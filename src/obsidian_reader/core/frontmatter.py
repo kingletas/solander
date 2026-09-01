@@ -29,8 +29,12 @@ class SplitNote:
     raw_frontmatter: str = ""
 
 
-def split_frontmatter(text: str) -> SplitNote:
-    """Separates a leading `---` YAML block from the body, tolerating malformed YAML."""
+def split_frontmatter(text: str, parse_properties: bool = True) -> SplitNote:
+    """Separates a leading `---` YAML block from the body, tolerating malformed YAML.
+
+    `parse_properties=False` skips the YAML parse and returns empty properties —
+    the raw block is still split off, which is all a bulk pass over a vault needs.
+    """
     if not text.startswith("---\n") and text.strip() != "---":
         return SplitNote(body=text)
     lines = text.split("\n")
@@ -38,7 +42,8 @@ def split_frontmatter(text: str) -> SplitNote:
         if lines[index].strip() in ("---", "..."):
             raw = "\n".join(lines[1:index])
             body = "\n".join(lines[index + 1 :])
-            return SplitNote(properties=_parse_properties(raw), body=body, raw_frontmatter=raw)
+            properties = _parse_properties(raw) if parse_properties else {}
+            return SplitNote(properties=properties, body=body, raw_frontmatter=raw)
     return SplitNote(body=text)
 
 

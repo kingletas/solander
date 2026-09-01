@@ -29,16 +29,21 @@ def _normalize_relative(base_dir: str, target: str) -> str:
     return "/".join(parts)
 
 
-def _try_paths(vault: Vault, candidates: list[str]) -> str:
+def _try_paths(vault: Vault, candidates: list[str], exists=None) -> str:
     """Returns the first candidate path that names a real file in the vault."""
+    check = vault.has_file if exists is None else exists
     for rel in candidates:
-        if rel and vault.has_file(rel):
+        if rel and check(rel):
             return rel
     return ""
 
 
-def resolve_note(vault: Vault, source: str, target: str) -> Resolution:
-    """Resolves a wikilink to a note using the path-first, then filename-match order."""
+def resolve_note(vault: Vault, source: str, target: str, exists=None) -> Resolution:
+    """Resolves a wikilink to a note using the path-first, then filename-match order.
+
+    `exists` swaps the per-path filesystem check for a caller-supplied predicate,
+    so a bulk pass over the whole vault can resolve against the index snapshot.
+    """
     if not target:
         return Resolution(kind="note", path=source)
     base_dir = str(PurePosixPath(source).parent)
@@ -51,7 +56,9 @@ def resolve_note(vault: Vault, source: str, target: str) -> Resolution:
     ]
     for candidate in with_extensions:
         found = _try_paths(
-            vault, [_normalize_relative(base_dir, candidate), _normalize_relative("", candidate)]
+            vault,
+            [_normalize_relative(base_dir, candidate), _normalize_relative("", candidate)],
+            exists,
         )
         if found and file_kind(found) == "note":
             return Resolution(kind="note", path=found)
@@ -64,7 +71,7 @@ def resolve_note(vault: Vault, source: str, target: str) -> Resolution:
     return Resolution(kind="missing")
 
 
-def resolve_attachment(vault: Vault, source: str, target: str) -> Resolution:
+def resolve_attachment(vault: Vault, source: str, target: str, exists=None) -> Resolution:
     """Resolves an embed target to any vault file, checking the attachment folder too."""
     base_dir = str(PurePosixPath(source).parent)
     if base_dir == ".":
@@ -76,6 +83,7 @@ def resolve_attachment(vault: Vault, source: str, target: str) -> Resolution:
             _normalize_relative("", target),
             _normalize_relative(vault.attachment_folder, target) if vault.attachment_folder else "",
         ],
+        exists,
     )
     if direct:
         return Resolution(kind=file_kind(direct), path=direct)
@@ -88,14 +96,14 @@ def resolve_attachment(vault: Vault, source: str, target: str) -> Resolution:
     return Resolution(kind="missing")
 
 
-def resolve_embed(vault: Vault, source: str, target: str) -> Resolution:
+def resolve_embed(vault: Vault, source: str, target: str, exists=None) -> Resolution:
     """Resolves an `![[...]]` target, preferring a note match and falling back to files."""
     if not target:
         return Resolution(kind="note", path=source)
-    as_note = resolve_note(vault, source, target)
+    as_note = resolve_note(vault, source, target, exists)
     if as_note.kind == "note":
         return as_note
-    as_file = resolve_attachment(vault, source, target)
+    as_file = resolve_attachment(vault, source, target, exists)
     if as_file.kind != "missing":
         return as_file
     return as_note if as_note.kind == "ambiguous" else Resolution(kind="missing")

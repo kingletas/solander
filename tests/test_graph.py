@@ -85,3 +85,21 @@ def test_build_indexes_builds_both_in_one_pass(vault):
     assert index.ready and graph.ready
     assert "Index.md" in index.entries
     assert "Projects/Alpha.md" in graph.backlinks
+
+
+def test_frontmatter_tags_read_inline_and_flow_forms(vault, vault_dir):
+    (vault_dir / "Inline.md").write_text("---\ntags: [alpha, beta-two]\n---\nBody.\n")
+    (vault_dir / "Single.md").write_text("---\ntag: gamma\n---\nBody.\n")
+    vault.reindex()
+    graph = VaultGraph.build(vault)
+    assert "Inline.md" in graph.tags["alpha"]
+    assert "Inline.md" in graph.tags["beta-two"]
+    assert "Single.md" in graph.tags["gamma"]
+
+
+def test_frontmatter_tags_read_unindented_lists_with_blank_lines(vault, vault_dir):
+    (vault_dir / "Loose.md").write_text("---\ntags:\n\n- delta\n- epsilon\nother: x\n---\nBody.\n")
+    vault.reindex()
+    graph = VaultGraph.build(vault)
+    assert "Loose.md" in graph.tags["delta"]
+    assert "Loose.md" in graph.tags["epsilon"]

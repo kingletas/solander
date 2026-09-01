@@ -56,33 +56,44 @@ class VaultGraph:
     def build(cls, vault: Vault, progress=None) -> "VaultGraph":
         """Reads every note once and records its links and tags."""
         graph = cls()
+        exists = _index_membership(vault)
         total = len(vault.notes)
         for position, rel in enumerate(vault.notes):
             note = vault.read_note(rel)
             if not note.error:
-                graph.add(vault, rel, note.text)
+                graph.add(vault, rel, note.text, exists)
             if progress is not None:
                 progress(position + 1, total)
         graph.ready = True
         return graph
 
-    def add(self, vault: Vault, rel: str, text: str) -> None:
-        """Indexes one note's wikilinks and tags into the graph."""
-        split = split_frontmatter(text)
-        for tag in _frontmatter_tags(split.properties):
+    def add(self, vault: Vault, rel: str, text: str, exists=None) -> None:
+        """Indexes one note's wikilinks and tags into the graph.
+
+        `exists` resolves link paths against the index snapshot instead of the
+        filesystem; without it, every candidate path of every link costs a stat.
+        """
+        # A full YAML parse per note measured as 60% of the whole build on a
+        # 10k-note vault, so the bulk pass reads the tag keys out of the raw block.
+        split = split_frontmatter(text, parse_properties=False)
+        for tag in _frontmatter_tags(split.raw_frontmatter):
             self._add_tag(rel, tag)
         body = strip_html_comments(strip_block_comments(split.body))
         outgoing: list[Outgoing] = []
         seen_out: set[tuple[str, str]] = set()
         for line in _content_lines(body):
-            plain = _INLINE_CODE.sub("", line)
-            for match in _WIKILINK.finditer(plain):
+            has_link = "[[" in line
+            has_tag = "#" in line
+            if not has_link and not has_tag:
+                continue
+            plain = _INLINE_CODE.sub("", line) if "`" in line else line
+            for match in _WIKILINK.finditer(plain) if has_link else ():
                 embed = match.group(0).startswith("!")
                 link = parse_embed(match.group(1)) if embed else parse_wikilink(match.group(1))
                 if not link.target:
                     continue
                 resolve = resolve_embed if embed else resolve_note
-                resolved = resolve(vault, rel, link.target)
+                resolved = resolve(vault, rel, link.target, exists)
                 # A media embed is an attachment, not a note link; it stays out
                 # of the graph so the outgoing panel lists notes and failures only.
                 if embed and resolved.kind not in ("note", "ambiguous", "missing"):
@@ -93,8 +104,10 @@ class VaultGraph:
                     outgoing.append(out)
                 if resolved.kind == "note" and resolved.path != rel:
                     self._add_mention(resolved.path, rel, plain, match.start())
-            for match in _TAG.finditer(_WIKILINK.sub(" ", plain)):
-                self._add_tag(rel, match.group(1))
+            if has_tag:
+                source = _WIKILINK.sub(" ", plain) if has_link else plain
+                for match in _TAG.finditer(source):
+                    self._add_tag(rel, match.group(1))
         if outgoing:
             self.outgoing[rel] = outgoing
 
@@ -130,17 +143,24 @@ def build_indexes(vault: Vault, progress=None) -> tuple[SearchIndex, VaultGraph]
     """Builds the search index and the link graph in one pass over the notes."""
     index = SearchIndex()
     graph = VaultGraph()
+    exists = _index_membership(vault)
     total = len(vault.notes)
     for position, rel in enumerate(vault.notes):
         note = vault.read_note(rel)
         if not note.error:
             index.add(rel, note.text)
-            graph.add(vault, rel, note.text)
+            graph.add(vault, rel, note.text, exists)
         if progress is not None:
             progress(position + 1, total)
     index.ready = True
     graph.ready = True
     return index, graph
+
+
+def _index_membership(vault: Vault):
+    """Returns an existence predicate over the vault's indexed files."""
+    known = set(vault.files)
+    return known.__contains__
 
 
 def _content_lines(body: str):
@@ -159,16 +179,37 @@ def _content_lines(body: str):
             yield line
 
 
-def _frontmatter_tags(properties: dict):
-    """Yields the tag strings out of a `tags` or `tag` frontmatter property."""
-    for key in ("tags", "tag"):
-        value = properties.get(key)
-        if isinstance(value, str):
-            yield from re.split(r"[,\s]+", value)
-        elif isinstance(value, list):
-            for item in value:
-                if isinstance(item, str):
-                    yield item
+_TAG_KEY = re.compile(r"^(?:tags|tag)\s*:\s*(.*)$")
+_TAG_ITEM = re.compile(r"^\s*-\s+(.+)$")
+
+
+def _frontmatter_tags(raw: str):
+    """Yields tag strings from a raw frontmatter block without a YAML parse.
+
+    Reads the shapes a vault actually writes — an inline value, or a `- item`
+    block list (indented or not, blank lines allowed) under a top-level
+    `tags:`/`tag:` key; anything more exotic yields nothing.
+    """
+    lines = raw.split("\n")
+    index = 0
+    while index < len(lines):
+        match = _TAG_KEY.match(lines[index])
+        index += 1
+        if not match:
+            continue
+        value = match.group(1).split(" #")[0].strip()
+        if value:
+            yield from (item.strip("\"'[] ") for item in re.split(r"[,\s]+", value))
+            continue
+        while index < len(lines):
+            if not lines[index].strip():
+                index += 1
+                continue
+            item = _TAG_ITEM.match(lines[index])
+            if not item:
+                break
+            yield item.group(1).split(" #")[0].strip("\"' ")
+            index += 1
 
 
 def _is_numeric_tag(tag: str) -> bool:
