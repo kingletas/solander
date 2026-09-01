@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 — 2026-09-01
+
+- Reading (zen) mode: `F11` hides the sidebar, header, and window chrome, leaving only the note; `Esc` or `F11` leaves, restoring the sidebar to how it was.
+- PDF export: `Ctrl+Shift+E` (or the menu) prints the current rendered note to a user-chosen file through WebKit's print pipeline. A target inside the vault is refused — the zero-write promise covers exports too.
+- The GUI smoke run now proves both on a live display, including the `%PDF` magic bytes of an actual export, and runs against isolated application state so a restored session cannot race it.
+
 ## 0.1.0 — 2026-09-01
 
 First release. A read-only GTK4/libadwaita reader for Obsidian vaults.

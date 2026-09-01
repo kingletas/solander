@@ -33,7 +33,8 @@ SHORTCUTS = [
     ("Ctrl+U", "Toggle raw source view"),
     ("Alt+Left / Alt+Right", "Back / Forward"),
     ("F9", "Toggle sidebar"),
-    ("F11", "Distraction-free reading"),
+    ("F11", "Reading mode (Esc leaves)"),
+    ("Ctrl+Shift+E", "Export as PDF"),
     ("Ctrl++ / Ctrl+- / Ctrl+0", "Zoom in / out / reset"),
     ("Ctrl+?", "This window"),
 ]
@@ -113,10 +114,10 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.split.set_sidebar(self._build_sidebar())
         self.split.set_content(self._build_content())
 
-        toolbar_view = Adw.ToolbarView()
-        toolbar_view.add_top_bar(header)
-        toolbar_view.set_content(self.split)
-        self.toasts = Adw.ToastOverlay(child=toolbar_view)
+        self.toolbar_view = Adw.ToolbarView()
+        self.toolbar_view.add_top_bar(header)
+        self.toolbar_view.set_content(self.split)
+        self.toasts = Adw.ToastOverlay(child=self.toolbar_view)
         self.set_content(self.toasts)
         self.connect("close-request", self._on_close)
         self._install_drop_target()
@@ -197,12 +198,14 @@ class ReaderWindow(Adw.ApplicationWindow):
         appearance.append("Dark", "win.appearance::dark")
         menu.append_submenu("Appearance", appearance)
         view = Gio.Menu()
+        view.append("Reading Mode", "win.zen")
         view.append("Raw Source View", "win.toggle-source")
         view.append("Show Hidden Files", "win.show-hidden")
         view.append("Markdown Files Only", "win.markdown-only")
         view.append("Restore Session on Launch", "win.restore-session")
         menu.append_section(None, view)
         note = Gio.Menu()
+        note.append("Export as PDF…", "win.export-pdf")
         note.append("Reveal in Files", "win.reveal")
         note.append("Open Externally", "win.open-external")
         note.append("Copy Markdown Source", "win.copy-source")
@@ -276,7 +279,15 @@ class ReaderWindow(Adw.ApplicationWindow):
         add("back", lambda *_: self.reader.webview.go_back(), ["<Alt>Left"])
         add("forward", lambda *_: self.reader.webview.go_forward(), ["<Alt>Right"])
         add("toggle-sidebar", lambda *_: self._toggle_sidebar(), ["F9"])
-        add("fullscreen", lambda *_: self._toggle_fullscreen(), ["F11"])
+        add(
+            "zen",
+            self._on_zen,
+            ["F11"],
+            state=GLib.Variant.new_boolean(False),
+        )
+        self.leave_zen_action = add("leave-zen", lambda *_: self._set_zen(False), ["Escape"])
+        self.leave_zen_action.set_enabled(False)
+        add("export-pdf", lambda *_: self._export_pdf_dialog(), ["<Control><Shift>e"])
         add("zoom-in", lambda *_: self._zoom(0.1), ["<Control>plus", "<Control>equal"])
         add("zoom-out", lambda *_: self._zoom(-0.1), ["<Control>minus"])
         add("zoom-reset", lambda *_: self._zoom(None), ["<Control>0"])
@@ -749,13 +760,72 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _toggle_sidebar(self) -> None:
         self.split.set_show_sidebar(not self.split.get_show_sidebar())
 
-    def _toggle_fullscreen(self) -> None:
-        if self.is_fullscreen():
-            self.unfullscreen()
-            self.split.set_show_sidebar(True)
-        else:
+    def _on_zen(self, action, value) -> None:
+        action.set_state(value)
+        self._set_zen(value.get_boolean())
+
+    def _set_zen(self, on: bool) -> None:
+        """Enters or leaves reading mode: no chrome, no sidebar, just the note."""
+        if on == getattr(self, "_zen", False):
+            return
+        self._zen = on
+        zen_action = self.lookup_action("zen")
+        if zen_action is not None and zen_action.get_state().get_boolean() != on:
+            zen_action.set_state(GLib.Variant.new_boolean(on))
+        self.leave_zen_action.set_enabled(on)
+        if on:
+            self._pre_zen_sidebar = self.split.get_show_sidebar()
             self.split.set_show_sidebar(False)
+            self.toolbar_view.set_reveal_top_bars(False)
             self.fullscreen()
+            self._toast("Reading mode — press Esc or F11 to leave")
+        else:
+            self.unfullscreen()
+            self.toolbar_view.set_reveal_top_bars(True)
+            self.split.set_show_sidebar(getattr(self, "_pre_zen_sidebar", True))
+
+    def _export_pdf_dialog(self) -> None:
+        if not self.current_note:
+            self._toast("Open a note first")
+            return
+        stem = self.current_note.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        dialog = Gtk.FileDialog(title="Export as PDF", initial_name=f"{stem}.pdf")
+        dialog.save(self, None, self._export_target_chosen)
+
+    def _export_target_chosen(self, dialog, result) -> None:
+        try:
+            gfile = dialog.save_finish(result)
+        except GLib.Error:
+            return
+        if gfile is not None:
+            self._export_pdf_to(gfile)
+
+    def _export_pdf_to(self, gfile) -> None:
+        """Prints the current page to a PDF outside the vault; inside it is refused."""
+        path = Path(gfile.get_path())
+        if self.vault is not None and self.vault.contains(path):
+            self._toast("Refusing to write inside the vault — choose a folder outside it")
+            return
+        operation = WebKit.PrintOperation.new(self.reader.webview)
+        settings = Gtk.PrintSettings()
+        settings.set(Gtk.PRINT_SETTINGS_OUTPUT_URI, gfile.get_uri())
+        settings.set(Gtk.PRINT_SETTINGS_OUTPUT_FILE_FORMAT, "pdf")
+        # Without the file backend named, GTK routes to the default printer instead.
+        settings.set_printer("Print to File")
+        operation.set_print_settings(settings)
+        outcome = {"failed": False}
+
+        def on_failed(_operation, error):
+            outcome["failed"] = True
+            self._toast(f"PDF export failed: {error.message}")
+
+        def on_finished(_operation):
+            if not outcome["failed"]:
+                self._toast(f"Exported {path.name}")
+
+        operation.connect("failed", on_failed)
+        operation.connect("finished", on_finished)
+        operation.print_()
 
     def _zoom(self, delta: float | None) -> None:
         zoom = 1.0 if delta is None else max(0.5, min(3.0, self.store.state.zoom + delta))

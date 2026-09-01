@@ -43,14 +43,30 @@ def run_checks(app):
 
     def after_navigation():
         check("navigation updated current note", window.current_note == "Second Note.md")
-        toggle = window.lookup_action("toggle-source")
-        window._on_toggle_source(toggle, GLib.Variant.new_boolean(True))
 
-        def finish():
-            app.quit()
+        window._set_zen(True)
+        check("zen hides sidebar and chrome", not window.split.get_show_sidebar())
+        check("zen reveals no top bars", not window.toolbar_view.get_reveal_top_bars())
+        window._set_zen(False)
+        check("leaving zen restores the sidebar", window.split.get_show_sidebar())
+        check("leaving zen restores the header", window.toolbar_view.get_reveal_top_bars())
+
+        import tempfile
+
+        from gi.repository import Gio
+
+        pdf_path = Path(tempfile.mkdtemp()) / "export.pdf"
+        window._export_pdf_to(Gio.File.new_for_path(str(pdf_path)))
+
+        def check_pdf():
+            written = pdf_path.exists() and pdf_path.read_bytes()[:5] == b"%PDF-"
+            check("PDF export wrote a real PDF", written)
+            toggle = window.lookup_action("toggle-source")
+            window._on_toggle_source(toggle, GLib.Variant.new_boolean(True))
+            GLib.timeout_add(1200, lambda: (app.quit(), False)[1])
             return False
 
-        GLib.timeout_add(1200, finish)
+        GLib.timeout_add(2500, check_pdf)
         return False
 
     GLib.timeout_add(1500, after_navigation)

@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="0.2.0" date="2026-09-01">
+      <description>
+        <p>Reading (zen) mode and PDF export of the rendered note, which
+        refuses to write inside the vault.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-09-01">
       <description>
         <p>First release: vault browsing, Obsidian Markdown rendering, link

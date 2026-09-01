@@ -12,6 +12,7 @@ It is a fallback reader, not an Obsidian replacement: something dependable to re
 - Renders CommonMark and GFM (tables, task lists, strikethrough, autolinks) plus the Obsidian layer: `[[wikilinks]]`, aliases, heading and block links, `![[embeds]]` with cycle detection, callouts (foldable and nested), `==highlights==`, `%%comments%%` (hidden), inline `#tags`, footnotes (inline included), frontmatter as a collapsible Properties panel, and syntax-highlighted code blocks.
 - Resolves links the way Obsidian does: exact relative path first, then vault-root path, then filename match — and when a name is ambiguous it asks instead of guessing.
 - Vault-wide filename and full-text search, quick-open, in-note find, back/forward history, outline navigation, session restore, light/dark/system appearance.
+- A reading (zen) mode — `F11` strips every piece of chrome, `Esc` brings it back — and PDF export (`Ctrl+Shift+E`) of the current rendered note, which refuses to write inside the vault.
 - Reads `.obsidian/app.json` (read-only) to honor the vault's attachment-folder setting.
 
 ## What it will never do
