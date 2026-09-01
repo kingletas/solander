@@ -96,10 +96,25 @@ def run_checks(app):
             window._cancel_preview()
             hidden = window._preview_reader is None or not window.preview_popover.get_visible()
             check("hover preview hides on cancel", hidden)
-            continue_pdf()
+            start_live()
             return False
 
         GLib.timeout_add(900, check_preview)
+
+    def start_live():
+        (vault_path / "Live.md").write_text("Watched: [[Second Note]] and a #livetag here.\n")
+
+        def check_live():
+            graph = window.graph
+            mentions = graph.backlinks.get("Second Note.md", []) if graph else []
+            check("monitor picked up the new note", any(m.source == "Live.md" for m in mentions))
+            check("new tag is live in the graph", graph is not None and "livetag" in graph.tags)
+            hits = window.search_index.search_content("watched")
+            check("new note is searchable without a reload", any(h.path == "Live.md" for h in hits))
+            continue_pdf()
+            return False
+
+        GLib.timeout_add(5200, check_live)
 
     def continue_pdf():
         import tempfile

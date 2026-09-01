@@ -1,13 +1,12 @@
-"""In-memory filename and full-text search over a vault, built off the UI thread."""
+"""Filename and full-text search: query parsing, operators, and the FTS-backed service."""
 
-import re
 import unicodedata
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
+from .store import IndexStore
 from .vault import Vault
 
 MAX_RESULTS = 200
-SNIPPET_RADIUS = 60
 
 
 @dataclass(frozen=True)
@@ -50,40 +49,26 @@ def parse_query(text: str) -> Query:
     )
 
 
-@dataclass
-class SearchIndex:
-    """Lowercased note contents held in memory; the vault itself is never written."""
+class VaultSearch:
+    """Full-text search over the persistent index, ranked by FTS5's own scoring."""
 
-    entries: dict[str, str] = field(default_factory=dict)
-    ready: bool = False
-
-    @classmethod
-    def build(cls, vault: Vault, progress=None) -> "SearchIndex":
-        """Reads every note once and keeps a fold-cased copy for scanning."""
-        index = cls()
-        total = len(vault.notes)
-        for position, rel in enumerate(vault.notes):
-            note = vault.read_note(rel)
-            if not note.error:
-                index.add(rel, note.text)
-            if progress is not None:
-                progress(position + 1, total)
-        index.ready = True
-        return index
-
-    def add(self, rel: str, text: str) -> None:
-        """Indexes one note's text under its vault-relative path."""
-        self.entries[rel] = _fold(text)
+    def __init__(self, store: IndexStore):
+        self.store = store
+        self.ready = False
 
     def search_content(
         self, query: str, note_tags: dict[str, set[str]] | None = None
     ) -> list[SearchHit]:
-        """Finds notes matching every word and filter, with a snippet per note."""
+        """Finds notes matching every word and filter, best matches first."""
         parsed = parse_query(query)
         if parsed.empty:
             return []
+        if parsed.words:
+            candidates = self.store.search_body(list(parsed.words), MAX_RESULTS * 5)
+        else:
+            candidates = [(rel, "") for rel in self.store.all_rels()]
         hits: list[SearchHit] = []
-        for rel, text in self.entries.items():
+        for rel, snippet in candidates:
             folded_rel = _fold(rel)
             if any(term not in folded_rel for term in parsed.paths):
                 continue
@@ -92,10 +77,6 @@ class SearchIndex:
                 continue
             if parsed.tags and not _tags_match(parsed.tags, (note_tags or {}).get(rel, set())):
                 continue
-            positions = [text.find(word) for word in parsed.words]
-            if any(position < 0 for position in positions):
-                continue
-            snippet = _snippet(text, min(positions), parsed.words[0]) if parsed.words else ""
             hits.append(SearchHit(path=rel, snippet=snippet))
             if len(hits) >= MAX_RESULTS:
                 break
@@ -127,12 +108,3 @@ def _tags_match(terms: tuple[str, ...], tags: set[str]) -> bool:
 
 def _fold(text: str) -> str:
     return unicodedata.normalize("NFC", text).casefold()
-
-
-def _snippet(text: str, position: int, word: str) -> str:
-    start = max(0, position - SNIPPET_RADIUS)
-    end = min(len(text), position + len(word) + SNIPPET_RADIUS)
-    fragment = re.sub(r"\s+", " ", text[start:end]).strip()
-    prefix = "…" if start > 0 else ""
-    suffix = "…" if end < len(text) else ""
-    return f"{prefix}{fragment}{suffix}"

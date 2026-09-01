@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — 2026-09-01
+
+The live layer: the reader now tracks the vault while it is open, and remembers it between launches.
+
+- **A persistent index** in `~/.cache/obsidian-reader/`, one SQLite file per vault: note scans plus an FTS5 full-text index. A launch reads only what changed since last time — on a 10,600-note vault, a warm start indexes in ~1.2 s instead of ~8.5 s, and the first-ever build is ~9 s. The cache is derived data: corruption or a schema change wipes and rebuilds it silently, and "Clear Index Cache" in the menu does the same on demand. Expect it to cost disk roughly proportional to the vault's text (about half its size).
+- **The vault is watched.** Every non-hidden directory carries a file monitor; changes are debounced for two seconds, then a background sync re-reads only the changed notes, re-resolves every link, and refreshes the tree, panels, and search — so a note written by another app (or synced in from another device) is searchable and backlinked without touching Reload. A rename or deletion re-resolves links vault-wide, so a link that was "missing" resolves the moment its target appears.
+- **Full-text search is now ranked** by FTS5's BM25 relevance instead of index order, with token-prefix matching (`ship` finds "Ships") and match snippets from the index itself. Queries run in ~65 ms against 10,600 notes. Query text is quoted into plain prefix terms, so FTS query syntax can never be injected.
+- The `path:`, `file:`, and `tag:` operators, the graph, and every panel work exactly as before — the graph now assembles from cached scans in about a second.
+- Fixed en route: the first cold build took 131 s because deleting an FTS row by its unindexed `rel` column is a full-table scan — O(n²) across a build. Deletion now goes through a stored rowid; 131 s → 8.8 s.
+
 ## 0.4.0 — 2026-09-01
 
 - A vault-wide link graph, built in the background alongside the search index in one pass over the notes. It powers three new sidebar pages beside Files and Search:

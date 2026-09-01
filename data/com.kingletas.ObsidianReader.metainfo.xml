@@ -26,6 +26,14 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="0.5.0" date="2026-09-01">
+      <description>
+        <p>The live layer: a persistent per-vault index makes launches
+        near-instant, file monitors keep the tree, search, and link graph
+        current as the vault changes, and full-text search is ranked by
+        relevance.</p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-09-01">
       <description>
         <p>Backlinks with context, a tag browser, the vault's bookmarks,

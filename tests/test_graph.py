@@ -1,6 +1,6 @@
 """The link graph: backlinks with context, outgoing links, and the tag map."""
 
-from obsidian_reader.core.graph import VaultGraph, build_indexes
+from obsidian_reader.core.graph import VaultGraph, scan_note
 
 
 def test_backlinks_point_at_the_linking_note(vault):
@@ -80,11 +80,15 @@ def test_mentions_per_target_are_capped(vault, vault_dir, monkeypatch):
     assert len(graph.backlinks["Projects/Alpha.md"]) == 5
 
 
-def test_build_indexes_builds_both_in_one_pass(vault):
-    index, graph = build_indexes(vault)
-    assert index.ready and graph.ready
-    assert "Index.md" in index.entries
-    assert "Projects/Alpha.md" in graph.backlinks
+def test_scan_and_assemble_match_the_direct_build(vault):
+    scans = {}
+    for rel in vault.notes:
+        scans[rel] = scan_note(vault.read_note(rel).text)
+    assembled = VaultGraph.assemble(vault, scans)
+    direct = VaultGraph.build(vault)
+    assert assembled.backlinks == direct.backlinks
+    assert assembled.outgoing == direct.outgoing
+    assert assembled.tags == direct.tags
 
 
 def test_frontmatter_tags_read_inline_and_flow_forms(vault, vault_dir):

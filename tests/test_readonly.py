@@ -3,8 +3,9 @@
 import hashlib
 from pathlib import Path
 
+from obsidian_reader.core.indexing import sync_indexes
 from obsidian_reader.core.render import NoteRenderer
-from obsidian_reader.core.search import SearchIndex
+from obsidian_reader.core.store import IndexStore
 from obsidian_reader.core.vault import Vault
 
 
@@ -16,10 +17,10 @@ def tree_digest(root: Path) -> dict[str, str]:
     return digest
 
 
-def test_index_search_and_render_write_nothing(vault_dir):
+def test_index_search_and_render_write_nothing(vault_dir, tmp_path):
     before = tree_digest(vault_dir)
     vault = Vault.open(vault_dir)
-    SearchIndex.build(vault)
+    sync_indexes(vault, IndexStore(tmp_path / "cache" / "index.db"))
     renderer = NoteRenderer(vault)
     for rel in vault.notes:
         renderer.render(rel)

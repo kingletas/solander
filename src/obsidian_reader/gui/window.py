@@ -10,17 +10,24 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("WebKit", "6.0")
+import hashlib
+import os
+import sqlite3
+
 from gi.repository import Adw, Gio, GLib, Gtk, WebKit
 
 from .. import APP_ID, APP_NAME, __version__
 from ..core.bookmarks import read_bookmarks
-from ..core.graph import VaultGraph, build_indexes
+from ..core.graph import VaultGraph
+from ..core.indexing import sync_indexes
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
 from ..core.resolver import resolve_note
-from ..core.search import SearchIndex, parse_query, search_filenames
+from ..core.search import VaultSearch, parse_query, search_filenames
 from ..core.session import SessionStore
+from ..core.store import open_index_store
 from ..core.vault import Vault, file_kind
 from .filetree import VaultTree
+from .monitor import VaultMonitor
 from .webpane import ReaderView
 
 MAX_AMBIGUOUS_CHOICES = 8
@@ -54,8 +61,12 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.store = SessionStore()
         self.vault: Vault | None = None
         self.renderer: NoteRenderer | None = None
-        self.search_index: SearchIndex | None = None
+        self.search_index: VaultSearch | None = None
         self.graph: VaultGraph | None = None
+        self.index_store = None
+        self.vault_monitor: VaultMonitor | None = None
+        self._sync_lock = threading.Lock()
+        self._sync_pending = False
         self.current_note = ""
         self.source_view = False
         self.monitor = None
@@ -463,6 +474,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         note.append("Copy as Wikilink", "win.copy-wikilink")
         menu.append_section(None, note)
         meta = Gio.Menu()
+        meta.append("Clear Index Cache", "win.clear-cache")
         meta.append("Keyboard Shortcuts", "win.shortcuts")
         meta.append(f"About {APP_NAME}", "win.about")
         menu.append_section(None, meta)
@@ -543,6 +555,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         add("zoom-in", lambda *_: self._zoom(0.1), ["<Control>plus", "<Control>equal"])
         add("zoom-out", lambda *_: self._zoom(-0.1), ["<Control>minus"])
         add("zoom-reset", lambda *_: self._zoom(None), ["<Control>0"])
+        add("clear-cache", lambda *_: self._clear_index_cache())
         add("shortcuts", lambda *_: self._show_shortcuts(), ["<Control>question"])
         add("about", lambda *_: self._show_about())
         add("reveal", lambda *_: self._reveal_current())
@@ -633,8 +646,14 @@ class ReaderWindow(Adw.ApplicationWindow):
     ) -> None:
         self.vault = vault
         self.renderer = renderer
-        self.search_index = None
         self.graph = None
+        if self.vault_monitor is not None:
+            self.vault_monitor.cancel()
+        if self.index_store is not None:
+            self.index_store.close()
+        self.index_store = open_index_store(self._cache_path(vault.root))
+        self.search_index = VaultSearch(self.index_store)
+        self.vault_monitor = VaultMonitor(vault.root, self._schedule_sync)
         self.store.remember_vault(str(vault.root))
         self._refresh_recents_menu()
         self.tree.set_vault(vault.root)
@@ -662,29 +681,88 @@ class ReaderWindow(Adw.ApplicationWindow):
                 if rel != current and vault.has_file(rel):
                     background = self._create_tab(select=False)
                     background.load_note(rel)
-        self._build_search_index()
+        self._schedule_sync()
         return False
 
-    def _build_search_index(self) -> None:
-        vault = self.vault
+    # -- the live index ----------------------------------------------------
 
-        def progress(done, total):
-            GLib.idle_add(self.index_status.set_text, f"Indexing {done}/{total}…")
+    def _cache_path(self, root: Path) -> Path:
+        """One index file per vault, in the app's own cache dir — never the vault."""
+        base = os.environ.get("XDG_CACHE_HOME", "") or str(Path.home() / ".cache")
+        directory = Path(base) / "obsidian-reader"
+        directory.mkdir(parents=True, exist_ok=True)
+        digest = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:16]
+        return directory / f"index-{digest}.db"
 
-        def build():
-            index, graph = build_indexes(vault, progress=progress)
-            GLib.idle_add(self._index_ready, vault, index, graph)
+    def _schedule_sync(self) -> None:
+        """Runs a background sync; overlapping requests coalesce into one more pass."""
+        if self.vault is None:
+            return
+        threading.Thread(target=self._run_sync, args=(self.vault.root,), daemon=True).start()
 
-        threading.Thread(target=build, daemon=True).start()
+    def _run_sync(self, root: Path) -> None:
+        if not self._sync_lock.acquire(blocking=False):
+            self._sync_pending = True
+            return
+        try:
+            while True:
+                self._sync_pending = False
+                store = self.index_store
+                search = self.search_index
+                if store is None or search is None:
+                    return
 
-    def _index_ready(self, vault: Vault, index: SearchIndex, graph: VaultGraph) -> None:
-        if vault is self.vault:
-            self.search_index = index
-            self.graph = graph
-            self.index_status.set_text(f"{len(vault.notes)} notes · {len(graph.tags)} tags")
-            self._refresh_tags_panel()
-            self._update_links_panel()
+                def progress(done, total):
+                    GLib.idle_add(self.index_status.set_text, f"Indexing {done}/{total}…")
+
+                vault = Vault.open(root)
+                renderer = NoteRenderer(vault)
+                try:
+                    result = sync_indexes(vault, store, progress=progress)
+                except sqlite3.Error:
+                    # A corrupted cache is derived data: delete it and rebuild once.
+                    store.close()
+                    for suffix in ("", "-wal", "-shm"):
+                        Path(f"{store.path}{suffix}").unlink(missing_ok=True)
+                    self.index_store = store = open_index_store(store.path)
+                    search.store = store
+                    result = sync_indexes(vault, store, progress=progress)
+                GLib.idle_add(self._apply_sync, vault, renderer, result.graph, search)
+                if not self._sync_pending:
+                    return
+        finally:
+            self._sync_lock.release()
+
+    def _apply_sync(self, vault: Vault, renderer, graph: VaultGraph, search) -> bool:
+        """Swaps in the freshly synced vault, renderer, and graph on the main loop."""
+        if self.vault is None or vault.root != self.vault.root or search is not self.search_index:
+            return False
+        files_changed = vault.files != self.vault.files
+        self.vault = vault
+        self.renderer = renderer
+        self.graph = graph
+        search.ready = True
+        self.index_status.set_text(f"{len(vault.notes)} notes · {len(graph.tags)} tags")
+        if files_changed:
+            self.tree.refresh()
+            self._refresh_bookmarks_panel()
+        self._refresh_tags_panel()
+        self._update_links_panel()
         return False
+
+    def _clear_index_cache(self) -> None:
+        """Deletes the persistent index for this vault and rebuilds it from scratch."""
+        if self.vault is None or self.index_store is None:
+            return
+        path = self.index_store.path
+        self.index_store.close()
+        for suffix in ("", "-wal", "-shm"):
+            Path(f"{path}{suffix}").unlink(missing_ok=True)
+        self.index_store = open_index_store(path)
+        self.search_index = VaultSearch(self.index_store)
+        self.graph = None
+        self._schedule_sync()
+        self._toast("Index cache cleared — rebuilding")
 
     def _open_file_dialog(self) -> None:
         dialog = Gtk.FileDialog(title="Open Markdown file")
@@ -872,8 +950,7 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     def _reload(self) -> None:
         if self.vault is not None:
-            self.vault.reindex()
-            self.tree.refresh()
+            self._schedule_sync()
         self.reader.webview.reload()
 
     # -- search ------------------------------------------------------------
@@ -1313,6 +1390,10 @@ class ReaderWindow(Adw.ApplicationWindow):
             self.add_action(action)
 
     def _on_close(self, _window) -> bool:
+        if self.vault_monitor is not None:
+            self.vault_monitor.cancel()
+        if self.index_store is not None:
+            self.index_store.close()
         state = self.store.state
         state.window_width = self.get_width()
         state.window_height = self.get_height()
