@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.kingletas.ObsidianReader</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Obsidian Reader</name>
+  <summary>Read Obsidian vaults in place, without ever writing into them</summary>
+  <description>
+    <p>
+      A read-only Markdown reader that opens an existing Obsidian vault straight from
+      disk and renders the Obsidian Markdown that matters for reading: wikilinks,
+      embeds, callouts, frontmatter, tags, highlights, and more.
+    </p>
+    <p>
+      Nothing is ever written into the vault, no plugin or script ever executes, and
+      the network is never touched. It is a dependable fallback reader for when
+      Obsidian is closed, not installed, or not safe to run against a vault you only
+      want to inspect.
+    </p>
+  </description>
+  <launchable type="desktop-id">com.kingletas.ObsidianReader.desktop</launchable>
+  <developer_name>Luis Tineo</developer_name>
+  <content_rating type="oars-1.1"/>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+  <releases>
+    <release version="0.1.0" date="2026-09-01">
+      <description>
+        <p>First release: vault browsing, Obsidian Markdown rendering, link
+        resolution with disambiguation, embeds with cycle detection, search,
+        session restore, and a hardened no-script rendering surface.</p>
+      </description>
+    </release>
+  </releases>
+</component>

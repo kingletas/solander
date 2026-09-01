@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#
+# obsidian-reader -- launch the Obsidian Reader desktop app from its source tree.
+#
+# Usage:
+#   obsidian-reader [PATH]        open PATH as a vault or note; no PATH resumes
+#   obsidian-reader --help        the app's own usage text
+#
+# Environment overrides:
+#   OBSIDIAN_READER_HOME   source checkout (default: ~/Development/obsidian-reader)
+
+set -euo pipefail
+
+READER_HOME="${OBSIDIAN_READER_HOME:-$HOME/Development/obsidian-reader}"
+
+if [[ ! -f "$READER_HOME/pyproject.toml" ]]; then
+  echo "obsidian-reader: no source tree at $READER_HOME (set OBSIDIAN_READER_HOME)" >&2
+  exit 1
+fi
+
+command -v uv >/dev/null 2>&1 || {
+  echo "obsidian-reader: uv is required -- https://docs.astral.sh/uv/" >&2
+  exit 1
+}
+
+exec uv run --project "$READER_HOME" obsidian-reader "$@"

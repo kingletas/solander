@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Obsidian Reader
+GenericName=Markdown Reader
+Comment=Read Obsidian vaults in place, without ever writing into them
+Exec=@LAUNCHER@ %f
+Icon=com.kingletas.ObsidianReader
+Terminal=false
+Categories=Office;Viewer;GNOME;GTK;
+MimeType=text/markdown;inode/directory;
+Keywords=markdown;obsidian;notes;vault;reader;
+StartupNotify=true
