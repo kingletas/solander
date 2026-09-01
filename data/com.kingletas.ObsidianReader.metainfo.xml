@@ -26,6 +26,13 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="0.4.0" date="2026-09-01">
+      <description>
+        <p>Backlinks with context, a tag browser, the vault's bookmarks,
+        search operators (path:, file:, tag:), and hover previews of
+        linked notes.</p>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-09-01">
       <description>
         <p>Tabs with middle-click and Ctrl+click to open notes and links in

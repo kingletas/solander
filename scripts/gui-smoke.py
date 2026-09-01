@@ -8,16 +8,18 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("WebKit", "6.0")
-from gi.repository import GLib
+from gi.repository import Gio, GLib
 
 from obsidian_reader.gui.app import ReaderApplication
 
 failures: list[str] = []
+checks_run: list[str] = []
 vault_path = Path(sys.argv[1]).resolve()
 
 
 def check(label: str, condition: bool) -> None:
     print(f"{'ok' if condition else 'FAIL'}  {label}")
+    checks_run.append(label)
     if not condition:
         failures.append(label)
 
@@ -62,11 +64,42 @@ def run_checks(app):
             check("new tab shows its note", window.current_note == "A.md")
             window._close_current_tab()
             check("closing returns to one tab", window.tab_view.get_n_pages() == 1)
-            continue_pdf()
+            check_panels()
             return False
 
         GLib.timeout_add(1200, check_tabs)
         return False
+
+    def check_panels():
+        graph = window.graph
+        check("link graph built", graph is not None and graph.ready)
+        if graph is not None:
+            mentions = graph.backlinks.get("Second Note.md", [])
+            linked = any(m.source == "A.md" for m in mentions)
+            check("backlink recorded for the linked note", linked)
+            check("tag indexed from the note body", "alpha" in graph.tags)
+            hits = window.search_index.search_content("tag:alpha", graph.note_tags)
+            check("tag: search operator finds the note", [h.path for h in hits] == ["A.md"])
+        window._update_links_panel()
+        check("links panel has rows", window.links_list.get_first_child() is not None)
+        window._refresh_tags_panel()
+        check("tags panel has rows", window.tags_list.get_first_child() is not None)
+        row = window.bookmarks_list.get_first_child()
+        bookmarked = row is not None and getattr(row, "note_path", "") == "A.md"
+        check("bookmarks panel lists the bookmark", bookmarked)
+        window._preview_pending = "A.md"
+        window._show_preview()
+
+        def check_preview():
+            shown = window._preview_reader is not None and window.preview_popover.get_visible()
+            check("hover preview popover shows", shown)
+            window._cancel_preview()
+            hidden = window._preview_reader is None or not window.preview_popover.get_visible()
+            check("hover preview hides on cancel", hidden)
+            continue_pdf()
+            return False
+
+        GLib.timeout_add(900, check_preview)
 
     def continue_pdf():
         import tempfile
@@ -92,6 +125,9 @@ def run_checks(app):
 
 def main() -> int:
     app = ReaderApplication()
+    # Without this, a reader already running for the real vault owns the app id,
+    # activate is forwarded to it, and zero checks would read as a pass.
+    app.set_flags(app.get_flags() | Gio.ApplicationFlags.NON_UNIQUE)
 
     def kick_off(application):
         window = application.get_active_window()
@@ -100,6 +136,9 @@ def main() -> int:
 
     app.connect_after("activate", kick_off)
     app.run([sys.argv[0]])
+    if not checks_run:
+        print("RESULT: FAIL (no checks ran)")
+        return 1
     print("RESULT:", "FAIL" if failures else "PASS")
     return 1 if failures else 0
 

@@ -26,6 +26,11 @@ MAX_EMBED_DEPTH = int(os.environ.get("READER_MAX_EMBED_DEPTH", "5"))
 # depth 5 measured a 23 MB page in 29 s. The budget caps note embeds per page.
 MAX_EMBEDS_PER_PAGE = int(os.environ.get("READER_MAX_EMBEDS_PER_PAGE", "200"))
 
+# A hover preview shows the opening of a note, so it takes a slice of the body
+# and a tight embed budget rather than paying for the whole page.
+PREVIEW_MAX_CHARS = int(os.environ.get("READER_PREVIEW_MAX_CHARS", "2500"))
+PREVIEW_EMBED_BUDGET = 4
+
 # Fence languages that Obsidian executes and this reader deliberately does not.
 INERT_FENCES = {"dataview", "dataviewjs", "templater", "tasks", "query", "meta-bind"}
 
@@ -168,6 +173,19 @@ class NoteRenderer:
             source=note.text,
             lossy=note.lossy,
         )
+
+    def render_preview(self, rel: str, theme: str = "light") -> str:
+        """Renders the opening slice of a note for the hover preview popover."""
+        note = self.vault.read_note(rel)
+        title = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        if note.error:
+            return build_message_page("Cannot preview", note.error, theme)
+        body, truncated = _preview_slice(split_frontmatter(note.text).body)
+        env = self._env(rel, budget={"left": PREVIEW_EMBED_BUDGET})
+        inner = sanitize(self._render_markdown(body, env))
+        more = '<div class="preview-more">…</div>' if truncated else ""
+        page_body = f'<div class="preview"><h1>{html.escape(title)}</h1>{inner}{more}</div>'
+        return build_page(page_body, title, theme)
 
     def _env(
         self,
@@ -402,6 +420,20 @@ class NoteRenderer:
                     f"{formatted}</code></pre>\n"
                 )
         return f"<pre><code>{html.escape(code)}</code></pre>\n"
+
+
+def _preview_slice(body: str) -> tuple[str, bool]:
+    """Cuts a body to the preview budget at a line boundary, reporting the cut."""
+    if len(body) <= PREVIEW_MAX_CHARS:
+        return body, False
+    kept: list[str] = []
+    used = 0
+    for line in body.split("\n"):
+        if used + len(line) > PREVIEW_MAX_CHARS and kept:
+            return "\n".join(kept), True
+        kept.append(line)
+        used += len(line) + 1
+    return "\n".join(kept), True
 
 
 def _embed_error(message: str) -> str:

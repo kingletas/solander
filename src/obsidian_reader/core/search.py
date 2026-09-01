@@ -18,6 +18,38 @@ class SearchHit:
     snippet: str = ""
 
 
+@dataclass(frozen=True)
+class Query:
+    """A parsed search: plain words plus `path:`, `file:`, and `tag:` filters."""
+
+    words: tuple[str, ...] = ()
+    paths: tuple[str, ...] = ()
+    files: tuple[str, ...] = ()
+    tags: tuple[str, ...] = ()
+
+    @property
+    def empty(self) -> bool:
+        return not (self.words or self.paths or self.files or self.tags)
+
+
+def parse_query(text: str) -> Query:
+    """Splits a query into words and operator filters; unknown operators stay words."""
+    words: list[str] = []
+    filters: dict[str, list[str]] = {"path": [], "file": [], "tag": []}
+    for token in text.split():
+        operator, sep, value = token.partition(":")
+        if sep and operator.casefold() in filters and value:
+            filters[operator.casefold()].append(_fold(value.lstrip("#")))
+        else:
+            words.append(_fold(token))
+    return Query(
+        words=tuple(words),
+        paths=tuple(filters["path"]),
+        files=tuple(filters["file"]),
+        tags=tuple(filters["tag"]),
+    )
+
+
 @dataclass
 class SearchIndex:
     """Lowercased note contents held in memory; the vault itself is never written."""
@@ -33,23 +65,38 @@ class SearchIndex:
         for position, rel in enumerate(vault.notes):
             note = vault.read_note(rel)
             if not note.error:
-                index.entries[rel] = _fold(note.text)
+                index.add(rel, note.text)
             if progress is not None:
                 progress(position + 1, total)
         index.ready = True
         return index
 
-    def search_content(self, query: str) -> list[SearchHit]:
-        """Finds notes containing every word of the query, with a snippet per note."""
-        words = [_fold(word) for word in query.split() if word.strip()]
-        if not words:
+    def add(self, rel: str, text: str) -> None:
+        """Indexes one note's text under its vault-relative path."""
+        self.entries[rel] = _fold(text)
+
+    def search_content(
+        self, query: str, note_tags: dict[str, set[str]] | None = None
+    ) -> list[SearchHit]:
+        """Finds notes matching every word and filter, with a snippet per note."""
+        parsed = parse_query(query)
+        if parsed.empty:
             return []
         hits: list[SearchHit] = []
         for rel, text in self.entries.items():
-            positions = [text.find(word) for word in words]
+            folded_rel = _fold(rel)
+            if any(term not in folded_rel for term in parsed.paths):
+                continue
+            name = folded_rel.rsplit("/", 1)[-1]
+            if any(term not in name for term in parsed.files):
+                continue
+            if parsed.tags and not _tags_match(parsed.tags, (note_tags or {}).get(rel, set())):
+                continue
+            positions = [text.find(word) for word in parsed.words]
             if any(position < 0 for position in positions):
                 continue
-            hits.append(SearchHit(path=rel, snippet=_snippet(text, min(positions), words[0])))
+            snippet = _snippet(text, min(positions), parsed.words[0]) if parsed.words else ""
+            hits.append(SearchHit(path=rel, snippet=snippet))
             if len(hits) >= MAX_RESULTS:
                 break
         return hits
@@ -69,6 +116,13 @@ def search_filenames(vault: Vault, query: str) -> list[SearchHit]:
             scored.append((rank, rel))
     scored.sort(key=lambda pair: (pair[0], len(pair[1]), pair[1]))
     return [SearchHit(path=rel) for _, rel in scored[:MAX_RESULTS]]
+
+
+def _tags_match(terms: tuple[str, ...], tags: set[str]) -> bool:
+    """Reports whether every tag term matches a note tag exactly or as a nested parent."""
+    return all(
+        any(tag == term or tag.startswith(f"{term}/") for tag in tags) for term in terms
+    )
 
 
 def _fold(text: str) -> str:

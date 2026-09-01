@@ -13,15 +13,19 @@ gi.require_version("WebKit", "6.0")
 from gi.repository import Adw, Gio, GLib, Gtk, WebKit
 
 from .. import APP_ID, APP_NAME, __version__
+from ..core.bookmarks import read_bookmarks
+from ..core.graph import VaultGraph, build_indexes
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
 from ..core.resolver import resolve_note
-from ..core.search import SearchIndex, search_filenames
+from ..core.search import SearchIndex, parse_query, search_filenames
 from ..core.session import SessionStore
 from ..core.vault import Vault, file_kind
 from .filetree import VaultTree
 from .webpane import ReaderView
 
 MAX_AMBIGUOUS_CHOICES = 8
+MAX_PANEL_ROWS = 200
+HOVER_PREVIEW_DELAY_MS = 600
 
 SHORTCUTS = [
     ("Ctrl+O", "Open file"),
@@ -51,9 +55,14 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.vault: Vault | None = None
         self.renderer: NoteRenderer | None = None
         self.search_index: SearchIndex | None = None
+        self.graph: VaultGraph | None = None
         self.current_note = ""
         self.source_view = False
         self.monitor = None
+        self._preview_reader = None
+        self._preview_timeout = 0
+        self._preview_pending = ""
+        self._pointer = (0.0, 0.0)
         self.set_default_size(self.store.state.window_width, self.store.state.window_height)
         self._apply_appearance(self.store.state.appearance)
         self._build_ui()
@@ -171,17 +180,18 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._create_tab()
 
     def _build_sidebar(self) -> Gtk.Widget:
+        self._install_bundled_icons()
         self.sidebar_stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
 
         self.tree = VaultTree(self._on_tree_activate, self._on_tree_open_new_tab)
         self.tree.show_hidden = self.store.state.show_hidden
         self.tree.markdown_only = self.store.state.markdown_only
         tree_scroll = Gtk.ScrolledWindow(child=self.tree.view, vexpand=True)
-        self.sidebar_stack.add_titled(tree_scroll, "files", "Files")
+        self._add_sidebar_page(tree_scroll, "files", "Files", "folder-symbolic")
 
         search_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         search_box.set_margin_top(6)
-        self.search_entry = Gtk.SearchEntry(placeholder_text="Search notes…")
+        self.search_entry = Gtk.SearchEntry(placeholder_text="Search — words, path:, file:, tag:")
         self.search_entry.set_margin_start(6)
         self.search_entry.set_margin_end(6)
         self.search_entry.connect("search-changed", self._on_search_typed)
@@ -196,7 +206,34 @@ class ReaderWindow(Adw.ApplicationWindow):
         search_box.append(self.search_entry)
         search_box.append(self.search_status)
         search_box.append(results_scroll)
-        self.sidebar_stack.add_titled(search_box, "search", "Search")
+        self._add_sidebar_page(search_box, "search", "Search", "edit-find-symbolic")
+
+        self.links_list = Gtk.ListBox()
+        self.links_list.add_css_class("navigation-sidebar")
+        self.links_list.connect("row-activated", self._on_panel_row)
+        links_scroll = Gtk.ScrolledWindow(child=self.links_list, vexpand=True)
+        self._add_sidebar_page(links_scroll, "links", "Links", "insert-link-symbolic")
+
+        tags_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        tags_box.set_margin_top(6)
+        self.tag_filter = Gtk.SearchEntry(placeholder_text="Filter tags…")
+        self.tag_filter.set_margin_start(6)
+        self.tag_filter.set_margin_end(6)
+        self.tag_filter.connect("search-changed", self._refresh_tags_panel)
+        self.tags_list = Gtk.ListBox()
+        self.tags_list.add_css_class("navigation-sidebar")
+        self.tags_list.connect("row-activated", self._on_tag_row)
+        tags_box.append(self.tag_filter)
+        tags_box.append(Gtk.ScrolledWindow(child=self.tags_list, vexpand=True))
+        self._add_sidebar_page(tags_box, "tags", "Tags", "reader-tag-symbolic")
+
+        self.bookmarks_list = Gtk.ListBox()
+        self.bookmarks_list.add_css_class("navigation-sidebar")
+        self.bookmarks_list.connect("row-activated", self._on_panel_row)
+        bookmarks_scroll = Gtk.ScrolledWindow(child=self.bookmarks_list, vexpand=True)
+        self._add_sidebar_page(
+            bookmarks_scroll, "bookmarks", "Bookmarks", "user-bookmarks-symbolic"
+        )
 
         switcher = Gtk.StackSwitcher(stack=self.sidebar_stack)
         switcher.set_margin_top(6)
@@ -212,6 +249,165 @@ class ReaderWindow(Adw.ApplicationWindow):
         box.append(self.sidebar_stack)
         box.append(self.index_status)
         return box
+
+    def _add_sidebar_page(self, child, name: str, title: str, icon: str) -> None:
+        page = self.sidebar_stack.add_titled(child, name, title)
+        page.set_icon_name(icon)
+
+    def _install_bundled_icons(self) -> None:
+        """Adds the app's bundled symbolic icons to the icon search path."""
+        from importlib import resources
+
+        from gi.repository import Gdk
+
+        display = Gdk.Display.get_default()
+        if display is None:
+            return
+        icon_dir = resources.files("obsidian_reader.assets").joinpath("icons")
+        Gtk.IconTheme.get_for_display(display).add_search_path(str(icon_dir))
+
+    # -- sidebar panels ----------------------------------------------------
+
+    def _clear_list(self, listbox: Gtk.ListBox) -> None:
+        while (row := listbox.get_first_child()) is not None:
+            listbox.remove(row)
+
+    def _panel_header(self, text: str) -> Gtk.ListBoxRow:
+        label = Gtk.Label(label=text, xalign=0.0)
+        label.add_css_class("heading")
+        label.set_margin_top(8)
+        row = Gtk.ListBoxRow(child=label, activatable=False, selectable=False)
+        return row
+
+    def _panel_note(self, text: str) -> Gtk.ListBoxRow:
+        label = Gtk.Label(label=text, xalign=0.0, wrap=True)
+        label.add_css_class("dim-label")
+        return Gtk.ListBoxRow(child=label, activatable=False, selectable=False)
+
+    def _panel_row(
+        self, title: str, caption: str = "", snippet: str = "", note_path: str = ""
+    ) -> Gtk.ListBoxRow:
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        box.append(Gtk.Label(label=title, xalign=0.0, ellipsize=3))
+        if caption:
+            caption_label = Gtk.Label(label=caption, xalign=0.0, ellipsize=2)
+            caption_label.add_css_class("dim-label")
+            caption_label.add_css_class("caption")
+            box.append(caption_label)
+        if snippet:
+            snippet_label = Gtk.Label(label=snippet, xalign=0.0, wrap=True, lines=2, ellipsize=3)
+            snippet_label.add_css_class("caption")
+            box.append(snippet_label)
+        box.set_margin_top(4)
+        box.set_margin_bottom(4)
+        row = Gtk.ListBoxRow(child=box)
+        row.note_path = note_path
+        if not note_path:
+            row.set_activatable(False)
+        return row
+
+    def _on_panel_row(self, _list, row) -> None:
+        path = getattr(row, "note_path", "")
+        if path:
+            self.reader.load_note(path)
+
+    def _update_links_panel(self) -> None:
+        """Rebuilds the Links page for the current note: linked mentions, then outgoing."""
+        self._clear_list(self.links_list)
+        if self.vault is None:
+            self.links_list.append(self._panel_note("Open a vault first"))
+            return
+        if self.graph is None or not self.graph.ready:
+            self.links_list.append(self._panel_note("Link index is still building…"))
+            return
+        rel = self.current_note
+        if not rel:
+            self.links_list.append(self._panel_note("Open a note to see its links"))
+            return
+        mentions = self.graph.backlinks.get(rel, [])
+        self.links_list.append(self._panel_header(f"Linked mentions ({len(mentions)})"))
+        for mention in mentions[:MAX_PANEL_ROWS]:
+            title = mention.source.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+            self.links_list.append(
+                self._panel_row(title, mention.source, mention.context, mention.source)
+            )
+        if not mentions:
+            self.links_list.append(self._panel_note("No notes link here"))
+        outgoing = self.graph.outgoing.get(rel, [])
+        self.links_list.append(self._panel_header(f"Outgoing links ({len(outgoing)})"))
+        for link in outgoing[:MAX_PANEL_ROWS]:
+            if link.kind == "note":
+                title = link.path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+                self.links_list.append(self._panel_row(title, link.path, "", link.path))
+            else:
+                state = "ambiguous" if link.kind == "ambiguous" else "not found"
+                self.links_list.append(self._panel_note(f"{link.target} — {state}"))
+        if not outgoing:
+            self.links_list.append(self._panel_note("No outgoing links"))
+
+    def _refresh_tags_panel(self, *_args) -> None:
+        """Rebuilds the Tags page from the graph, filtered by the tag filter entry."""
+        self._clear_list(self.tags_list)
+        if self.graph is None or not self.graph.ready:
+            self.tags_list.append(
+                self._panel_note(
+                    "Tag index is still building…" if self.vault else "Open a vault first"
+                )
+            )
+            return
+        needle = self.tag_filter.get_text().strip().lstrip("#").casefold()
+        shown = 0
+        for folded in sorted(self.graph.tags):
+            if needle and needle not in folded:
+                continue
+            display = self.graph.tag_names[folded]
+            count = len(self.graph.tags[folded])
+            box = Gtk.Box(spacing=6)
+            name = Gtk.Label(label=f"#{display}", xalign=0.0, ellipsize=2, hexpand=True)
+            counter = Gtk.Label(label=str(count))
+            counter.add_css_class("dim-label")
+            counter.add_css_class("caption")
+            box.append(name)
+            box.append(counter)
+            box.set_margin_top(3)
+            box.set_margin_bottom(3)
+            row = Gtk.ListBoxRow(child=box)
+            row.tag_value = display
+            self.tags_list.append(row)
+            shown += 1
+            if shown >= 500:
+                break
+        if shown == 0:
+            self.tags_list.append(self._panel_note("No tags"))
+
+    def _on_tag_row(self, _list, row) -> None:
+        """Turns a tag row into a search: `tag:<name>` submitted on the Search page."""
+        tag = getattr(row, "tag_value", "")
+        if not tag:
+            return
+        self.search_entry.set_text(f"tag:{tag}")
+        self.sidebar_stack.set_visible_child_name("search")
+        self._on_search_submitted(self.search_entry)
+
+    def _refresh_bookmarks_panel(self) -> None:
+        """Rebuilds the Bookmarks page from the vault's own bookmarks file."""
+        self._clear_list(self.bookmarks_list)
+        if self.vault is None:
+            self.bookmarks_list.append(self._panel_note("Open a vault first"))
+            return
+        bookmarks = read_bookmarks(self.vault)
+        if not bookmarks:
+            self.bookmarks_list.append(self._panel_note("No bookmarks in this vault"))
+            return
+        last_group = None
+        for bookmark in bookmarks:
+            if bookmark.group != last_group:
+                if bookmark.group:
+                    self.bookmarks_list.append(self._panel_header(bookmark.group))
+                last_group = bookmark.group
+            self.bookmarks_list.append(
+                self._panel_row(bookmark.title, bookmark.rel, "", bookmark.rel)
+            )
 
     def _build_content(self) -> Gtk.Widget:
         self.tab_bar = Adw.TabBar(view=self.tab_view, autohide=True)
@@ -232,6 +428,10 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.tab_view.set_vexpand(True)
         overlay = Gtk.Overlay(child=self.tab_view)
         overlay.add_overlay(self.hover_label)
+        self.content_overlay = overlay
+        motion = Gtk.EventControllerMotion()
+        motion.connect("motion", self._on_pointer_motion)
+        overlay.add_controller(motion)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.append(self.tab_bar)
@@ -434,9 +634,13 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.vault = vault
         self.renderer = renderer
         self.search_index = None
+        self.graph = None
         self.store.remember_vault(str(vault.root))
         self._refresh_recents_menu()
         self.tree.set_vault(vault.root)
+        self._refresh_bookmarks_panel()
+        self._refresh_tags_panel()
+        self._update_links_panel()
         self.title_widget.set_subtitle(vault.root.name)
         self._close_extra_tabs()
         if not vault.notes:
@@ -468,15 +672,18 @@ class ReaderWindow(Adw.ApplicationWindow):
             GLib.idle_add(self.index_status.set_text, f"Indexing {done}/{total}…")
 
         def build():
-            index = SearchIndex.build(vault, progress=progress)
-            GLib.idle_add(self._index_ready, vault, index)
+            index, graph = build_indexes(vault, progress=progress)
+            GLib.idle_add(self._index_ready, vault, index, graph)
 
         threading.Thread(target=build, daemon=True).start()
 
-    def _index_ready(self, vault: Vault, index: SearchIndex) -> None:
+    def _index_ready(self, vault: Vault, index: SearchIndex, graph: VaultGraph) -> None:
         if vault is self.vault:
             self.search_index = index
-            self.index_status.set_text(f"{len(vault.notes)} notes")
+            self.graph = graph
+            self.index_status.set_text(f"{len(vault.notes)} notes · {len(graph.tags)} tags")
+            self._refresh_tags_panel()
+            self._update_links_panel()
         return False
 
     def _open_file_dialog(self) -> None:
@@ -529,6 +736,8 @@ class ReaderWindow(Adw.ApplicationWindow):
             if reader is not None:
                 reader.last_render = rendered
             return rendered.page
+        if segments and segments[0] == "preview" and self.renderer is not None:
+            return self.renderer.render_preview("/".join(segments[1:]), theme)
         if segments and segments[0] == "page":
             return self._app_page(segments[1] if len(segments) > 1 else "", theme)
         return ""
@@ -616,6 +825,8 @@ class ReaderWindow(Adw.ApplicationWindow):
             self.outline_button.set_sensitive(False)
             self.title_widget.set_title(APP_NAME)
             self._watch_current_note(None)
+        self._cancel_preview()
+        self._update_links_panel()
 
     def _on_close_page(self, tab_view, page) -> bool:
         """Closes a tab; the last tab falls back to the welcome page instead."""
@@ -699,8 +910,12 @@ class ReaderWindow(Adw.ApplicationWindow):
         if self.search_index is None or not self.search_index.ready:
             self.search_status.set_text("Still indexing — try again shortly")
             return
+        if parse_query(query).tags and (self.graph is None or not self.graph.ready):
+            self.search_status.set_text("The tag index is still building — try again shortly")
+            return
         self._clear_results()
-        hits = self.search_index.search_content(query)
+        note_tags = self.graph.note_tags if self.graph is not None else None
+        hits = self.search_index.search_content(query, note_tags)
         if not hits:
             self.search_status.set_text(f"No matches for “{query}”")
             return
@@ -803,6 +1018,7 @@ class ReaderWindow(Adw.ApplicationWindow):
                 self._toast(f"Vault no longer exists: {path}")
 
     def _on_hover_link(self, _reader, uri: str) -> None:
+        self._cancel_preview()
         if not uri:
             self.hover_label.set_visible(False)
             return
@@ -810,10 +1026,59 @@ class ReaderWindow(Adw.ApplicationWindow):
         if parsed.scheme == "reader":
             segments = [unquote(part) for part in parsed.path.split("/") if part]
             text = "/".join(segments[1:]) if len(segments) > 1 else uri
+            if len(segments) > 1 and segments[0] == "note":
+                rel = "/".join(segments[1:])
+                if rel and rel != self.current_note:
+                    self._preview_pending = rel
+                    self._preview_timeout = GLib.timeout_add(
+                        HOVER_PREVIEW_DELAY_MS, self._show_preview
+                    )
         else:
             text = uri
         self.hover_label.set_text(text)
         self.hover_label.set_visible(True)
+
+    # -- hover preview -----------------------------------------------------
+
+    def _on_pointer_motion(self, _controller, x: float, y: float) -> None:
+        self._pointer = (x, y)
+
+    def _ensure_preview(self) -> None:
+        if self._preview_reader is not None:
+            return
+        self._preview_reader = ReaderView(share_from=self._first_reader)
+        webview = self._preview_reader.webview
+        # The preview is display-only: with input off, a click lands on the page
+        # behind it and can never navigate the popover's own surface.
+        webview.set_sensitive(False)
+        webview.set_size_request(420, 320)
+        self.preview_popover = Gtk.Popover(autohide=False, child=webview)
+        self.preview_popover.set_parent(self.content_overlay)
+
+    def _cancel_preview(self) -> None:
+        self._preview_pending = ""
+        if self._preview_timeout:
+            GLib.source_remove(self._preview_timeout)
+            self._preview_timeout = 0
+        if self._preview_reader is not None and self.preview_popover.get_visible():
+            self.preview_popover.popdown()
+
+    def _show_preview(self) -> bool:
+        from gi.repository import Gdk
+
+        self._preview_timeout = 0
+        rel = self._preview_pending
+        if not rel or self.renderer is None:
+            return False
+        self._ensure_preview()
+        rect = Gdk.Rectangle()
+        rect.x, rect.y = int(self._pointer[0]), int(self._pointer[1])
+        rect.width = rect.height = 1
+        self.preview_popover.set_pointing_to(rect)
+        uri = f"reader:///preview/{GLib.uri_escape_string(rel, '/', True)}"
+        self._preview_reader.webview.load_uri(uri)
+        self.preview_popover.popup()
+        return False
 
     # -- file monitoring ---------------------------------------------------
 

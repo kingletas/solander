@@ -179,3 +179,22 @@ def test_unreadable_note_returns_an_error_page(vault):
 def test_helper_pages_build(vault):
     assert "raw-source" in build_source_page("# src", "T")
     assert "message-state" in build_message_page("Empty", "Nothing here")
+
+
+def test_preview_renders_the_opening_of_a_note(vault):
+    page = NoteRenderer(vault).render_preview("Projects/Alpha.md")
+    assert "<h1>Alpha</h1>" in page
+    assert "Intro paragraph" in page
+
+
+def test_preview_truncates_a_long_note(vault, vault_dir):
+    (vault_dir / "Long.md").write_text("word\n" * 5000)
+    vault.reindex()
+    page = NoteRenderer(vault).render_preview("Long.md")
+    assert "preview-more" in page
+    assert page.count("word") < 1000
+
+
+def test_preview_of_an_unreadable_note_names_the_failure(vault):
+    page = NoteRenderer(vault).render_preview("Missing.md")
+    assert "Cannot preview" in page

@@ -37,7 +37,7 @@ run: ## Run from the working tree; make run VAULT=~/path/to/vault opens it
 
 .PHONY: smoke
 smoke: ## Drive the real window through open, render, and search on the live display
-	@tmp=$$(mktemp -d) && printf '# A\n\n[[Second Note]]\n\n> [!note]\n> callout\n' > "$$tmp/A.md" && printf '# B\n' > "$$tmp/Second Note.md" && XDG_CONFIG_HOME="$$tmp/config" uv run python scripts/gui-smoke.py "$$tmp"; rm -rf "$$tmp"
+	@tmp=$$(mktemp -d) && printf '# A\n\n[[Second Note]]\n\nAn #alpha tag.\n\n> [!note]\n> callout\n' > "$$tmp/A.md" && printf '# B\n' > "$$tmp/Second Note.md" && mkdir "$$tmp/.obsidian" && printf '{"items":[{"type":"file","path":"A.md"}]}' > "$$tmp/.obsidian/bookmarks.json" && XDG_CONFIG_HOME="$$tmp/config" uv run python scripts/gui-smoke.py "$$tmp"; rm -rf "$$tmp"
 
 # --- install ---
 

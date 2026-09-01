@@ -253,3 +253,8 @@ section.footnotes {
   color: var(--muted);
 }
 .message-state h1 { border: none; font-size: 1.3rem; color: var(--fg); }
+
+/* Hover preview */
+.preview { font-size: 0.85em; }
+.preview h1 { font-size: 1.1em; margin-top: 0; }
+.preview-more { color: var(--muted); margin-top: 0.5em; }
