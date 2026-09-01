@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="0.3.0" date="2026-09-01">
+      <description>
+        <p>Tabs with middle-click and Ctrl+click to open notes and links in
+        them, a resizable sidebar, and single-click folder expansion.</p>
+      </description>
+    </release>
     <release version="0.2.2" date="2026-09-01">
       <description>
         <p>The launcher execs the interpreter directly so the AppArmor sandbox

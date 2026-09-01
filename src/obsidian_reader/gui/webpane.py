@@ -6,7 +6,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("WebKit", "6.0")
-from gi.repository import Gio, GLib, GObject, WebKit
+from gi.repository import Gdk, Gio, GLib, GObject, WebKit
 
 from ..core.render import build_message_page
 
@@ -25,6 +25,7 @@ class ReaderView(GObject.Object):
 
     __gsignals__ = {
         "navigate-note": (GObject.SignalFlags.RUN_FIRST, None, (str, str)),
+        "navigate-note-new-tab": (GObject.SignalFlags.RUN_FIRST, None, (str, str)),
         "choose-ambiguous": (GObject.SignalFlags.RUN_FIRST, None, (str, str)),
         "open-external-file": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
         "open-external-uri": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
@@ -32,18 +33,25 @@ class ReaderView(GObject.Object):
         "hover-link": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
     }
 
-    def __init__(self):
+    def __init__(self, share_from: "ReaderView | None" = None):
         super().__init__()
-        self.page_provider = None
-        self.asset_provider = None
-        context = WebKit.WebContext()
-        context.register_uri_scheme("reader", self._serve_reader, None)
-        context.register_uri_scheme("vault", self._serve_vault, None)
-        security = context.get_security_manager()
-        security.register_uri_scheme_as_cors_enabled("vault")
-        security.register_uri_scheme_as_secure("reader")
-        security.register_uri_scheme_as_secure("vault")
-        self.webview = WebKit.WebView(web_context=context)
+        self.current_note = ""
+        self.last_render = None
+        if share_from is not None:
+            self.page_provider = share_from.page_provider
+            self.asset_provider = share_from.asset_provider
+            self.context = share_from.context
+        else:
+            self.page_provider = None
+            self.asset_provider = None
+            self.context = WebKit.WebContext()
+            self.context.register_uri_scheme("reader", self._serve_reader, None)
+            self.context.register_uri_scheme("vault", self._serve_vault, None)
+            security = self.context.get_security_manager()
+            security.register_uri_scheme_as_cors_enabled("vault")
+            security.register_uri_scheme_as_secure("reader")
+            security.register_uri_scheme_as_secure("vault")
+        self.webview = WebKit.WebView(web_context=self.context)
         settings = self.webview.get_settings()
         # The no-script rule fails closed: if this WebKit cannot disable JavaScript,
         # the reader refuses to start rather than rendering hostile input with it on.
@@ -85,7 +93,7 @@ class ReaderView(GObject.Object):
         path = unquote(uri.path)
         page = ""
         if self.page_provider is not None:
-            page = self.page_provider(path)
+            page = self.page_provider(path, request.get_web_view())
         if not page:
             page = build_message_page("Not found", f"Nothing is served at {path}")
         self._finish(request, page.encode("utf-8"), "text/html")
@@ -123,8 +131,13 @@ class ReaderView(GObject.Object):
         uri = action.get_request().get_uri()
         parsed = urlparse(uri)
         scheme = parsed.scheme.casefold()
+        wants_new_tab = (
+            decision_type == WebKit.PolicyDecisionType.NEW_WINDOW_ACTION
+            or action.get_mouse_button() == 2
+            or bool(action.get_modifiers() & Gdk.ModifierType.CONTROL_MASK)
+        )
         if scheme == "reader":
-            return self._route_reader(decision, parsed)
+            return self._route_reader(decision, parsed, wants_new_tab)
         if scheme in ("http", "https", "mailto"):
             decision.ignore()
             self.emit("open-external-uri", uri)
@@ -132,9 +145,13 @@ class ReaderView(GObject.Object):
         decision.ignore()
         return True
 
-    def _route_reader(self, decision, parsed) -> bool:
+    def _route_reader(self, decision, parsed, wants_new_tab: bool = False) -> bool:
         segments = [unquote(part) for part in parsed.path.split("/") if part]
         head = segments[0] if segments else ""
+        if head == "note" and wants_new_tab:
+            decision.ignore()
+            self.emit("navigate-note-new-tab", "/".join(segments[1:]), unquote(parsed.fragment))
+            return True
         if head in ("note", "page"):
             decision.use()
             return True

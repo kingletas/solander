@@ -6,7 +6,7 @@ from pathlib import Path
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gio, GObject, Gtk
+from gi.repository import Gdk, Gio, GObject, Gtk
 
 from ..core.vault import NOTE_EXTENSIONS
 
@@ -32,11 +32,12 @@ class TreeNode(GObject.Object):
 class VaultTree:
     """Builds the ListView over a TreeListModel and reports row activation."""
 
-    def __init__(self, on_activate):
+    def __init__(self, on_activate, on_open_new_tab=None):
         self.root: Path | None = None
         self.show_hidden = False
         self.markdown_only = True
         self._on_activate = on_activate
+        self._on_open_new_tab = on_open_new_tab
         self._root_store = Gio.ListStore(item_type=TreeNode)
         tree_model = Gtk.TreeListModel.new(
             self._root_store, passthrough=False, autoexpand=False, create_func=self._children
@@ -47,6 +48,7 @@ class VaultTree:
         factory.connect("bind", self._bind_row)
         self.view = Gtk.ListView(model=self.selection, factory=factory)
         self.view.add_css_class("navigation-sidebar")
+        self.view.set_single_click_activate(True)
         self.view.connect("activate", self._activated)
 
     def set_vault(self, root: Path | None) -> None:
@@ -100,6 +102,29 @@ class VaultTree:
         box.append(label)
         expander.set_child(box)
         item.set_child(expander)
+
+        def open_new_tab_from(gesture) -> bool:
+            row = item.get_item()
+            node = row.get_item() if row is not None else None
+            if node is not None and node.is_note and self._on_open_new_tab is not None:
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+                self._on_open_new_tab(node)
+                return True
+            return False
+
+        middle = Gtk.GestureClick(button=Gdk.BUTTON_MIDDLE)
+        middle.connect("pressed", lambda gesture, *_: open_new_tab_from(gesture))
+        expander.add_controller(middle)
+
+        primary = Gtk.GestureClick(button=Gdk.BUTTON_PRIMARY)
+
+        def primary_pressed(gesture, *_):
+            state = gesture.get_current_event_state()
+            if state & Gdk.ModifierType.CONTROL_MASK:
+                open_new_tab_from(gesture)
+
+        primary.connect("pressed", primary_pressed)
+        expander.add_controller(primary)
 
     def _bind_row(self, _factory, item) -> None:
         row = item.get_item()

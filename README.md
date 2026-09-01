@@ -13,6 +13,7 @@ It is a fallback reader, not an Obsidian replacement: something dependable to re
 - Resolves links the way Obsidian does: exact relative path first, then vault-root path, then filename match — and when a name is ambiguous it asks instead of guessing.
 - Vault-wide filename and full-text search, quick-open, in-note find, back/forward history, outline navigation, session restore, light/dark/system appearance.
 - A reading (zen) mode — `F11` strips every piece of chrome, `Esc` brings it back — and PDF export (`Ctrl+Shift+E`) of the current rendered note, which refuses to write inside the vault.
+- Tabs: middle-click or `Ctrl+click` a note or wikilink to open it in a new tab (`Ctrl+T`/`Ctrl+W` to open and close); a plain click opens in the current tab. The sidebar drags to any width, and both survive a restart.
 - Reads `.obsidian/app.json` (read-only) to honor the vault's attachment-folder setting.
 
 ## What it will never do

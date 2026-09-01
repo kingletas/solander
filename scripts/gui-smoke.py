@@ -28,8 +28,8 @@ def run_checks(app):
     check("vault opened", window.vault is not None)
     check("vault indexed notes", window.vault is not None and len(window.vault.notes) >= 2)
     check("a note is shown", bool(window.current_note))
-    check("renderer produced a page", getattr(window, "_last_render", None) is not None)
-    rendered = getattr(window, "_last_render", None)
+    rendered = window.reader.last_render
+    check("renderer produced a page", rendered is not None)
     if rendered is not None:
         check("callout rendered", "callout" in rendered.body)
         check("wikilink rendered", "reader:///note/" in rendered.body)
@@ -45,12 +45,30 @@ def run_checks(app):
         check("navigation updated current note", window.current_note == "Second Note.md")
 
         window._set_zen(True)
-        check("zen hides sidebar and chrome", not window.split.get_show_sidebar())
+        check("zen hides sidebar and chrome", not window.sidebar_widget.get_visible())
         check("zen reveals no top bars", not window.toolbar_view.get_reveal_top_bars())
         window._set_zen(False)
-        check("leaving zen restores the sidebar", window.split.get_show_sidebar())
+        check("leaving zen restores the sidebar", window.sidebar_widget.get_visible())
         check("leaving zen restores the header", window.toolbar_view.get_reveal_top_bars())
 
+        check("sidebar is resizable", window.paned.get_position() > 0)
+        window.paned.set_position(340)
+        check("sidebar width follows the drag position", window.paned.get_position() == 340)
+
+        window.open_in_new_tab("A.md")
+
+        def check_tabs():
+            check("a second tab opened", window.tab_view.get_n_pages() == 2)
+            check("new tab shows its note", window.current_note == "A.md")
+            window._close_current_tab()
+            check("closing returns to one tab", window.tab_view.get_n_pages() == 1)
+            continue_pdf()
+            return False
+
+        GLib.timeout_add(1200, check_tabs)
+        return False
+
+    def continue_pdf():
         import tempfile
 
         from gi.repository import Gio
@@ -67,7 +85,6 @@ def run_checks(app):
             return False
 
         GLib.timeout_add(2500, check_pdf)
-        return False
 
     GLib.timeout_add(1500, after_navigation)
     return False

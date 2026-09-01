@@ -30,6 +30,8 @@ class SessionState:
     window_width: int = 1100
     window_height: int = 760
     sidebar_visible: bool = True
+    sidebar_width: int = 280
+    open_tabs: list[str] = field(default_factory=list)
 
 
 class SessionStore:

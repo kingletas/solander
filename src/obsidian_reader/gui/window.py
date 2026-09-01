@@ -32,6 +32,8 @@ SHORTCUTS = [
     ("Ctrl+R", "Reload current note"),
     ("Ctrl+U", "Toggle raw source view"),
     ("Alt+Left / Alt+Right", "Back / Forward"),
+    ("Ctrl+T / Ctrl+W", "New tab / Close tab"),
+    ("Middle-click or Ctrl+click", "Open note or link in a new tab"),
     ("F9", "Toggle sidebar"),
     ("F11", "Reading mode (Esc leaves)"),
     ("Ctrl+Shift+E", "Export as PDF"),
@@ -59,18 +61,56 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     # -- construction ------------------------------------------------------
 
+    @property
+    def reader(self) -> ReaderView:
+        """The ReaderView of the selected tab; a first tab is created on demand."""
+        page = self.tab_view.get_selected_page()
+        if page is None:
+            return self._create_tab()
+        return self._readers[page.get_child()]
+
+    def _create_reader(self) -> ReaderView:
+        reader = ReaderView(share_from=self._first_reader)
+        if self._first_reader is None:
+            reader.page_provider = self._provide_page
+            reader.asset_provider = self._provide_asset
+            self._first_reader = reader
+        reader.connect("open-external-uri", self._on_external_uri)
+        reader.connect("open-external-file", self._on_external_file)
+        reader.connect("choose-ambiguous", self._on_ambiguous)
+        reader.connect("run-action", self._on_page_action)
+        reader.connect("hover-link", self._on_hover_link)
+        reader.connect("navigate-note-new-tab", self._on_navigate_new_tab)
+        reader.webview.connect("load-changed", self._on_load_changed)
+        reader.webview.set_zoom_level(self.store.state.zoom)
+        reader.webview.set_vexpand(True)
+        self._readers[reader.webview] = reader
+        return reader
+
+    def _create_tab(self, select: bool = True) -> ReaderView:
+        """Adds a tab holding a fresh ReaderView and optionally selects it."""
+        reader = self._create_reader()
+        page = self.tab_view.append(reader.webview)
+        page.set_title("New Tab")
+        if select:
+            self.tab_view.set_selected_page(page)
+        return reader
+
+    def open_in_new_tab(self, rel: str, anchor: str = "") -> None:
+        """Opens a note in a new selected tab."""
+        reader = self._create_tab()
+        reader.load_note(rel, anchor)
+
+    def _on_navigate_new_tab(self, _reader, rel: str, anchor: str) -> None:
+        self.open_in_new_tab(rel, anchor)
+
     def _build_ui(self) -> None:
-        self.reader = ReaderView()
-        self.reader.page_provider = self._provide_page
-        self.reader.asset_provider = self._provide_asset
-        self.reader.connect("open-external-uri", self._on_external_uri)
-        self.reader.connect("open-external-file", self._on_external_file)
-        self.reader.connect("choose-ambiguous", self._on_ambiguous)
-        self.reader.connect("run-action", self._on_page_action)
-        self.reader.connect("hover-link", self._on_hover_link)
-        self.reader.webview.connect("load-changed", self._on_load_changed)
-        self.reader.webview.set_zoom_level(self.store.state.zoom)
-        self.reader.webview.set_vexpand(True)
+        self._readers: dict = {}
+        self._first_reader = None
+        self.tab_view = Adw.TabView()
+        self.tab_view.connect("notify::selected-page", lambda *_: self._sync_chrome())
+        self.tab_view.connect("close-page", self._on_close_page)
+        self.tab_view.connect("page-detached", self._on_page_detached)
 
         header = Adw.HeaderBar()
         self.title_widget = Adw.WindowTitle(title=APP_NAME, subtitle="")
@@ -108,26 +148,32 @@ class ReaderWindow(Adw.ApplicationWindow):
         search_button.connect("clicked", lambda *_: self._show_search())
         header.pack_end(search_button)
 
-        self.split = Adw.OverlaySplitView(
-            show_sidebar=self.store.state.sidebar_visible, sidebar_width_fraction=0.22
+        self.sidebar_widget = self._build_sidebar()
+        self.sidebar_widget.set_visible(self.store.state.sidebar_visible)
+        self.paned = Gtk.Paned(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            position=self.store.state.sidebar_width,
+            shrink_start_child=False,
+            resize_start_child=False,
         )
-        self.split.set_sidebar(self._build_sidebar())
-        self.split.set_content(self._build_content())
+        self.paned.set_start_child(self.sidebar_widget)
+        self.paned.set_end_child(self._build_content())
 
         self.toolbar_view = Adw.ToolbarView()
         self.toolbar_view.add_top_bar(header)
-        self.toolbar_view.set_content(self.split)
+        self.toolbar_view.set_content(self.paned)
         self.toasts = Adw.ToastOverlay(child=self.toolbar_view)
         self.set_content(self.toasts)
         self.connect("close-request", self._on_close)
         self._install_drop_target()
         self._load_css()
         self._refresh_recents_menu()
+        self._create_tab()
 
     def _build_sidebar(self) -> Gtk.Widget:
         self.sidebar_stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
 
-        self.tree = VaultTree(self._on_tree_activate)
+        self.tree = VaultTree(self._on_tree_activate, self._on_tree_open_new_tab)
         self.tree.show_hidden = self.store.state.show_hidden
         self.tree.markdown_only = self.store.state.markdown_only
         tree_scroll = Gtk.ScrolledWindow(child=self.tree.view, vexpand=True)
@@ -168,6 +214,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         return box
 
     def _build_content(self) -> Gtk.Widget:
+        self.tab_bar = Adw.TabBar(view=self.tab_view, autohide=True)
         self.find_bar = Gtk.SearchBar()
         self.find_entry = Gtk.SearchEntry(placeholder_text="Find in note…")
         self.find_entry.connect("search-changed", self._on_find_changed)
@@ -182,10 +229,12 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.hover_label.set_valign(Gtk.Align.END)
         self.hover_label.set_visible(False)
 
-        overlay = Gtk.Overlay(child=self.reader.webview)
+        self.tab_view.set_vexpand(True)
+        overlay = Gtk.Overlay(child=self.tab_view)
         overlay.add_overlay(self.hover_label)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(self.tab_bar)
         box.append(self.find_bar)
         box.append(overlay)
         return box
@@ -198,6 +247,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         appearance.append("Dark", "win.appearance::dark")
         menu.append_submenu("Appearance", appearance)
         view = Gio.Menu()
+        view.append("New Tab", "win.new-tab")
         view.append("Reading Mode", "win.zen")
         view.append("Raw Source View", "win.toggle-source")
         view.append("Show Hidden Files", "win.show-hidden")
@@ -279,6 +329,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         add("back", lambda *_: self.reader.webview.go_back(), ["<Alt>Left"])
         add("forward", lambda *_: self.reader.webview.go_forward(), ["<Alt>Right"])
         add("toggle-sidebar", lambda *_: self._toggle_sidebar(), ["F9"])
+        add("new-tab", lambda *_: self._new_tab(), ["<Control>t"])
+        add("close-tab", lambda *_: self._close_current_tab(), ["<Control>w"])
         add(
             "zen",
             self._on_zen,
@@ -343,22 +395,42 @@ class ReaderWindow(Adw.ApplicationWindow):
         """Restores the previous session when enabled, otherwise shows the welcome page."""
         state = self.store.state
         if state.restore_session and state.last_vault and Path(state.last_vault).is_dir():
-            self._open_vault(Path(state.last_vault), focus_note=state.last_note or None)
+            self._open_vault(
+                Path(state.last_vault), focus_note=state.last_note or None, restore_tabs=True
+            )
         else:
             self.reader.load_page("welcome")
 
-    def _open_vault(self, root: Path, focus_note: str | None = None) -> None:
+    def _open_vault(
+        self, root: Path, focus_note: str | None = None, restore_tabs: bool = False
+    ) -> None:
         self.index_status.set_text("Opening vault…")
         self.title_widget.set_subtitle(root.name)
 
         def build():
             vault = Vault.open(root)
             renderer = NoteRenderer(vault)
-            GLib.idle_add(self._vault_ready, vault, renderer, focus_note)
+            GLib.idle_add(self._vault_ready, vault, renderer, focus_note, restore_tabs)
 
         threading.Thread(target=build, daemon=True).start()
 
-    def _vault_ready(self, vault: Vault, renderer: NoteRenderer, focus_note: str | None) -> None:
+    def _close_extra_tabs(self) -> None:
+        keep = self.tab_view.get_selected_page()
+        extras = [
+            self.tab_view.get_nth_page(i)
+            for i in range(self.tab_view.get_n_pages())
+            if self.tab_view.get_nth_page(i) is not keep
+        ]
+        for page in extras:
+            self.tab_view.close_page(page)
+
+    def _vault_ready(
+        self,
+        vault: Vault,
+        renderer: NoteRenderer,
+        focus_note: str | None,
+        restore_tabs: bool = False,
+    ) -> None:
         self.vault = vault
         self.renderer = renderer
         self.search_index = None
@@ -366,6 +438,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._refresh_recents_menu()
         self.tree.set_vault(vault.root)
         self.title_widget.set_subtitle(vault.root.name)
+        self._close_extra_tabs()
         if not vault.notes:
             self.index_status.set_text("")
             self.reader.load_page("empty-vault")
@@ -379,6 +452,12 @@ class ReaderWindow(Adw.ApplicationWindow):
                 self.reader.load_page("welcome")
         else:
             self.reader.load_note(vault.notes[0])
+        if restore_tabs:
+            current = self.store.state.last_note
+            for rel in self.store.state.open_tabs:
+                if rel != current and vault.has_file(rel):
+                    background = self._create_tab(select=False)
+                    background.load_note(rel)
         self._build_search_index()
         return False
 
@@ -435,17 +514,20 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _theme(self) -> str:
         return "dark" if Adw.StyleManager.get_default().get_dark() else "light"
 
-    def _provide_page(self, path: str) -> str:
+    def _provide_page(self, path: str, webview=None) -> str:
         theme = self._theme()
+        reader = self._readers.get(webview)
         segments = [part for part in path.split("/") if part]
         if segments and segments[0] == "note" and self.renderer is not None:
             rel = "/".join(segments[1:])
             if self.source_view:
-                self._last_render = None
+                if reader is not None:
+                    reader.last_render = None
                 note = self.vault.read_note(rel)
                 return build_source_page(note.text or note.error, rel, theme)
             rendered = self.renderer.render(rel, theme)
-            self._last_render = rendered
+            if reader is not None:
+                reader.last_render = rendered
             return rendered.page
         if segments and segments[0] == "page":
             return self._app_page(segments[1] if len(segments) > 1 else "", theme)
@@ -491,30 +573,63 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _on_load_changed(self, webview, event) -> None:
         if event != WebKit.LoadEvent.COMMITTED:
             return
-        self.back_button.set_sensitive(webview.can_go_back())
-        self.forward_button.set_sensitive(webview.can_go_forward())
+        reader = self._readers.get(webview)
+        if reader is None:
+            return
         parsed = urlparse(webview.get_uri() or "")
         segments = [unquote(part) for part in parsed.path.split("/") if part]
         if parsed.scheme == "reader" and segments and segments[0] == "note":
-            rel = "/".join(segments[1:])
-            self._note_shown(rel)
+            reader.current_note = "/".join(segments[1:])
         else:
-            self.current_note = ""
+            reader.current_note = ""
+        page = self.tab_view.get_page(webview)
+        if page is not None:
+            title = reader.current_note.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+            page.set_title(title or APP_NAME)
+        selected = self.tab_view.get_selected_page()
+        if selected is not None and selected.get_child() is webview:
+            self._sync_chrome()
+
+    def _sync_chrome(self) -> None:
+        """Points every piece of window chrome at the selected tab's state."""
+        page = self.tab_view.get_selected_page()
+        if page is None:
+            return
+        reader = self._readers.get(page.get_child())
+        if reader is None:
+            return
+        webview = reader.webview
+        self.back_button.set_sensitive(webview.can_go_back())
+        self.forward_button.set_sensitive(webview.can_go_forward())
+        self.current_note = reader.current_note
+        if reader.current_note:
+            self.store.state.last_note = reader.current_note
+            title = reader.current_note.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+            self.title_widget.set_title(title)
+            self.tree.select_path(reader.current_note)
+            rendered = reader.last_render
+            outline = rendered.outline if rendered is not None and rendered.title else []
+            self._fill_outline(outline)
+            if self.vault is not None:
+                self._watch_current_note(self.vault.root / reader.current_note)
+        else:
             self.outline_button.set_sensitive(False)
             self.title_widget.set_title(APP_NAME)
             self._watch_current_note(None)
 
-    def _note_shown(self, rel: str) -> None:
-        self.current_note = rel
-        self.store.state.last_note = rel
-        title = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
-        self.title_widget.set_title(title)
-        self.tree.select_path(rel)
-        rendered = getattr(self, "_last_render", None)
-        outline = rendered.outline if rendered is not None and rendered.title else []
-        self._fill_outline(outline)
-        if self.vault is not None:
-            self._watch_current_note(self.vault.root / rel)
+    def _on_close_page(self, tab_view, page) -> bool:
+        """Closes a tab; the last tab falls back to the welcome page instead."""
+        if tab_view.get_n_pages() <= 1:
+            reader = self._readers.get(page.get_child())
+            if reader is not None:
+                reader.load_page("welcome")
+            tab_view.close_page_finish(page, False)
+            return True
+        tab_view.close_page_finish(page, True)
+        return True
+
+    def _on_page_detached(self, _tab_view, page, _position) -> None:
+        self._readers.pop(page.get_child(), None)
 
     def _fill_outline(self, outline) -> None:
         while (row := self.outline_list.get_first_child()) is not None:
@@ -540,6 +655,10 @@ class ReaderWindow(Adw.ApplicationWindow):
         else:
             self._toast(f"{node.name} is not a text note — use Open Externally")
 
+    def _on_tree_open_new_tab(self, node) -> None:
+        if node.is_note:
+            self.open_in_new_tab(node.rel)
+
     def _reload(self) -> None:
         if self.vault is not None:
             self.vault.reindex()
@@ -549,7 +668,7 @@ class ReaderWindow(Adw.ApplicationWindow):
     # -- search ------------------------------------------------------------
 
     def _show_search(self) -> None:
-        self.split.set_show_sidebar(True)
+        self.sidebar_widget.set_visible(True)
         self.sidebar_stack.set_visible_child_name("search")
         self.search_entry.grab_focus()
 
@@ -724,8 +843,7 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _on_toggle_source(self, action, value) -> None:
         action.set_state(value)
         self.source_view = value.get_boolean()
-        if self.current_note:
-            self.reader.webview.reload()
+        self._reload_all_tabs()
 
     def _on_show_hidden(self, action, value) -> None:
         action.set_state(value)
@@ -747,7 +865,11 @@ class ReaderWindow(Adw.ApplicationWindow):
         action.set_state(value)
         self.store.state.appearance = value.get_string()
         self._apply_appearance(self.store.state.appearance)
-        self.reader.webview.reload()
+        self._reload_all_tabs()
+
+    def _reload_all_tabs(self) -> None:
+        for reader in self._readers.values():
+            reader.webview.reload()
 
     def _apply_appearance(self, appearance: str) -> None:
         manager = Adw.StyleManager.get_default()
@@ -758,7 +880,19 @@ class ReaderWindow(Adw.ApplicationWindow):
         manager.set_color_scheme(scheme)
 
     def _toggle_sidebar(self) -> None:
-        self.split.set_show_sidebar(not self.split.get_show_sidebar())
+        self.sidebar_widget.set_visible(not self.sidebar_widget.get_visible())
+
+    def _new_tab(self) -> None:
+        reader = self._create_tab()
+        if self.current_note:
+            reader.load_note(self.current_note)
+        else:
+            reader.load_page("welcome")
+
+    def _close_current_tab(self) -> None:
+        page = self.tab_view.get_selected_page()
+        if page is not None:
+            self.tab_view.close_page(page)
 
     def _on_zen(self, action, value) -> None:
         action.set_state(value)
@@ -774,15 +908,17 @@ class ReaderWindow(Adw.ApplicationWindow):
             zen_action.set_state(GLib.Variant.new_boolean(on))
         self.leave_zen_action.set_enabled(on)
         if on:
-            self._pre_zen_sidebar = self.split.get_show_sidebar()
-            self.split.set_show_sidebar(False)
+            self._pre_zen_sidebar = self.sidebar_widget.get_visible()
+            self.sidebar_widget.set_visible(False)
+            self.tab_bar.set_visible(False)
             self.toolbar_view.set_reveal_top_bars(False)
             self.fullscreen()
             self._toast("Reading mode — press Esc or F11 to leave")
         else:
             self.unfullscreen()
             self.toolbar_view.set_reveal_top_bars(True)
-            self.split.set_show_sidebar(getattr(self, "_pre_zen_sidebar", True))
+            self.tab_bar.set_visible(True)
+            self.sidebar_widget.set_visible(getattr(self, "_pre_zen_sidebar", True))
 
     def _export_pdf_dialog(self) -> None:
         if not self.current_note:
@@ -830,7 +966,8 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _zoom(self, delta: float | None) -> None:
         zoom = 1.0 if delta is None else max(0.5, min(3.0, self.store.state.zoom + delta))
         self.store.state.zoom = round(zoom, 2)
-        self.reader.webview.set_zoom_level(self.store.state.zoom)
+        for reader in self._readers.values():
+            reader.webview.set_zoom_level(self.store.state.zoom)
 
     # -- current-note utilities --------------------------------------------
 
@@ -914,6 +1051,15 @@ class ReaderWindow(Adw.ApplicationWindow):
         state = self.store.state
         state.window_width = self.get_width()
         state.window_height = self.get_height()
-        state.sidebar_visible = self.split.get_show_sidebar()
+        state.sidebar_visible = self.sidebar_widget.get_visible()
+        state.sidebar_width = self.paned.get_position()
+        state.open_tabs = [
+            reader.current_note
+            for reader in (
+                self._readers.get(self.tab_view.get_nth_page(i).get_child())
+                for i in range(self.tab_view.get_n_pages())
+            )
+            if reader is not None and reader.current_note
+        ]
         self.store.save()
         return False
