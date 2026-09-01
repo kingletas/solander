@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="0.2.1" date="2026-09-01">
+      <description>
+        <p>Detects Ubuntu's user-namespace restriction before WebKit's sandbox
+        crashes on it, and prints the AppArmor profile that fixes it.</p>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-09-01">
       <description>
         <p>Reading (zen) mode and PDF export of the rendered note, which

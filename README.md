@@ -47,6 +47,22 @@ obsidian-reader                      # reopen the last session
 
 A second launch hands its path to the running instance instead of racing it for state.
 
+## The sandbox and Ubuntu's user-namespace policy
+
+WebKitGTK wraps its rendering processes in a bubblewrap sandbox, and that sandbox needs to create an unprivileged user namespace. Ubuntu 24.04+ restricts those by default (`kernel.apparmor_restrict_unprivileged_userns=1`), so on a stock system the app would abort with `bwrap: setting up uid map: Permission denied`. The launcher detects this before WebKit crashes and prints the fix.
+
+The fix is a one-time AppArmor profile that grants the permission to this app's interpreter alone (`make install` gives the venv a private interpreter copy so the profile names nothing else). Run `obsidian-reader` once — it prints the profile rendered for your installation — then install it:
+
+```bash
+obsidian-reader 2>&1 | sed -n '/^abi/,/^}/p' | sudo tee /etc/apparmor.d/obsidian-reader
+```
+
+```bash
+sudo apparmor_parser -r /etc/apparmor.d/obsidian-reader
+```
+
+Then start the app again. This is the same mechanism Ubuntu itself ships for browsers: the profile is `flags=(unconfined)` — it confines nothing — plus a single `userns,` grant, and it keeps WebKit's sandbox *on*, which is strictly better than the workaround of disabling user-namespace restrictions system-wide.
+
 ## Development
 
 ```bash

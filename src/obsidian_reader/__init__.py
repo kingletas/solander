@@ -1,6 +1,6 @@
 """Read-only GTK4 reader for Obsidian vaults."""
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 APP_ID = "com.kingletas.ObsidianReader"
 APP_NAME = "Obsidian Reader"

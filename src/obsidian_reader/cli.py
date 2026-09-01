@@ -1,5 +1,8 @@
-"""Command-line entry point: version, path arguments, and a friendly bindings check."""
+"""Command-line entry point: version, path arguments, and environment preflight."""
 
+import os
+import shutil
+import subprocess
 import sys
 
 from . import __version__
@@ -15,6 +18,73 @@ Options:
   -h, --help  this text
 """
 
+SANDBOX_HELP = """\
+obsidian-reader: WebKit's sandbox cannot start under this system's security policy.
+
+Ubuntu restricts unprivileged user namespaces, and the sandbox WebKitGTK wraps
+around its rendering processes needs one. Without it the app aborts with
+"bwrap: setting up uid map: Permission denied".
+
+The fix is a one-time AppArmor profile granting exactly this application's
+interpreter that permission. The profile, rendered for this installation:
+
+{profile}
+
+Install it as /etc/apparmor.d/obsidian-reader and reload AppArmor — the exact
+steps are in the README under "The sandbox and Ubuntu's user-namespace policy".
+
+To bypass this check and try anyway, set OBSIDIAN_READER_SKIP_SANDBOX_CHECK=1.
+"""
+
+PROFILE_TEMPLATE = """\
+abi <abi/4.0>,
+include <tunables/global>
+
+profile obsidian-reader {interpreter} flags=(unconfined) {{
+  userns,
+}}
+"""
+
+
+def sandbox_ready() -> bool:
+    """Reports whether bubblewrap can build a user namespace under this confinement."""
+    bwrap = shutil.which("bwrap")
+    true_bin = shutil.which("true")
+    if bwrap is None or true_bin is None:
+        return True
+    try:
+        probe = subprocess.run(  # noqa: S603 — fixed argv, no untrusted input
+            [bwrap, "--unshare-user", "--ro-bind", "/", "/", true_bin],
+            capture_output=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return True
+    return probe.returncode == 0
+
+
+def rendered_profile() -> str:
+    """Renders the AppArmor profile for the interpreter actually running this app."""
+    interpreter = os.path.realpath(sys.executable)
+    return PROFILE_TEMPLATE.format(interpreter=interpreter).rstrip("\n")
+
+
+def check_sandbox() -> str:
+    """Returns the remediation text when the sandbox cannot start, empty when it can."""
+    if os.environ.get("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", "") == "1":
+        return ""
+    if sandbox_ready():
+        return ""
+    interpreter = os.path.realpath(sys.executable)
+    help_text = SANDBOX_HELP.format(profile=rendered_profile())
+    if not interpreter.startswith(sys.prefix):
+        help_text += (
+            "\nNote: this interpreter is the system Python, so the profile above would\n"
+            "cover every Python process. Run `make install` first — it gives the app\n"
+            "a private interpreter copy the profile can name narrowly.\n"
+        )
+    return help_text
+
 
 def main() -> int:
     """Parses the trivial flags, then hands the real arguments to the GTK application."""
@@ -25,6 +95,10 @@ def main() -> int:
     if "-h" in arguments or "--help" in arguments:
         print(USAGE, end="")
         return 0
+    sandbox_problem = check_sandbox()
+    if sandbox_problem:
+        print(sandbox_problem, file=sys.stderr)
+        return 1
     try:
         import gi
 
