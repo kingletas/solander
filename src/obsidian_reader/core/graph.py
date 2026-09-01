@@ -179,6 +179,25 @@ class VaultGraph:
         self.tag_names.setdefault(folded, tag)
 
 
+def local_neighbors(graph: "VaultGraph", rel: str, cap: int = 30) -> list[tuple[str, str]]:
+    """Returns a note's neighbors as (path, direction): 'in', 'out', or 'both'.
+
+    Bidirectional links come first, then backlinks, then outgoing, capped so a
+    hub note draws a legible ring instead of a starburst.
+    """
+    incoming = {mention.source for mention in graph.backlinks.get(rel, [])}
+    outgoing = {
+        link.path for link in graph.outgoing.get(rel, []) if link.kind == "note" and link.path
+    }
+    outgoing.discard(rel)
+    incoming.discard(rel)
+    both = incoming & outgoing
+    ordered = [(path, "both") for path in sorted(both)]
+    ordered += [(path, "in") for path in sorted(incoming - both)]
+    ordered += [(path, "out") for path in sorted(outgoing - both)]
+    return ordered[:cap]
+
+
 def _collect_tag(tag: str, tags: list[str], seen: set[str]) -> None:
     tag = tag.lstrip("#").strip()
     if not _TAG_BODY.fullmatch(tag) or _is_numeric_tag(tag):

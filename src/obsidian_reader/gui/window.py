@@ -18,7 +18,7 @@ from gi.repository import Adw, Gio, GLib, Gtk, WebKit
 
 from .. import APP_ID, APP_NAME, __version__
 from ..core.bookmarks import read_bookmarks
-from ..core.graph import VaultGraph
+from ..core.graph import VaultGraph, local_neighbors
 from ..core.indexing import sync_indexes
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
 from ..core.resolver import resolve_note
@@ -27,6 +27,7 @@ from ..core.session import SessionStore
 from ..core.store import open_index_store
 from ..core.vault import Vault, file_kind
 from .filetree import VaultTree
+from .localgraph import LocalGraphView
 from .monitor import VaultMonitor
 from .webpane import ReaderView
 
@@ -73,6 +74,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._preview_reader = None
         self._preview_timeout = 0
         self._preview_pending = ""
+        self._pending_highlight = ""
         self._pointer = (0.0, 0.0)
         self.set_default_size(self.store.state.window_width, self.store.state.window_height)
         self._apply_appearance(self.store.state.appearance)
@@ -245,6 +247,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._add_sidebar_page(
             bookmarks_scroll, "bookmarks", "Bookmarks", "user-bookmarks-symbolic"
         )
+
+        self.local_graph = LocalGraphView(lambda rel: self.reader.load_note(rel))
+        self._add_sidebar_page(self.local_graph.area, "graph", "Graph", "reader-graph-symbolic")
 
         switcher = Gtk.StackSwitcher(stack=self.sidebar_stack)
         switcher.set_margin_top(6)
@@ -748,6 +753,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._refresh_bookmarks_panel()
         self._refresh_tags_panel()
         self._update_links_panel()
+        self._update_local_graph()
         return False
 
     def _clear_index_cache(self) -> None:
@@ -858,6 +864,13 @@ class ReaderWindow(Adw.ApplicationWindow):
     # -- navigation and rendering state ------------------------------------
 
     def _on_load_changed(self, webview, event) -> None:
+        if event == WebKit.LoadEvent.FINISHED:
+            # A note opened from a search result gets its matches highlighted.
+            if self._pending_highlight and self.reader.webview is webview:
+                options = WebKit.FindOptions.CASE_INSENSITIVE | WebKit.FindOptions.WRAP_AROUND
+                webview.get_find_controller().search(self._pending_highlight, options, 500)
+                self._pending_highlight = ""
+            return
         if event != WebKit.LoadEvent.COMMITTED:
             return
         reader = self._readers.get(webview)
@@ -891,6 +904,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.current_note = reader.current_note
         if reader.current_note:
             self.store.state.last_note = reader.current_note
+            self.store.remember_note(reader.current_note)
             title = reader.current_note.rsplit("/", 1)[-1].rsplit(".", 1)[0]
             self.title_widget.set_title(title)
             self.tree.select_path(reader.current_note)
@@ -905,6 +919,15 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._watch_current_note(None)
         self._cancel_preview()
         self._update_links_panel()
+        self._update_local_graph()
+
+    def _update_local_graph(self) -> None:
+        if self.graph is None or not self.current_note:
+            self.local_graph.show_note("", [])
+            return
+        self.local_graph.show_note(
+            self.current_note, local_neighbors(self.graph, self.current_note)
+        )
 
     def _on_close_page(self, tab_view, page) -> bool:
         """Closes a tab; the last tab falls back to the welcome page instead."""
@@ -967,7 +990,10 @@ class ReaderWindow(Adw.ApplicationWindow):
         query = entry.get_text().strip()
         self._clear_results()
         if not query:
-            self.search_status.set_text("")
+            recents = [rel for rel in self.store.state.recent_notes if self.vault.has_file(rel)]
+            self.search_status.set_text("Recent notes" if recents else "")
+            for rel in recents:
+                self._add_result(rel, "")
             return
         hits = search_filenames(self.vault, query)
         self.search_status.set_text(
@@ -1024,6 +1050,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.search_results.append(row)
 
     def _on_search_row(self, _list, row) -> None:
+        words = parse_query(self.search_entry.get_text()).words
+        self._pending_highlight = words[0] if words else ""
         self.reader.load_note(row.note_path)
 
     # -- find in note ------------------------------------------------------

@@ -1,15 +1,18 @@
 """The application object: single instance, path handoff, session restore."""
 
+import gc
 from pathlib import Path
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gio
+from gi.repository import Adw, Gio, GLib
 
 from .. import APP_ID
 from .window import ReaderWindow
+
+GC_INTERVAL_SECONDS = 10
 
 
 class ReaderApplication(Adw.Application):
@@ -17,6 +20,17 @@ class ReaderApplication(Adw.Application):
 
     def __init__(self):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_OPEN)
+        # Cyclic garbage can hold GTK and WebKit objects (a closed tab's web
+        # view), and WebKit aborts when finalized off the main thread — which is
+        # exactly where the collector lands once the index sync thread exists.
+        # So automatic collection is off, and the main loop collects instead.
+        gc.disable()
+        GLib.timeout_add_seconds(GC_INTERVAL_SECONDS, self._collect)
+
+    @staticmethod
+    def _collect() -> bool:
+        gc.collect()
+        return True
 
     def _window(self) -> ReaderWindow:
         window = self.get_active_window()

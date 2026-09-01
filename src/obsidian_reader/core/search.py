@@ -3,6 +3,7 @@
 import unicodedata
 from dataclasses import dataclass
 
+from .fuzzy import fuzzy_filenames
 from .store import IndexStore
 from .vault import Vault
 
@@ -84,19 +85,9 @@ class VaultSearch:
 
 
 def search_filenames(vault: Vault, query: str) -> list[SearchHit]:
-    """Finds notes whose path contains every word of the query, best matches first."""
-    words = [_fold(word) for word in query.split() if word.strip()]
-    if not words:
-        return []
-    scored: list[tuple[int, str]] = []
-    for rel in vault.notes:
-        folded = _fold(rel)
-        if all(word in folded for word in words):
-            name = _fold(rel.rsplit("/", 1)[-1])
-            rank = 0 if name.startswith(words[0]) else (1 if words[0] in name else 2)
-            scored.append((rank, rel))
-    scored.sort(key=lambda pair: (pair[0], len(pair[1]), pair[1]))
-    return [SearchHit(path=rel) for _, rel in scored[:MAX_RESULTS]]
+    """Finds notes whose path fuzzily matches the query, best matches first."""
+    matches = fuzzy_filenames(vault.notes, query, limit=MAX_RESULTS)
+    return [SearchHit(path=match.path) for match in matches]
 
 
 def _tags_match(terms: tuple[str, ...], tags: set[str]) -> bool:

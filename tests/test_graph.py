@@ -1,6 +1,6 @@
 """The link graph: backlinks with context, outgoing links, and the tag map."""
 
-from obsidian_reader.core.graph import VaultGraph, scan_note
+from obsidian_reader.core.graph import VaultGraph, local_neighbors, scan_note
 
 
 def test_backlinks_point_at_the_linking_note(vault):
@@ -107,3 +107,11 @@ def test_frontmatter_tags_read_unindented_lists_with_blank_lines(vault, vault_di
     graph = VaultGraph.build(vault)
     assert "Loose.md" in graph.tags["delta"]
     assert "Loose.md" in graph.tags["epsilon"]
+
+
+def test_local_neighbors_orders_both_in_out(vault):
+    graph = VaultGraph.build(vault)
+    neighbors = dict(local_neighbors(graph, "Personal/Cycle A.md"))
+    assert neighbors["Personal/Cycle B.md"] == "both"
+    index_neighbors = dict(local_neighbors(graph, "Projects/Alpha.md"))
+    assert index_neighbors["Index.md"] == "in"

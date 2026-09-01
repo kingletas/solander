@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 MAX_RECENTS = 10
+MAX_RECENT_NOTES = 20
 
 
 def default_state_dir() -> Path:
@@ -32,6 +33,7 @@ class SessionState:
     sidebar_visible: bool = True
     sidebar_width: int = 280
     open_tabs: list[str] = field(default_factory=list)
+    recent_notes: list[str] = field(default_factory=list)
 
 
 class SessionStore:
@@ -72,3 +74,8 @@ class SessionStore:
         """Moves a single opened file to the top of the recent-files list."""
         recents = [path] + [r for r in self.state.recent_files if r != path]
         self.state.recent_files = recents[:MAX_RECENTS]
+
+    def remember_note(self, rel: str) -> None:
+        """Moves a vault note to the top of the recent-notes list."""
+        recents = [rel] + [r for r in self.state.recent_notes if r != rel]
+        self.state.recent_notes = recents[:MAX_RECENT_NOTES]

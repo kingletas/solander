@@ -111,10 +111,30 @@ def run_checks(app):
             check("new tag is live in the graph", graph is not None and "livetag" in graph.tags)
             hits = window.search_index.search_content("watched")
             check("new note is searchable without a reload", any(h.path == "Live.md" for h in hits))
-            continue_pdf()
+            check_retrieval()
             return False
 
         GLib.timeout_add(5200, check_live)
+
+    def check_retrieval():
+        from obsidian_reader.core.search import search_filenames
+
+        fuzzy_hits = search_filenames(window.vault, "scnt")
+        check("fuzzy quick-open matches a subsequence", fuzzy_hits[0].path == "Second Note.md")
+        check("recent notes are tracked", "Second Note.md" in window.store.state.recent_notes)
+        window._update_local_graph()
+        check("local graph pane has neighbors", len(window.local_graph.neighbors) >= 1)
+        window._pending_highlight = "note"
+        window.reader.load_note("A.md")
+
+        def check_highlight():
+            controller = window.reader.webview.get_find_controller()
+            check("search hit highlighting ran", controller.get_search_text() == "note")
+            check("highlight consumed after one load", window._pending_highlight == "")
+            continue_pdf()
+            return False
+
+        GLib.timeout_add(1500, check_highlight)
 
     def continue_pdf():
         import tempfile

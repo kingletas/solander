@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 — 2026-09-01
+
+The retrieval layer: finding a note now works the way the best launchers do.
+
+- **Fuzzy quick-open.** The as-you-type filename search matches subsequences with scoring — word-boundary hits, consecutive runs, and filename matches rank higher — so `scnt` finds "Second Note" and `pmn` finds "Personal/Meeting Notes". An empty query shows your recent notes.
+- **Recent notes** are remembered across sessions (the twenty most recently opened).
+- **Search hits open highlighted**: activating a full-text result highlights every match of the leading term in the opened note and scrolls to the first one.
+- **A local graph pane** — a sixth sidebar page drawing the current note and its neighbors natively (no JavaScript): bidirectional links in accent color, backlinks solid, outgoing dimmed. Click a node to open it. Capped at thirty neighbors so hub notes stay legible.
+- **Fixed a crash that could kill the app at any moment after 0.5**: Python's garbage collector can run on the index-sync thread, and cyclic garbage there can hold GTK and WebKit objects (a closed tab's web view) whose finalizers abort off the main thread — silently, with no message. Automatic collection is now off and the main loop collects on a timer, so GObjects are only ever finalized where they were born. Found because the GUI smoke started dying with exit 134 *after* printing an all-green PASS.
+
 ## 0.5.0 — 2026-09-01
 
 The live layer: the reader now tracks the vault while it is open, and remembers it between launches.
