@@ -258,3 +258,41 @@ section.footnotes {
 .preview { font-size: 0.85em; }
 .preview h1 { font-size: 1.1em; margin-top: 0; }
 .preview-more { color: var(--muted); margin-top: 0.5em; }
+
+/* Canvas pages */
+.note:has(> .canvas) { max-width: none; }
+.canvas { position: relative; margin: 1em 0; }
+.canvas-edges { position: absolute; top: 0; left: 0; }
+.canvas-edges line { stroke: var(--muted); stroke-width: 1.6; }
+.canvas-edges text { fill: var(--muted); font-size: 12px; text-anchor: middle; }
+.canvas-edges marker path { fill: var(--muted); }
+.canvas-card {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  overflow: hidden;
+  font-size: 0.85em;
+  background: var(--surface);
+  white-space: pre-wrap;
+}
+.canvas-file a { border-bottom: none; font-weight: 600; }
+.canvas-group {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+}
+.canvas-group-label {
+  position: absolute;
+  top: -1.5em;
+  left: 6px;
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+/* Math */
+.math-block { text-align: center; margin: 1em 0; overflow-x: auto; }
+.math-block math { font-size: 1.15em; }
+code.math-source { color: var(--muted); }

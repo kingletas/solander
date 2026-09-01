@@ -9,7 +9,7 @@ It is a fallback reader, not an Obsidian replacement: something dependable to re
 ## What it does
 
 - Opens a folder as a vault, or a single `.md` file, straight from disk — nothing is imported, copied, or indexed into the vault.
-- Renders CommonMark and GFM (tables, task lists, strikethrough, autolinks) plus the Obsidian layer: `[[wikilinks]]`, aliases, heading and block links, `![[embeds]]` with cycle detection, callouts (foldable and nested), `==highlights==`, `%%comments%%` (hidden), inline `#tags`, footnotes (inline included), frontmatter as a collapsible Properties panel, and syntax-highlighted code blocks.
+- Renders CommonMark and GFM (tables, task lists, strikethrough, autolinks) plus the Obsidian layer: `[[wikilinks]]`, aliases, heading and block links, `![[embeds]]` with cycle detection, callouts (foldable and nested), `==highlights==`, `%%comments%%` (hidden), inline `#tags`, footnotes (inline included), frontmatter as a collapsible Properties panel, syntax-highlighted code blocks, TeX math as native MathML (`$...$` and `$$...$$` — no JavaScript involved), and `.canvas` files as static positioned pages with linked cards and arrows.
 - Resolves links the way Obsidian does: exact relative path first, then vault-root path, then filename match — and when a name is ambiguous it asks instead of guessing.
 - Vault-wide search that works like a launcher: fuzzy quick-open (`scnt` finds "Second Note"; empty shows recent notes), relevance-ranked full-text search with `path:`, `file:`, and `tag:` operators and highlighted hits, plus in-note find, back/forward history, outline navigation, session restore, light/dark/system appearance.
 - Stays current: the vault is watched, so a note created or edited by anything else (Obsidian, a sync client, a script) shows up in the tree, the search index, and the link graph within seconds — no reload step.
@@ -18,6 +18,7 @@ It is a fallback reader, not an Obsidian replacement: something dependable to re
 - Hover previews: rest the pointer on a wikilink and a popover shows the opening of the target note.
 - A reading (zen) mode — `F11` strips every piece of chrome, `Esc` brings it back — and PDF export (`Ctrl+Shift+E`) of the current rendered note, which refuses to write inside the vault.
 - Tabs: middle-click or `Ctrl+click` a note or wikilink to open it in a new tab (`Ctrl+T`/`Ctrl+W` to open and close); a plain click opens in the current tab. The sidebar drags to any width, and both survive a restart.
+- Typography controls — font, line width, line spacing — persisted and applied everywhere.
 - Reads `.obsidian/app.json` (read-only) to honor the vault's attachment-folder setting.
 
 ## What it will never do

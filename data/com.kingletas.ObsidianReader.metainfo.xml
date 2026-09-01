@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="0.7.0" date="2026-09-01">
+      <description>
+        <p>TeX math as native MathML, canvas files rendered as static
+        pages, and typography controls for font, line width, and spacing.</p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-09-01">
       <description>
         <p>Fuzzy quick-open with recent notes, highlighted search hits, a

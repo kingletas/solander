@@ -138,4 +138,6 @@ def file_kind(rel: str) -> str:
         return "video"
     if lower.endswith(".pdf"):
         return "pdf"
+    if lower.endswith(".canvas"):
+        return "canvas"
     return "other"

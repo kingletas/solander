@@ -37,7 +37,7 @@ run: ## Run from the working tree; make run VAULT=~/path/to/vault opens it
 
 .PHONY: smoke
 smoke: ## Drive the real window through open, render, and search on the live display
-	@tmp=$$(mktemp -d) && printf '# A\n\n[[Second Note]]\n\nAn #alpha tag.\n\n> [!note]\n> callout\n' > "$$tmp/A.md" && printf '# B\n' > "$$tmp/Second Note.md" && mkdir "$$tmp/.obsidian" && printf '{"items":[{"type":"file","path":"A.md"}]}' > "$$tmp/.obsidian/bookmarks.json" && XDG_CONFIG_HOME="$$tmp/config" XDG_CACHE_HOME="$$tmp/cache" uv run python scripts/gui-smoke.py "$$tmp"; rm -rf "$$tmp"
+	@tmp=$$(mktemp -d) && printf '# A\n\n[[Second Note]]\n\nAn #alpha tag and math $$e=mc^2$$ inline.\n\n> [!note]\n> callout\n' > "$$tmp/A.md" && printf '# B\n' > "$$tmp/Second Note.md" && printf '{"nodes":[{"id":"a","type":"text","x":0,"y":0,"width":100,"height":40,"text":"hi"},{"id":"b","type":"file","x":200,"y":0,"width":100,"height":40,"file":"A.md"}],"edges":[{"id":"e","fromNode":"a","toNode":"b"}]}' > "$$tmp/Board.canvas" && mkdir "$$tmp/.obsidian" && printf '{"items":[{"type":"file","path":"A.md"}]}' > "$$tmp/.obsidian/bookmarks.json" && XDG_CONFIG_HOME="$$tmp/config" XDG_CACHE_HOME="$$tmp/cache" uv run python scripts/gui-smoke.py "$$tmp"; rm -rf "$$tmp"
 
 # --- install ---
 

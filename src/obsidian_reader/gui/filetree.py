@@ -79,8 +79,9 @@ class VaultTree:
             if entry.is_dir(follow_symlinks=False):
                 directories.append(TreeNode(self.root, child_rel, True))
             elif entry.is_file(follow_symlinks=False):
-                is_note = entry.name.casefold().endswith(NOTE_EXTENSIONS)
-                if self.markdown_only and not is_note:
+                name = entry.name.casefold()
+                readable = name.endswith(NOTE_EXTENSIONS) or name.endswith(".canvas")
+                if self.markdown_only and not readable:
                     continue
                 files.append(TreeNode(self.root, child_rel, False))
         return directories + files

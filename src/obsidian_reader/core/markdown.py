@@ -162,6 +162,44 @@ def _comment_rule(state, silent: bool) -> bool:
     return True
 
 
+def _math_rule(state, silent: bool) -> bool:
+    """Parses `$...$` and `$$...$$` into math tokens, refusing currency-shaped text.
+
+    An opener must touch its content on both sides and a closer may not be
+    followed by a digit, so "$5 and $10" stays prose.
+    """
+    src = state.src
+    position = state.pos
+    if src[position] != "$":
+        return False
+    if position > 0 and src[position - 1] == "\\":
+        return False
+    if src.startswith("$$", position):
+        end = src.find("$$", position + 2)
+        if end < 0 or not src[position + 2 : end].strip():
+            return False
+        if not silent:
+            token = state.push("obsidian_math_block", "", 0)
+            token.content = src[position + 2 : end].strip()
+        state.pos = end + 2
+        return True
+    end = src.find("$", position + 1)
+    while 0 < end and src[end - 1] == "\\":
+        end = src.find("$", end + 1)
+    if end < 0:
+        return False
+    inner = src[position + 1 : end]
+    if not inner or "\n" in inner or inner[0].isspace() or inner[-1].isspace():
+        return False
+    if end + 1 < len(src) and src[end + 1].isdigit():
+        return False
+    if not silent:
+        token = state.push("obsidian_math_inline", "", 0)
+        token.content = inner
+    state.pos = end + 1
+    return True
+
+
 def _tag_rule(state, silent: bool) -> bool:
     """Parses an inline `#tag` at a word boundary into a styled, non-navigating pill."""
     src = state.src
@@ -210,6 +248,7 @@ def build_parser() -> MarkdownIt:
     md.inline.ruler.before("link", "obsidian_wikilink", _wikilink_rule)
     md.inline.ruler.before("obsidian_wikilink", "obsidian_comment", _comment_rule)
     md.inline.ruler.before("emphasis", "obsidian_highlight", _highlight_rule)
+    md.inline.ruler.before("emphasis", "obsidian_math", _math_rule)
     md.inline.ruler.push("obsidian_tag", _tag_rule)
     md.core.ruler.before("inline", "obsidian_tasks", _extended_tasks_rule)
     return md

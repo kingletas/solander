@@ -4,7 +4,7 @@
 
 The reader treats every vault as attacker-controlled input. The load-bearing controls, each covered by a test in `tests/`:
 
-- **No script execution.** JavaScript is disabled at the WebKit settings level, and the app refuses to start if those settings do not exist. Raw HTML in notes is escaped by the parser, and the generated markup passes an allowlist sanitizer before display.
+- **No script execution.** JavaScript is disabled at the WebKit settings level, and the app refuses to start if those settings do not exist. Raw HTML in notes is escaped by the parser, and the generated markup passes an allowlist sanitizer before display. Two page kinds are app-authored rather than sanitized after the fact — canvas pages and in-app message pages — and both interpolate untrusted values only through forced escaping and numeric coercion. MathML produced from TeX passes the same sanitizer as everything else.
 - **No network.** Remote images, stylesheets, fonts, and frames are blocked by the sanitizer, the page CSP, and the navigation policy. `http`/`https` links open in the system browser; every other scheme is refused.
 - **Vault containment.** Assets are served only through a `vault:` URI scheme whose handler refuses any path — symlinks included — that resolves outside the vault root.
 - **No writes.** The application never writes below a vault root; a test hashes a vault tree before and after a full index-and-render pass and asserts byte identity.

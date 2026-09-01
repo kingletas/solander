@@ -13,6 +13,31 @@ ALLOWED_TAGS = {
     "video",
 }
 
+# MathML as latex2mathml emits it; WebKit renders these natively, scripts cannot
+# hide in them, and every attribute below is presentational.
+MATHML_TAGS = {
+    "math", "annotation", "menclose", "mfenced", "mfrac", "mi", "mn", "mo", "mover",
+    "mpadded", "mphantom", "mroot", "mrow", "mspace", "msqrt", "mstyle", "msub", "msubsup",
+    "msup", "mtable", "mtd", "mtext", "mtr", "munder", "munderover", "semantics",
+}
+ALLOWED_TAGS |= MATHML_TAGS
+
+_MATHML_ATTRIBUTES = {
+    "math": {"xmlns", "display"},
+    "annotation": {"encoding"},
+    "mo": {"stretchy", "fence", "separator", "form", "lspace", "rspace"},
+    "mspace": {"width", "height", "depth"},
+    "mstyle": {"displaystyle", "scriptlevel", "mathsize"},
+    "mfrac": {"linethickness"},
+    "mtable": {"columnalign", "rowalign", "columnspacing", "rowspacing"},
+    "mtd": {"columnalign", "rowalign"},
+    "mtr": {"columnalign", "rowalign"},
+    "mpadded": {"width", "height", "depth", "lspace", "voffset"},
+    "menclose": {"notation"},
+    "mi": {"mathvariant"},
+    "mtext": {"mathvariant"},
+}
+
 VOID_TAGS = {"br", "hr", "img", "input", "source"}
 
 # Content inside these is dangerous even as text-adjacent markup and is removed whole.
@@ -47,6 +72,7 @@ ALLOWED_ATTRIBUTES = {
     "figcaption": {"class"},
     "aside": {"class"},
 }
+ALLOWED_ATTRIBUTES.update(_MATHML_ATTRIBUTES)
 
 # Internal pages, vault assets, and browser-bound links; nothing else survives.
 ALLOWED_LINK_SCHEMES = ("reader:", "vault:", "http:", "https:", "mailto:")
@@ -54,6 +80,7 @@ ALLOWED_MEDIA_SCHEMES = ("vault:",)
 
 _SAFE_STYLE = re.compile(r"^text-align\s*:\s*(left|right|center|justify)\s*;?$")
 _SAFE_DIMENSION = re.compile(r"^\d{1,5}$")
+_SAFE_LENGTH = re.compile(r"^-?\d{0,4}(\.\d{1,4})?(em|ex|px|pt|%)?$")
 
 
 def _safe_url(value: str, schemes: tuple[str, ...]) -> str:
@@ -96,7 +123,8 @@ class _Sanitizer(HTMLParser):
                 if not _SAFE_STYLE.match(value):
                     continue
             elif name in ("width", "height", "start"):
-                if not _SAFE_DIMENSION.match(value):
+                pattern = _SAFE_LENGTH if tag in MATHML_TAGS else _SAFE_DIMENSION
+                if not pattern.match(value):
                     continue
             elif name == "type" and tag == "input":
                 if value != "checkbox":

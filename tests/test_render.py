@@ -198,3 +198,34 @@ def test_preview_truncates_a_long_note(vault, vault_dir):
 def test_preview_of_an_unreadable_note_names_the_failure(vault):
     page = NoteRenderer(vault).render_preview("Missing.md")
     assert "Cannot preview" in page
+
+
+def test_inline_math_renders_mathml(vault, vault_dir):
+    (vault_dir / "Math.md").write_text("Euler: $e^{i\\pi} + 1 = 0$ inline.\n")
+    vault.reindex()
+    body = NoteRenderer(vault).render("Math.md").body
+    assert "<math" in body
+    assert 'display="inline"' in body
+
+
+def test_block_math_renders_display_mathml(vault, vault_dir):
+    (vault_dir / "Math.md").write_text("$$\n\\frac{a}{b}\n$$\n")
+    vault.reindex()
+    body = NoteRenderer(vault).render("Math.md").body
+    assert 'class="math-block"' in body
+    assert "<mfrac>" in body
+
+
+def test_currency_is_not_math(vault, vault_dir):
+    (vault_dir / "Money.md").write_text("It costs $5 and $10 at most. Escaped \\$x\\$ too.\n")
+    vault.reindex()
+    body = NoteRenderer(vault).render("Money.md").body
+    assert "<math" not in body
+    assert "$5 and $10" in body
+
+
+def test_bad_tex_falls_back_to_source(vault, vault_dir):
+    (vault_dir / "Math.md").write_text("$\\begin{oops$ and $" + "x" * 6000 + "$\n")
+    vault.reindex()
+    body = NoteRenderer(vault).render("Math.md").body
+    assert "<math" not in body

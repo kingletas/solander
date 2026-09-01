@@ -462,6 +462,26 @@ class ReaderWindow(Adw.ApplicationWindow):
         appearance.append("Light", "win.appearance::light")
         appearance.append("Dark", "win.appearance::dark")
         menu.append_submenu("Appearance", appearance)
+        typography = Gio.Menu()
+        fonts = Gio.Menu()
+        for label, value in (
+            ("Theme Default", "default"), ("Serif", "serif"), ("Sans", "sans"), ("Mono", "mono")
+        ):
+            fonts.append(label, f"win.reader-font::{value}")
+        typography.append_submenu("Font", fonts)
+        widths = Gio.Menu()
+        for label, value in (
+            ("Narrow", "narrow"), ("Normal", "normal"), ("Wide", "wide"), ("Full", "full")
+        ):
+            widths.append(label, f"win.line-width::{value}")
+        typography.append_submenu("Line Width", widths)
+        spacings = Gio.Menu()
+        for label, value in (
+            ("Compact", "compact"), ("Normal", "normal"), ("Relaxed", "relaxed")
+        ):
+            spacings.append(label, f"win.line-spacing::{value}")
+        typography.append_submenu("Line Spacing", spacings)
+        menu.append_submenu("Typography", typography)
         view = Gio.Menu()
         view.append("New Tab", "win.new-tab")
         view.append("Reading Mode", "win.zen")
@@ -595,6 +615,17 @@ class ReaderWindow(Adw.ApplicationWindow):
             parameter=GLib.VariantType.new("s"),
             state=GLib.Variant.new_string(self.store.state.appearance),
         )
+        for name, key in (
+            ("reader-font", "reader_font"),
+            ("line-width", "line_width"),
+            ("line-spacing", "line_spacing"),
+        ):
+            add(
+                name,
+                (lambda a, v, k=key: self._on_typography(a, v, k)),
+                parameter=GLib.VariantType.new("s"),
+                state=GLib.Variant.new_string(getattr(self.store.state, key)),
+            )
 
     # -- opening things ----------------------------------------------------
 
@@ -627,7 +658,7 @@ class ReaderWindow(Adw.ApplicationWindow):
 
         def build():
             vault = Vault.open(root)
-            renderer = NoteRenderer(vault)
+            renderer = NoteRenderer(vault, self._typography)
             GLib.idle_add(self._vault_ready, vault, renderer, focus_note, restore_tabs)
 
         threading.Thread(target=build, daemon=True).start()
@@ -721,7 +752,7 @@ class ReaderWindow(Adw.ApplicationWindow):
                     GLib.idle_add(self.index_status.set_text, f"Indexing {done}/{total}…")
 
                 vault = Vault.open(root)
-                renderer = NoteRenderer(vault)
+                renderer = NoteRenderer(vault, self._typography)
                 try:
                     result = sync_indexes(vault, store, progress=progress)
                 except sqlite3.Error:
@@ -755,6 +786,20 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._update_links_panel()
         self._update_local_graph()
         return False
+
+    def _typography(self) -> dict:
+        """The reading-comfort settings the page shell injects as CSS overrides."""
+        state = self.store.state
+        return {
+            "font": state.reader_font,
+            "width": state.line_width,
+            "spacing": state.line_spacing,
+        }
+
+    def _on_typography(self, action, value, key: str) -> None:
+        action.set_state(value)
+        setattr(self.store.state, key, value.get_string())
+        self._reload_all_tabs()
 
     def _clear_index_cache(self) -> None:
         """Deletes the persistent index for this vault and rebuilds it from scratch."""
@@ -816,6 +861,10 @@ class ReaderWindow(Adw.ApplicationWindow):
                     reader.last_render = None
                 note = self.vault.read_note(rel)
                 return build_source_page(note.text or note.error, rel, theme)
+            if rel.casefold().endswith(".canvas"):
+                if reader is not None:
+                    reader.last_render = None
+                return self.renderer.render_canvas(rel, theme)
             rendered = self.renderer.render(rel, theme)
             if reader is not None:
                 reader.last_render = rendered
@@ -960,7 +1009,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             self.reader.load_note(self.current_note, row.anchor)
 
     def _on_tree_activate(self, node) -> None:
-        if node.is_note:
+        if node.is_note or file_kind(node.rel) == "canvas":
             self.reader.load_note(node.rel)
         elif file_kind(node.rel) in ("image", "audio", "video", "pdf"):
             self._launch_file(self.vault.root / node.rel)

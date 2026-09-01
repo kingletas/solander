@@ -7,12 +7,14 @@ from dataclasses import dataclass, field
 from importlib import resources
 from urllib.parse import quote, unquote
 
+from latex2mathml.converter import convert as latex_to_mathml
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 
 from .callouts import callouts_rule
+from .canvas import canvas_body, parse_canvas
 from .frontmatter import split_frontmatter
 from .links import WikiLink, slugify
 from .markdown import build_parser, strip_block_comments, strip_html_comments
@@ -33,6 +35,9 @@ PREVIEW_EMBED_BUDGET = 4
 
 # Fence languages that Obsidian executes and this reader deliberately does not.
 INERT_FENCES = {"dataview", "dataviewjs", "templater", "tasks", "query", "meta-bind"}
+
+# TeX past this length is not a formula, and the converter's cost grows with it.
+MAX_MATH_CHARS = int(os.environ.get("READER_MAX_MATH_CHARS", "5000"))
 
 _BLOCK_ID_TAIL = re.compile(r"[ \t]+\^[A-Za-z0-9-]+[ \t]*$")
 _FENCE_LINE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
@@ -143,19 +148,26 @@ def _find_block(body: str, block_id: str) -> str:
 class NoteRenderer:
     """Renders notes from one vault, resolving links and embeds as it goes."""
 
-    def __init__(self, vault: Vault):
+    def __init__(self, vault: Vault, typography=None):
         self.vault = vault
+        self.typography = typography
         self.md = build_parser()
         self.md.core.ruler.before("inline", "obsidian_callouts", callouts_rule)
         self._install_render_rules()
+
+    def _typo(self) -> dict | None:
+        return self.typography() if callable(self.typography) else None
 
     def render(self, rel: str, theme: str = "light") -> RenderedNote:
         """Renders one note into a complete sanitized page."""
         note = self.vault.read_note(rel)
         title = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        typo = self._typo()
         if note.error:
             return RenderedNote(
-                page=build_page(_message_body("Cannot open note", note.error), title, theme),
+                page=build_page(
+                    _message_body("Cannot open note", note.error), title, theme, typography=typo
+                ),
                 title=title,
                 error=note.error,
             )
@@ -165,7 +177,7 @@ class NoteRenderer:
         properties_html = _properties_block(split.properties)
         body = sanitize(properties_html + body_html)
         return RenderedNote(
-            page=build_page(body, title, theme, lossy=note.lossy),
+            page=build_page(body, title, theme, lossy=note.lossy, typography=typo),
             body=body,
             title=title,
             outline=env["outline"],
@@ -173,6 +185,20 @@ class NoteRenderer:
             source=note.text,
             lossy=note.lossy,
         )
+
+    def render_canvas(self, rel: str, theme: str = "light") -> str:
+        """Renders a `.canvas` file as a static, positioned page."""
+        note = self.vault.read_note(rel)
+        title = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        if note.error:
+            return build_message_page("Cannot open canvas", note.error, theme)
+
+        def note_href(file_rel: str) -> str:
+            resolved = resolve_note(self.vault, rel, file_rel)
+            return note_uri(resolved.path) if resolved.kind == "note" else ""
+
+        body = canvas_body(parse_canvas(note.text), note_href)
+        return build_page(body, title, theme, typography=self._typo())
 
     def render_preview(self, rel: str, theme: str = "light") -> str:
         """Renders the opening slice of a note for the hover preview popover."""
@@ -185,7 +211,7 @@ class NoteRenderer:
         inner = sanitize(self._render_markdown(body, env))
         more = '<div class="preview-more">…</div>' if truncated else ""
         page_body = f'<div class="preview"><h1>{html.escape(title)}</h1>{inner}{more}</div>'
-        return build_page(page_body, title, theme)
+        return build_page(page_body, title, theme, typography=self._typo())
 
     def _env(
         self,
@@ -275,6 +301,12 @@ class NoteRenderer:
         def render_image(self_r, tokens, idx, options, env):
             return renderer._image_html(tokens, idx, env)
 
+        def render_math_inline(self_r, tokens, idx, options, env):
+            return _math_html(tokens[idx].content, display=False)
+
+        def render_math_block(self_r, tokens, idx, options, env):
+            return _math_html(tokens[idx].content, display=True)
+
         def render_link_open(self_r, tokens, idx, options, env):
             token = tokens[idx]
             href = token.attrGet("href") or ""
@@ -293,6 +325,8 @@ class NoteRenderer:
                     token.attrJoin("class", "unsupported-link")
             return self_r.renderToken(tokens, idx, options, env)
 
+        md.add_render_rule("obsidian_math_inline", render_math_inline)
+        md.add_render_rule("obsidian_math_block", render_math_block)
         md.add_render_rule("obsidian_wikilink", render_wikilink)
         md.add_render_rule("obsidian_embed", render_embed)
         md.add_render_rule("obsidian_tag", render_tag)
@@ -436,6 +470,20 @@ def _preview_slice(body: str) -> tuple[str, bool]:
     return "\n".join(kept), True
 
 
+def _math_html(tex: str, display: bool) -> str:
+    """Converts TeX to MathML; anything the converter refuses falls back to source."""
+    fallback = f'<code class="math-source">{html.escape(tex)}</code>'
+    if len(tex) > MAX_MATH_CHARS:
+        return fallback
+    try:
+        markup = latex_to_mathml(tex, display="block" if display else "inline")
+    except Exception:  # noqa: S110 — the converter raises library-specific errors on bad TeX
+        return fallback
+    if display:
+        return f'<div class="math-block">{markup}</div>\n'
+    return markup
+
+
 def _embed_error(message: str) -> str:
     return f'<div class="embed embed-error">{html.escape(message)}</div>'
 
@@ -509,7 +557,40 @@ def _page_css() -> str:
     return f"{_PAGE_CSS}\n{_PYGMENTS_CSS}"
 
 
-def build_page(body: str, title: str, theme: str = "light", lossy: bool = False) -> str:
+# Reading-comfort presets; unknown values fall back to the stylesheet's own defaults.
+_FONT_STACKS = {
+    "serif": "'Noto Serif', 'Liberation Serif', Georgia, serif",
+    "sans": "'Cantarell', 'Ubuntu', 'Segoe UI', system-ui, sans-serif",
+    "mono": "'Ubuntu Mono', 'Source Code Pro', 'DejaVu Sans Mono', monospace",
+}
+_LINE_WIDTHS = {"narrow": "38rem", "wide": "62rem", "full": "none"}
+_LINE_HEIGHTS = {"compact": "1.45", "relaxed": "1.85"}
+
+
+def _typography_css(typography: dict | None) -> str:
+    """Builds the override style block for the reader's typography preferences."""
+    if not typography:
+        return ""
+    rules = []
+    font = _FONT_STACKS.get(typography.get("font", ""))
+    if font:
+        rules.append(f"body {{ font-family: {font}; }}")
+    width = _LINE_WIDTHS.get(typography.get("width", ""))
+    if width:
+        rules.append(f"main.note {{ max-width: {width}; }}")
+    height = _LINE_HEIGHTS.get(typography.get("spacing", ""))
+    if height:
+        rules.append(f"body {{ line-height: {height}; }}")
+    return f"<style>{' '.join(rules)}</style>" if rules else ""
+
+
+def build_page(
+    body: str,
+    title: str,
+    theme: str = "light",
+    lossy: bool = False,
+    typography: dict | None = None,
+) -> str:
     """Wraps sanitized body markup in the full page shell with CSP and theme CSS."""
     notice = (
         '<div class="decode-notice">This file is not valid UTF-8; '
@@ -522,7 +603,8 @@ def build_page(body: str, title: str, theme: str = "light", lossy: bool = False)
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; "
         "img-src vault:; media-src vault:; style-src 'unsafe-inline';\">"
-        f"<title>{html.escape(title)}</title><style>{_page_css()}</style></head>"
+        f"<title>{html.escape(title)}</title><style>{_page_css()}</style>"
+        f"{_typography_css(typography)}</head>"
         f"<body class='{theme_class}' dir='auto'>{notice}"
         f"<main class='note'>{body}</main></body></html>"
     )

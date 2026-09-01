@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 — 2026-09-01
+
+The fidelity layer: more of what a vault actually contains renders as itself.
+
+- **Math.** `$...$` and `$$...$$` TeX renders as native MathML (via latex2mathml — pure Python, no JavaScript), with block math centered and inline math in the text flow. Currency stays prose: an opener must touch its content and a closer may not be followed by a digit, so "$5 and $10" never becomes a formula. TeX the converter refuses — or anything over the size bound — falls back to the labeled source.
+- **Canvas files render.** A `.canvas` opens in the reading pane as a static page: text cards, file cards (linked to their notes), groups, colors, and SVG arrows with labels, laid out at the canvas's own coordinates. Verified against all 26 canvases in a 10,000-note vault. The JSON is treated as hostile: coordinates are numerically coerced per node, colors pass a palette-or-hex check, every string is escaped, and node/size bounds cap the work.
+- **Typography controls.** Menu → Typography: font (theme default, serif, sans, mono), line width (narrow to full), and line spacing (compact to relaxed) — persisted, applied to every page including previews and canvases.
+- Deferred, named: embedded PDF preview needs `gir1.2-poppler-0.18`, which is not installed here — code that cannot be run even once does not ship. External open remains. Heading folding stays out for a structural reason: without JavaScript, a `#anchor` cannot open the closed `<details>` it lands in, so folding would break outline navigation.
+
 ## 0.6.0 — 2026-09-01
 
 The retrieval layer: finding a note now works the way the best launchers do.

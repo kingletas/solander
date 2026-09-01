@@ -131,10 +131,30 @@ def run_checks(app):
             controller = window.reader.webview.get_find_controller()
             check("search hit highlighting ran", controller.get_search_text() == "note")
             check("highlight consumed after one load", window._pending_highlight == "")
-            continue_pdf()
+            check_fidelity()
             return False
 
         GLib.timeout_add(1500, check_highlight)
+
+    def check_fidelity():
+        rendered = window.reader.last_render
+        check("math renders as MathML", rendered is not None and "<math" in rendered.body)
+        canvas_page = window.renderer.render_canvas("Board.canvas")
+        cards = canvas_page.count('class="canvas-card')
+        check("canvas renders cards and edges", cards == 2 and "<line" in canvas_page)
+        check("canvas links resolve to notes", "reader:///note/A.md" in canvas_page)
+        window.reader.load_note("Board.canvas")
+
+        def check_canvas_route():
+            check("canvas opens in the reading pane", window.current_note == "Board.canvas")
+            action = window.lookup_action("line-width")
+            action.change_state(GLib.Variant.new_string("narrow"))
+            page = window._provide_page("/note/A.md", window.reader.webview)
+            check("typography override reaches the page", "max-width: 38rem" in page)
+            continue_pdf()
+            return False
+
+        GLib.timeout_add(1200, check_canvas_route)
 
     def continue_pdf():
         import tempfile
