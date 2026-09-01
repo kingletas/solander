@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0 — 2026-09-01
+
+- **Embedded PDF preview.** Opening a PDF from the file tree (or a PDF embed's link) now shows it in an in-app viewer: pages rendered on demand through the system's own Poppler library, fit-to-width with zoom, an Open Externally escape hatch, and a page cap plus a small surface cache bounding memory. Requires the optional `gir1.2-poppler-0.18` package; without it, PDFs open externally exactly as before — the viewer is never half-present.
+
 ## 0.7.0 — 2026-09-01
 
 The fidelity layer: more of what a vault actually contains renders as itself.

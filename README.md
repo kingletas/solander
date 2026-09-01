@@ -19,6 +19,7 @@ It is a fallback reader, not an Obsidian replacement: something dependable to re
 - A reading (zen) mode — `F11` strips every piece of chrome, `Esc` brings it back — and PDF export (`Ctrl+Shift+E`) of the current rendered note, which refuses to write inside the vault.
 - Tabs: middle-click or `Ctrl+click` a note or wikilink to open it in a new tab (`Ctrl+T`/`Ctrl+W` to open and close); a plain click opens in the current tab. The sidebar drags to any width, and both survive a restart.
 - Typography controls — font, line width, line spacing — persisted and applied everywhere.
+- PDFs preview in-app through system Poppler (zoom, fit-to-width, open-externally), when the optional `gir1.2-poppler-0.18` package is installed.
 - Reads `.obsidian/app.json` (read-only) to honor the vault's attachment-folder setting.
 
 ## What it will never do
@@ -33,6 +34,12 @@ Requires Ubuntu 24.04+ (GTK 4, libadwaita 1.5+, WebKitGTK 6.0) with the system G
 
 ```bash
 sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0
+```
+
+Optional, for the embedded PDF preview (PDFs open externally without it):
+
+```bash
+sudo apt install gir1.2-poppler-0.18
 ```
 
 Then, with [uv](https://docs.astral.sh/uv/) installed:

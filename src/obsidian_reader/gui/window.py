@@ -29,6 +29,7 @@ from ..core.vault import Vault, file_kind
 from .filetree import VaultTree
 from .localgraph import LocalGraphView
 from .monitor import VaultMonitor
+from .pdfview import PdfWindow, poppler_available
 from .webpane import ReaderView
 
 MAX_AMBIGUOUS_CHOICES = 8
@@ -1134,6 +1135,9 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._launch_file(self.vault.root / rel)
 
     def _launch_file(self, path: Path) -> None:
+        if file_kind(path.name) == "pdf" and poppler_available():
+            PdfWindow(path, self).present()
+            return
         Gtk.FileLauncher(file=Gio.File.new_for_path(str(path))).launch(self, None, None)
 
     def _on_ambiguous(self, _reader, target: str, _source: str) -> None:

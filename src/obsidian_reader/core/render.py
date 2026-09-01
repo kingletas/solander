@@ -500,7 +500,7 @@ def _media_embed_html(resolved: Resolution, link: WikiLink) -> str:
     if resolved.kind == "video":
         return f'<video controls src="{uri}"></video>'
     href = f"reader:///external/{quote(resolved.path)}"
-    label = "Open externally" if resolved.kind == "pdf" else "Open with the system default app"
+    label = "Open" if resolved.kind == "pdf" else "Open with the system default app"
     return (
         f'<div class="embed embed-file"><span class="embed-file-name">{name}</span> '
         f'<a class="external-open" href="{href}">{label}</a></div>'

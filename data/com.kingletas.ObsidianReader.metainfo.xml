@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="0.8.0" date="2026-09-01">
+      <description>
+        <p>Embedded PDF preview through system Poppler, with zoom and an
+        external-open fallback when the bindings are absent.</p>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-09-01">
       <description>
         <p>TeX math as native MathML, canvas files rendered as static

@@ -151,10 +151,37 @@ def run_checks(app):
             action.change_state(GLib.Variant.new_string("narrow"))
             page = window._provide_page("/note/A.md", window.reader.webview)
             check("typography override reaches the page", "max-width: 38rem" in page)
-            continue_pdf()
+            check_pdf_preview()
             return False
 
         GLib.timeout_add(1200, check_canvas_route)
+
+    def check_pdf_preview():
+        import cairo
+
+        from obsidian_reader.gui.pdfview import PdfWindow, poppler_available
+
+        check("poppler bindings are available", poppler_available())
+        pdf_path = vault_path / "doc.pdf"
+        surface = cairo.PDFSurface(str(pdf_path), 300, 200)
+        context = cairo.Context(surface)
+        for _page in range(2):
+            context.set_source_rgb(0, 0, 0)
+            context.rectangle(40, 40, 120, 60)
+            context.fill()
+            context.show_page()
+        surface.finish()
+        viewer = PdfWindow(pdf_path, window)
+        check("pdf viewer parsed both pages", viewer.status.get_text() == "2 pages")
+        rendered = viewer._surface(0)
+        check("pdf page renders to a surface", rendered is not None and rendered.get_width() > 0)
+        has_ink = False
+        if rendered is not None:
+            data = bytes(rendered.get_data())
+            has_ink = any(data[i] < 200 for i in range(0, len(data), 4))
+        check("pdf page has actual content", has_ink)
+        viewer.destroy()
+        continue_pdf()
 
     def continue_pdf():
         import tempfile
