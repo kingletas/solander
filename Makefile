@@ -33,7 +33,7 @@ lint: ## Run ruff only
 
 .PHONY: run
 run: ## Run from the working tree; make run VAULT=~/path/to/vault opens it
-	@uv run obsidian-reader $(VAULT)
+	@uv run python -m obsidian_reader.cli $(VAULT)
 
 .PHONY: smoke
 smoke: ## Drive the real window through open, render, and search on the live display

@@ -24,11 +24,34 @@ def test_ready_when_bwrap_succeeds(tmp_path, monkeypatch):
 def test_refuses_with_guidance_when_bwrap_is_blocked(tmp_path, monkeypatch):
     fake_bwrap(tmp_path, 1, monkeypatch)
     monkeypatch.delenv("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", raising=False)
+    monkeypatch.setattr(cli, "PROFILE_PATH", str(tmp_path / "absent-profile"))
     assert not cli.sandbox_ready()
     message = cli.check_sandbox()
     assert "user namespaces" in message
     assert "profile obsidian-reader" in message
     assert "/etc/apparmor.d/obsidian-reader" in message
+
+
+def test_installed_but_unattached_profile_names_the_shebang_trap(tmp_path, monkeypatch):
+    fake_bwrap(tmp_path, 1, monkeypatch)
+    monkeypatch.delenv("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", raising=False)
+    profile = tmp_path / "obsidian-reader-profile"
+    profile.write_text("profile obsidian-reader ...")
+    monkeypatch.setattr(cli, "PROFILE_PATH", str(profile))
+    monkeypatch.setattr(cli, "current_label", lambda: "unconfined")
+    message = cli.check_sandbox()
+    assert "already installed" in message
+    assert "shebang" in message
+
+
+def test_attached_profile_with_blocked_bwrap_gets_the_full_help(tmp_path, monkeypatch):
+    fake_bwrap(tmp_path, 1, monkeypatch)
+    monkeypatch.delenv("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", raising=False)
+    profile = tmp_path / "obsidian-reader-profile"
+    profile.write_text("profile obsidian-reader ...")
+    monkeypatch.setattr(cli, "PROFILE_PATH", str(profile))
+    monkeypatch.setattr(cli, "current_label", lambda: "obsidian-reader (unconfined)")
+    assert "user namespaces" in cli.check_sandbox()
 
 
 def test_skip_variable_bypasses_the_check(tmp_path, monkeypatch):

@@ -63,6 +63,8 @@ sudo apparmor_parser -r /etc/apparmor.d/obsidian-reader
 
 Then start the app again. This is the same mechanism Ubuntu itself ships for browsers: the profile is `flags=(unconfined)` — it confines nothing — plus a single `userns,` grant, and it keeps WebKit's sandbox *on*, which is strictly better than the workaround of disabling user-namespace restrictions system-wide.
 
+One subtlety the launcher handles for you: AppArmor attaches the profile by interpreter path, and a `#!` shebang launch (such as running the venv's console script directly) bypasses attachment. The `obsidian-reader` launcher execs the interpreter directly for exactly this reason — start the app through it.
+
 ## Development
 
 ```bash

@@ -36,6 +36,20 @@ steps are in the README under "The sandbox and Ubuntu's user-namespace policy".
 To bypass this check and try anyway, set OBSIDIAN_READER_SKIP_SANDBOX_CHECK=1.
 """
 
+SHEBANG_HELP = """\
+obsidian-reader: WebKit's sandbox cannot start, but the AppArmor profile for it
+is already installed — it just did not attach to this process.
+
+That happens when the app is started through the venv console script or another
+`#!` shebang: AppArmor attaches the profile by interpreter path, and a shebang
+launch bypasses that. Start the app through the `obsidian-reader` launcher
+(installed by `make install`), which executes the interpreter directly.
+
+To bypass this check and try anyway, set OBSIDIAN_READER_SKIP_SANDBOX_CHECK=1.
+"""
+
+PROFILE_PATH = "/etc/apparmor.d/obsidian-reader"
+
 PROFILE_TEMPLATE = """\
 abi <abi/4.0>,
 include <tunables/global>
@@ -69,12 +83,23 @@ def rendered_profile() -> str:
     return PROFILE_TEMPLATE.format(interpreter=interpreter).rstrip("\n")
 
 
+def current_label() -> str:
+    """Reads this process's AppArmor label, empty where none is readable."""
+    try:
+        with open("/proc/self/attr/apparmor/current") as handle:
+            return handle.read().strip()
+    except OSError:
+        return ""
+
+
 def check_sandbox() -> str:
     """Returns the remediation text when the sandbox cannot start, empty when it can."""
     if os.environ.get("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", "") == "1":
         return ""
     if sandbox_ready():
         return ""
+    if os.path.exists(PROFILE_PATH) and not current_label().startswith("obsidian-reader"):
+        return SHEBANG_HELP
     interpreter = os.path.realpath(sys.executable)
     help_text = SANDBOX_HELP.format(profile=rendered_profile())
     if not interpreter.startswith(sys.prefix):
