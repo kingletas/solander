@@ -22,6 +22,10 @@ from .vault import Vault
 
 MAX_EMBED_DEPTH = int(os.environ.get("READER_MAX_EMBED_DEPTH", "5"))
 
+# The depth limit alone leaves multiplicative growth open: 8-wide embeds at
+# depth 5 measured a 23 MB page in 29 s. The budget caps note embeds per page.
+MAX_EMBEDS_PER_PAGE = int(os.environ.get("READER_MAX_EMBEDS_PER_PAGE", "200"))
+
 # Fence languages that Obsidian executes and this reader deliberately does not.
 INERT_FENCES = {"dataview", "dataviewjs", "templater", "tasks", "query", "meta-bind"}
 
@@ -165,7 +169,13 @@ class NoteRenderer:
             lossy=note.lossy,
         )
 
-    def _env(self, rel: str, depth: int = 0, ancestors: frozenset = frozenset()) -> dict:
+    def _env(
+        self,
+        rel: str,
+        depth: int = 0,
+        ancestors: frozenset = frozenset(),
+        budget: dict | None = None,
+    ) -> dict:
         return {
             "source": rel,
             "depth": depth,
@@ -173,6 +183,7 @@ class NoteRenderer:
             "outline": [],
             "anchor_counts": {},
             "callout_stack": [],
+            "embed_budget": budget if budget is not None else {"left": MAX_EMBEDS_PER_PAGE},
         }
 
     def _render_markdown(self, body: str, env: dict) -> str:
@@ -310,6 +321,10 @@ class NoteRenderer:
             return _embed_error(f"Cyclic embed: {resolved.path}")
         if env["depth"] >= MAX_EMBED_DEPTH:
             return _embed_error(f"Embed depth limit reached at {resolved.path}")
+        budget = env["embed_budget"]
+        if budget["left"] <= 0:
+            return _embed_error(f"Embed limit for this page reached at {resolved.path}")
+        budget["left"] -= 1
         note = self.vault.read_note(resolved.path)
         if note.error:
             return _embed_error(note.error)
@@ -322,7 +337,7 @@ class NoteRenderer:
             body = _find_block(body, link.block_id)
             if not body:
                 return _embed_error(f"No block ^{link.block_id} in {resolved.path}")
-        inner_env = self._env(resolved.path, env["depth"] + 1, env["ancestors"])
+        inner_env = self._env(resolved.path, env["depth"] + 1, env["ancestors"], budget)
         inner = self._render_markdown(body, inner_env)
         title = html.escape(link.label)
         href = note_uri(resolved.path, slugify(link.anchor) if link.anchor else "")

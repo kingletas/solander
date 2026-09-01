@@ -45,9 +45,10 @@ class ReaderView(GObject.Object):
         security.register_uri_scheme_as_secure("vault")
         self.webview = WebKit.WebView(web_context=context)
         settings = self.webview.get_settings()
-        hardened = {
-            "enable-javascript": False,
-            "enable-javascript-markup": False,
+        # The no-script rule fails closed: if this WebKit cannot disable JavaScript,
+        # the reader refuses to start rather than rendering hostile input with it on.
+        critical = {"enable-javascript": False, "enable-javascript-markup": False}
+        best_effort = {
             "enable-html5-local-storage": False,
             "enable-html5-database": False,
             "enable-webgl": False,
@@ -56,7 +57,11 @@ class ReaderView(GObject.Object):
             "allow-file-access-from-file-urls": False,
             "allow-universal-access-from-file-urls": False,
         }
-        for name, value in hardened.items():
+        for name, value in critical.items():
+            if settings.find_property(name) is None:
+                raise RuntimeError(f"this WebKitGTK has no {name} setting; refusing to render")
+            settings.set_property(name, value)
+        for name, value in best_effort.items():
             if settings.find_property(name) is not None:
                 settings.set_property(name, value)
         self.webview.connect("decide-policy", self._decide_policy)

@@ -30,3 +30,21 @@ def test_unterminated_frontmatter_is_body():
     note = split_frontmatter("---\ntitle: dangling\nno close\n")
     assert note.properties == {}
     assert "dangling" in note.body
+
+
+def test_yaml_aliases_are_refused():
+    bomb = "---\na: &a [x,x,x,x,x,x,x,x,x]\n"
+    for index in range(1, 8):
+        previous = "a" if index == 1 else f"a{index - 1}"
+        bomb += f"a{index}: &a{index} [" + ",".join([f"*{previous}"] * 9) + "]\n"
+    bomb += "---\nbody\n"
+    note = split_frontmatter(bomb)
+    assert note.properties == {}
+    assert note.body == "body\n"
+
+
+def test_oversized_frontmatter_degrades_to_no_properties(monkeypatch):
+    monkeypatch.setattr("obsidian_reader.core.frontmatter.MAX_FRONTMATTER_BYTES", 50)
+    note = split_frontmatter("---\ntitle: " + "x" * 100 + "\n---\nbody\n")
+    assert note.properties == {}
+    assert note.body == "body\n"

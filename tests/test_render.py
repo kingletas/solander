@@ -86,6 +86,22 @@ def test_cyclic_embed_is_stopped(vault):
     assert "Cyclic embed" in body
 
 
+def test_embed_amplification_is_capped(vault, monkeypatch):
+    monkeypatch.setattr("obsidian_reader.core.render.MAX_EMBEDS_PER_PAGE", 10)
+    (vault.root / "Leaf.md").write_text("leaf text\n")
+    (vault.root / "Mid.md").write_text("![[Leaf]]\n\n" * 8)
+    (vault.root / "Top.md").write_text("![[Mid]]\n\n" * 8)
+    vault.reindex()
+    body = rendered(vault, "Top.md").body
+    assert "Embed limit for this page reached" in body
+    assert body.count("leaf text") <= 10
+
+
+def test_a_normal_page_never_sees_the_embed_limit(vault):
+    body = rendered(vault).body
+    assert "Embed limit" not in body
+
+
 def test_inert_fences_do_not_execute(vault):
     body = rendered(vault).body
     assert "dataview — not executed in read-only mode" in body
@@ -131,6 +147,27 @@ def test_javascript_href_cannot_become_a_live_link(vault):
     body = rendered(vault, "hostile2.md").body
     assert "href=\"javascript" not in body
     assert "<a" not in body
+
+
+def test_file_scheme_links_are_disarmed(vault):
+    (vault.root / "hostile3.md").write_text("[leak](file:///etc/passwd)\n")
+    body = rendered(vault, "hostile3.md").body
+    assert 'href="file' not in body
+    assert "<a" not in body
+
+
+def test_html_in_a_filename_cannot_break_out(vault):
+    hostile = "<img src=x onerror=alert(1)>"
+    (vault.root / f"{hostile}.md").write_text("# safe body\n")
+    (vault.root / "linker.md").write_text(f"[[{hostile}]]\n")
+    vault.reindex()
+    page = rendered(vault, f"{hostile}.md")
+    assert "<img" not in page.page
+    assert 'onerror="' not in page.page
+    body = rendered(vault, "linker.md").body
+    assert "<img" not in body
+    assert 'onerror="' not in body
+    assert "&lt;img" in body
 
 
 def test_unreadable_note_returns_an_error_page(vault):

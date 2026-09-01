@@ -1,8 +1,23 @@
 """Splits a note into YAML frontmatter and body, without trusting either."""
 
+import os
 from dataclasses import dataclass, field
 
 import yaml
+
+# Anchors expand at render time, so a few hundred bytes of aliases can become
+# gigabytes of output; properties never legitimately need them, so they are refused.
+MAX_FRONTMATTER_BYTES = int(os.environ.get("READER_MAX_FRONTMATTER_BYTES", str(128 * 1024)))
+
+
+class _NoAliasLoader(yaml.SafeLoader):
+    """SafeLoader that refuses alias expansion outright."""
+
+    def compose_node(self, parent, index):
+        event = self.peek_event()
+        if isinstance(event, yaml.AliasEvent):
+            raise yaml.YAMLError("aliases are not allowed in frontmatter")
+        return super().compose_node(parent, index)
 
 
 @dataclass(frozen=True)
@@ -23,11 +38,16 @@ def split_frontmatter(text: str) -> SplitNote:
         if lines[index].strip() in ("---", "..."):
             raw = "\n".join(lines[1:index])
             body = "\n".join(lines[index + 1 :])
-            try:
-                parsed = yaml.safe_load(raw)
-            except yaml.YAMLError:
-                parsed = None
-            if not isinstance(parsed, dict):
-                parsed = {}
-            return SplitNote(properties=parsed, body=body, raw_frontmatter=raw)
+            return SplitNote(properties=_parse_properties(raw), body=body, raw_frontmatter=raw)
     return SplitNote(body=text)
+
+
+def _parse_properties(raw: str) -> dict:
+    """Parses the YAML block defensively; anything hostile degrades to no properties."""
+    if len(raw.encode("utf-8", errors="replace")) > MAX_FRONTMATTER_BYTES:
+        return {}
+    try:
+        parsed = yaml.load(raw, Loader=_NoAliasLoader)  # noqa: S506 — SafeLoader subclass
+    except yaml.YAMLError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
