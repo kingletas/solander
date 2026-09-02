@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.14.0" date="2026-09-02">
+      <description>
+        <p>Thirteen dark themes in the Archive family, sharing one design language,
+        with every text colour measured against WCAG AA.</p>
+      </description>
+    </release>
     <release version="1.13.0" date="2026-09-02">
       <description>
         <p>A new application mark: a sealed archival plate on a plinth, with a

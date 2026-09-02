@@ -1,0 +1,137 @@
+/* THE ARCHIVE — a classified record rather than a notebook. A dark ground, bone
+   text, one accent for what is important, and a hot colour held back for what
+   actually matters. Every rule here is shared by the whole family; the colours it
+   names are the tokens each theme's palette generates.
+
+   Everything is screen-only. Paper has no dark mode, and reader.css already forces
+   a light palette for print — a screen theme that reached print would fight it. */
+
+@media screen {
+
+  body.theme-archive {
+    --display-face: "IBM Plex Serif", "Noto Serif", "Liberation Serif", Georgia, serif;
+    --body-face: "IBM Plex Serif", "Noto Serif", "Liberation Serif", Georgia, serif;
+    --mono-face: "IBM Plex Mono", "Ubuntu Mono", "Source Code Pro", "DejaVu Sans Mono", monospace;
+  }
+
+  /* Headings are editorial, and the rule under a title reads as a flag on the record. */
+  body.theme-archive h1 { color: var(--arc-bright); }
+  body.theme-archive h2 {
+    color: color-mix(in srgb, var(--fg) 85%, var(--muted));
+    border-bottom-color: var(--border-strong);
+  }
+  body.theme-archive h3 { color: var(--arc-second); }
+  body.theme-archive h1.inline-title::after {
+    background: linear-gradient(to right, var(--arc-accent), var(--border-strong));
+  }
+
+  /* Links are evidence annotations: the accent at rest, the hot colour under the pointer. */
+  body.theme-archive a { text-decoration-color: color-mix(in srgb, var(--accent) 45%, var(--bg)); }
+  body.theme-archive a:hover {
+    color: var(--arc-hot);
+    text-decoration-color: var(--arc-hot);
+  }
+  body.theme-archive .wikilink {
+    border-bottom-color: color-mix(in srgb, var(--accent) 60%, var(--bg));
+  }
+  body.theme-archive .wikilink:hover { border-bottom-color: var(--arc-hot); }
+
+  /* Tags become case markers: square, small caps, on a tinted plate. */
+  body.theme-archive .tag {
+    background: color-mix(in srgb, var(--arc-deep) 30%, var(--bg));
+    border-color: var(--border-strong);
+    border-radius: 2px;
+    color: var(--arc-second);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  body.theme-archive a.tag:hover {
+    background: color-mix(in srgb, var(--arc-accent) 45%, var(--bg));
+    border-color: var(--arc-accent);
+    color: var(--arc-bright);
+  }
+
+  /* Code is the machine's own voice inside the document, sunk into the ground. */
+  body.theme-archive code {
+    font-family: var(--mono-face);
+    background: color-mix(in srgb, var(--arc-code-bg) 70%, var(--bg));
+    color: var(--arc-code-fg);
+    border-color: color-mix(in srgb, var(--border-strong) 75%, var(--bg));
+    border-radius: 3px;
+  }
+  body.theme-archive pre,
+  body.theme-archive .highlight {
+    background: var(--arc-code-bg);
+    border-radius: 4px;
+  }
+  body.theme-archive pre {
+    border-color: color-mix(in srgb, var(--border-strong) 75%, var(--bg));
+    box-shadow: inset 0 0 30px color-mix(in srgb, var(--arc-deep) 22%, transparent);
+  }
+  body.theme-archive pre > code { color: inherit; }
+
+  /* Semantic colour, kept honest: the hot colour means attention, the second accent
+     means finding, amber means uncertainty, green means verified, slate means info. */
+  body.theme-archive .callout-note {
+    --callout-color: color-mix(in srgb, var(--arc-info) 82%, var(--fg));
+  }
+  body.theme-archive .callout-abstract { --callout-color: var(--arc-info); }
+  body.theme-archive .callout-info     { --callout-color: var(--arc-info); }
+  body.theme-archive .callout-tip      { --callout-color: var(--arc-second); }
+  body.theme-archive .callout-success  { --callout-color: var(--arc-success); }
+  body.theme-archive .callout-question {
+    --callout-color: color-mix(in srgb, var(--arc-info) 78%, var(--fg));
+  }
+  body.theme-archive .callout-warning  { --callout-color: var(--arc-warning); }
+  body.theme-archive .callout-failure {
+    --callout-color: color-mix(in srgb, var(--arc-danger) 78%, var(--arc-warning));
+  }
+  body.theme-archive .callout-danger   { --callout-color: var(--arc-danger); }
+  body.theme-archive .callout-bug {
+    --callout-color: color-mix(in srgb, var(--arc-danger) 72%, var(--muted));
+  }
+  body.theme-archive .callout-example  { --callout-color: var(--gold); }
+  body.theme-archive .callout-quote    { --callout-color: var(--muted); }
+
+  /* A quoted passage takes the theme's metal; so does the section break. */
+  body.theme-archive blockquote { border-left-color: var(--gold); }
+  body.theme-archive blockquote::before { color: var(--gold); }
+
+  /* Structure lines are barely there until a row is under the pointer. */
+  body.theme-archive th { border-bottom-color: var(--border-strong); }
+  body.theme-archive tbody tr:hover td {
+    background: color-mix(in srgb, var(--arc-deep) 22%, transparent);
+  }
+  body.theme-archive .action-card { box-shadow: none; }
+  body.theme-archive .action-card:hover {
+    border-color: var(--arc-accent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--arc-accent) 20%, transparent);
+  }
+  body.theme-archive .vault-card:hover { border-color: var(--arc-accent); }
+
+  /* Selection is the accent itself; a search hit is a stain, not a highlighter. */
+  body.theme-archive ::selection {
+    background: color-mix(in srgb, var(--arc-accent) 58%, transparent);
+    color: var(--arc-bright);
+  }
+  body.theme-archive mark { color: var(--arc-bright); }
+
+  /* Scrollbars are industrial: square, dark, and accented only under the pointer. */
+  body.theme-archive ::-webkit-scrollbar { width: 8px; height: 8px; }
+  body.theme-archive ::-webkit-scrollbar-track { background: var(--arc-void); }
+  body.theme-archive ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--arc-deep) 65%, var(--bg));
+    border-radius: 0;
+  }
+  body.theme-archive ::-webkit-scrollbar-thumb:hover { background: var(--arc-deep); }
+
+  /* Diagrams and drawings inherit the tokens; only the note tint needs a hand. */
+  body.theme-archive .mermaid-note { stroke: var(--gold); }
+
+  /* The app mark is one geometry with many identities: the board takes the theme's
+     structure colour, the plate stays bone, and the seal in the cut is the accent. */
+  body.theme-archive .mark-board { fill: var(--border-strong); }
+  body.theme-archive .mark-face { fill: color-mix(in srgb, var(--fg) 82%, var(--muted)); }
+  body.theme-archive .mark-seal { fill: var(--arc-accent); }
+
+}

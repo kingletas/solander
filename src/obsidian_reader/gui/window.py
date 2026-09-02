@@ -586,9 +586,15 @@ class ReaderWindow(Adw.ApplicationWindow):
         menu = Gio.Menu()
         appearance = Gio.Menu()
         themes = Gio.Menu()
+        families: dict[str, Gio.Menu] = {}
         for theme in THEMES.values():
-            themes.append(theme.label, f"win.theme::{theme.key}")
-        appearance.append_section("Theme", themes)
+            section = families.get(theme.family)
+            if section is None:
+                section = Gio.Menu()
+                families[theme.family] = section
+                themes.append_section(theme.family or None, section)
+            section.append(theme.label, f"win.theme::{theme.key}")
+        appearance.append_submenu("Theme", themes)
         modes = Gio.Menu()
         modes.append("Follow System", "win.appearance::system")
         modes.append("Light", "win.appearance::light")

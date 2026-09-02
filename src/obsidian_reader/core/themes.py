@@ -3,6 +3,9 @@
 A theme owns three things — the page tokens the reading surface consumes, the GTK
 colors the window chrome consumes, and the syntax palette for code. Layout lives in
 `reader.css` and the chrome structure lives with the window; neither is per-theme.
+
+Atelier is written out here because it is its own design. Every member of the Archive
+family is generated from one `Palette`, so adding one is sixteen colours and no rules.
 """
 
 from dataclasses import dataclass, field
@@ -21,37 +24,10 @@ from pygments.token import (
     Token,
 )
 
+from .palettes import PALETTES, Palette, mix
+
 DEFAULT_THEME = "atelier"
-
-
-class BloodRecordStyle(Style):
-    """Syntax colors for Blood Record: bone and copper on blackened crimson."""
-
-    background_color = "#090707"
-    styles = {
-        Token: "#c9c0b1",
-        Comment: "italic #665f56",
-        Keyword: "bold #d52b2b",
-        Keyword.Type: "#c1843d",
-        Name: "#d9cdbb",
-        Name.Builtin: "#c1843d",
-        Name.Class: "bold #d9cdbb",
-        Name.Function: "#d9cdbb",
-        Name.Attribute: "#b87862",
-        Name.Tag: "#d52b2b",
-        Name.Variable: "#b87862",
-        String: "#c17857",
-        String.Escape: "#d9826c",
-        Number: "#c1843d",
-        Operator: "#9c8f83",
-        Punctuation: "#8a8078",
-        Error: "bold #ff3b30",
-        Generic.Deleted: "#d52b2b",
-        Generic.Inserted: "#78966a",
-        Generic.Heading: "bold #d9cdbb",
-        Generic.Emph: "italic",
-        Generic.Strong: "bold",
-    }
+ARCHIVE_CLASS = "theme-archive"
 
 
 @dataclass(frozen=True)
@@ -64,6 +40,7 @@ class Variant:
     chrome: str
     highlight: object = "default"
     stylesheet: str = ""
+    tokens: str = ""
     chrome_extra: str = ""
 
 
@@ -74,6 +51,7 @@ class Theme:
     key: str
     label: str
     variants: dict[str, Variant] = field(default_factory=dict)
+    family: str = ""
 
     @property
     def dark_only(self) -> bool:
@@ -136,60 +114,157 @@ _ATELIER_DARK_CHROME = """
 @define-color canvas_muted #a29882;
 """
 
-# Blackened iron either side of the record, oxidized copper for what is important,
-# and the one hot red held back for the thing currently under the reader's hand.
-_BLOOD_RECORD_CHROME = """
-@define-color accent_bg_color #a51f1f;
-@define-color accent_fg_color #f6ece4;
-@define-color accent_color #d9826c;
-@define-color window_bg_color #100d0d;
-@define-color window_fg_color #e6ded0;
-@define-color headerbar_bg_color #100d0d;
-@define-color headerbar_fg_color #e6ded0;
-@define-color view_bg_color #100d0d;
-@define-color view_fg_color #e6ded0;
-@define-color popover_bg_color #151111;
-@define-color popover_fg_color #c9c0b1;
-@define-color dialog_bg_color #151111;
-@define-color dialog_fg_color #c9c0b1;
-@define-color card_bg_color #171313;
-@define-color card_fg_color #e6ded0;
-@define-color rail_bg #0b0909;
-@define-color rail_fg #c9c0b1;
-@define-color rail_muted #938a7e;
-@define-color rail_accent #d52b2b;
-@define-color canvas_muted #938a7e;
-"""
 
-# The rail's labels stay dried blood; only the selected row is allowed the hot red,
-# so a flagged document is the one thing on the rail that shouts.
-_BLOOD_RECORD_CHROME_EXTRA = """
-headerbar { border-bottom: 1px solid #2d1c1c; }
-.reader-rail { border-right: 1px solid #352020; }
+def page_tokens(palette: Palette) -> str:
+    """The custom properties one Archive theme contributes; the rules are shared."""
+    p = palette
+    return (
+        f"body.theme-{p.key} {{\n"
+        f"  --bg: {p.bg};\n"
+        f"  --fg: {p.text};\n"
+        f"  --muted: {p.legible(p.muted)};\n"
+        f"  --border: {p.line};\n"
+        f"  --border-strong: {p.line_strong};\n"
+        f"  --surface: {p.surface};\n"
+        f"  --accent: {p.legible(p.link)};\n"
+        f"  --accent-soft: {mix(p.accent, p.bg, 0.82)};\n"
+        f"  --gold: {p.legible(p.ornament)};\n"
+        f"  --missing: {p.legible(p.danger)};\n"
+        f"  --mark-bg: {mix(p.accent, p.bg, 0.45)};\n"
+        f"  --arc-void: {p.void};\n"
+        f"  --arc-deep: {p.deep};\n"
+        f"  --arc-accent: {p.accent};\n"
+        f"  --arc-hot: {p.legible(p.hot)};\n"
+        f"  --arc-second: {p.legible(p.second)};\n"
+        f"  --arc-bright: {p.bright};\n"
+        f"  --arc-code-bg: {p.code_bg};\n"
+        f"  --arc-code-fg: {p.legible(p.code_fg, p.code_bg)};\n"
+        f"  --arc-danger: {p.legible(p.danger)};\n"
+        f"  --arc-warning: {p.legible(p.warning)};\n"
+        f"  --arc-success: {p.legible(p.success)};\n"
+        f"  --arc-info: {p.legible(p.info)};\n"
+        "}"
+    )
+
+
+def chrome(palette: Palette) -> str:
+    """The GTK colours the shared chrome structure names; the structure never changes."""
+    p = palette
+    return (
+        f"@define-color accent_bg_color {p.accent};\n"
+        f"@define-color accent_fg_color {p.bright};\n"
+        f"@define-color accent_color {p.legible(mix(p.link, p.text, 0.25))};\n"
+        f"@define-color window_bg_color {p.bg};\n"
+        f"@define-color window_fg_color {p.text};\n"
+        f"@define-color headerbar_bg_color {p.bg};\n"
+        f"@define-color headerbar_fg_color {p.text};\n"
+        f"@define-color view_bg_color {p.bg};\n"
+        f"@define-color view_fg_color {p.text};\n"
+        f"@define-color popover_bg_color {mix(p.bg, p.surface, 0.45)};\n"
+        f"@define-color popover_fg_color {mix(p.text, p.muted, 0.35)};\n"
+        f"@define-color dialog_bg_color {mix(p.bg, p.surface, 0.45)};\n"
+        f"@define-color dialog_fg_color {mix(p.text, p.muted, 0.35)};\n"
+        f"@define-color card_bg_color {mix(p.bg, p.surface, 0.6)};\n"
+        f"@define-color card_fg_color {p.text};\n"
+        f"@define-color rail_bg {p.void};\n"
+        f"@define-color rail_fg {mix(p.text, p.muted, 0.4)};\n"
+        f"@define-color rail_muted {p.muted};\n"
+        f"@define-color rail_accent {p.hot};\n"
+        f"@define-color canvas_muted {p.muted};\n"
+    )
+
+
+def chrome_extra(palette: Palette) -> str:
+    """The archive's own chrome: quiet labels, one flagged row, industrial scrollbars."""
+    p = palette
+    return f"""
+headerbar {{ border-bottom: 1px solid {mix(p.line_strong, p.bg, 0.4)}; }}
+.reader-rail {{ border-right: 1px solid {mix(p.line_strong, p.void, 0.3)}; }}
 .reader-rail .rail-title,
 .reader-rail .quick-heading,
-.outline-panel .panel-heading { color: #8f302c; }
-.reader-rail row:selected {
-    background: linear-gradient(to right, alpha(#7f1717, 0.38), alpha(#7f1717, 0.08));
-    box-shadow: inset 2px 0 0 #d52b2b;
-    color: #f0e7d8;
-}
-.reader-rail row:hover { background: alpha(#d52b2b, 0.07); }
-.reader-rail entry:focus-within { border-color: #a51f1f; }
-.reader-rail .rail-separator { background: #352020; }
-.navigation-sidebar row:selected { box-shadow: inset 2px 0 0 #d52b2b; }
-.outline-panel row:hover, .outline-panel row:selected { color: #d9826c; }
-scrollbar { background: #0b0909; }
-scrollbar slider {
-    background: #352020;
+.outline-panel .panel-heading {{ color: {p.rail_label}; }}
+.reader-rail row:selected {{
+    background: linear-gradient(to right, alpha({p.deep}, 0.38), alpha({p.deep}, 0.08));
+    box-shadow: inset 2px 0 0 {p.hot};
+    color: {p.bright};
+}}
+.reader-rail row:hover {{ background: alpha({p.hot}, 0.07); }}
+.reader-rail entry:focus-within {{ border-color: {p.accent}; }}
+.reader-rail .rail-separator {{ background: {mix(p.line_strong, p.void, 0.3)}; }}
+.navigation-sidebar row:selected {{ box-shadow: inset 2px 0 0 {p.hot}; }}
+.outline-panel row:hover, .outline-panel row:selected {{ color: {mix(p.link, p.text, 0.25)}; }}
+scrollbar {{ background: {p.void}; }}
+scrollbar slider {{
+    background: {mix(p.deep, p.void, 0.45)};
     border: none;
     border-radius: 0;
     min-width: 8px;
     min-height: 8px;
-}
-scrollbar slider:hover { background: #7f1717; }
-scrollbar slider:active { background: #a51f1f; }
+}}
+scrollbar slider:hover {{ background: {p.deep}; }}
+scrollbar slider:active {{ background: {p.accent}; }}
 """
+
+
+def highlight_style(palette: Palette) -> type[Style]:
+    """Builds the syntax palette for one theme: evidence, in the theme's own colours."""
+    p = palette
+    ground = p.code_bg
+    legible = lambda color: p.legible(color, ground)  # noqa: E731
+    namespace = {
+        "background_color": ground,
+        "styles": {
+            Token: legible(mix(p.text, p.muted, 0.25)),
+            Comment: f"italic {legible(mix(p.muted, p.void, 0.45))}",
+            Keyword: f"bold {legible(p.hot)}",
+            Keyword.Type: legible(p.warning),
+            Name: legible(mix(p.text, p.muted, 0.15)),
+            Name.Builtin: legible(p.warning),
+            Name.Class: f"bold {legible(mix(p.text, p.muted, 0.15))}",
+            Name.Function: legible(mix(p.text, p.muted, 0.15)),
+            Name.Attribute: legible(p.second),
+            Name.Tag: legible(p.hot),
+            Name.Variable: legible(p.second),
+            String: legible(p.link),
+            String.Escape: legible(p.code_fg),
+            Number: legible(p.warning),
+            Operator: legible(p.muted),
+            Punctuation: legible(mix(p.muted, p.text, 0.15)),
+            Error: f"bold {legible(p.danger)}",
+            Generic.Deleted: legible(p.danger),
+            Generic.Inserted: legible(p.success),
+            Generic.Heading: f"bold {p.text}",
+            Generic.Emph: "italic",
+            Generic.Strong: "bold",
+        },
+    }
+    name = "".join(part.capitalize() for part in palette.key.split("-")) + "Style"
+    return type(Style)(name, (Style,), namespace)
+
+
+def _archive_theme(palette: Palette) -> Theme:
+    """Wraps one palette as a selectable theme; every rule it uses is shared."""
+    return Theme(
+        key=palette.key,
+        label=palette.label,
+        family="Archive",
+        variants={
+            "dark": Variant(
+                page_id=palette.key,
+                # The dark class first, so every dark rule in reader.css is the base
+                # the family paints over, then the shared archive rules, then the
+                # theme's own tokens.
+                body_classes=f"theme-dark {ARCHIVE_CLASS} theme-{palette.key}",
+                highlight_scope=f".theme-{palette.key}",
+                chrome=chrome(palette),
+                highlight=highlight_style(palette),
+                stylesheet="theme-archive.css",
+                tokens=page_tokens(palette),
+                chrome_extra=chrome_extra(palette),
+            ),
+        },
+    )
+
 
 ATELIER = Theme(
     key="atelier",
@@ -212,25 +287,9 @@ ATELIER = Theme(
     },
 )
 
-BLOOD_RECORD = Theme(
-    key="blood-record",
-    label="Blood Record",
-    variants={
-        "dark": Variant(
-            page_id="blood-record",
-            # The dark class first, so every dark rule in reader.css is the base
-            # this theme paints over rather than a second thing to restate.
-            body_classes="theme-dark theme-blood-record",
-            highlight_scope=".theme-blood-record",
-            chrome=_BLOOD_RECORD_CHROME,
-            highlight=BloodRecordStyle,
-            stylesheet="theme-blood-record.css",
-            chrome_extra=_BLOOD_RECORD_CHROME_EXTRA,
-        ),
-    },
-)
-
-THEMES: dict[str, Theme] = {theme.key: theme for theme in (ATELIER, BLOOD_RECORD)}
+THEMES: dict[str, Theme] = {ATELIER.key: ATELIER}
+for _palette in PALETTES:
+    THEMES[_palette.key] = _archive_theme(_palette)
 
 _BY_PAGE_ID: dict[str, Variant] = {
     variant.page_id: variant for theme in THEMES.values() for variant in theme.variants.values()

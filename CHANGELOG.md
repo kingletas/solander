@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.14.0 — 2026-09-02
+
+Blood Record became a family of thirteen.
+
+- **The Archive family.** *Blood Record*, *Ember Archive*, *Blackout*, *Corrosion*, *Bruise*, *Drowned*, *Sepulcher*, *Cold Iron*, *Hazard*, *Velvet Knife*, *Ash*, *Null* and *Black Blood* — thirteen dark themes sharing one design language and one stylesheet. Appearance → Theme, now grouped by family.
+- **A theme is a palette.** Sixteen colours in `core/palettes.py` and no rules: the page tokens, the whole GTK chrome and the syntax palette are all generated from them. Adding the fourteenth is one entry.
+- **Semantics hold across the family**: danger, warning, verified and information mean the same thing in every theme, and a broken link takes the theme's danger colour rather than its accent.
+- **Every colour that carries words is measured.** A solver lifts any text colour that misses WCAG AA on the ground it sits on, and the suite asserts it for all thirteen themes — body text, muted text, links, code, callout titles and the rail's labels — against the page, the panels, and the code ground. **This caught three failures in Blood Record as shipped**: its link (4.44), its hot red as a broken-link marker (3.88) and its rail labels (2.48). Its surfaces and accent are unchanged; only the colours carrying text moved.
+- Atelier is untouched.
+
 ## 1.13.0 — 2026-09-02
 
 The app mark is a sealed record now, not a book with a padlock.

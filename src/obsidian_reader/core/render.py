@@ -868,6 +868,8 @@ def _page_css(page: str) -> str:
     sheets = [_asset_css("reader.css")]
     if variant.stylesheet:
         sheets.append(_asset_css(variant.stylesheet))
+    if variant.tokens:
+        sheets.append(variant.tokens)
     scope = variant.highlight_scope
     sheets.append(HtmlFormatter(style=variant.highlight).get_style_defs(f"{scope} .highlight"))
     # Pygments sets its own panel color; the page's surface stays the one truth.
