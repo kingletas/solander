@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.1 — 2026-09-02
+
+- **The outline lives in the right panel only.** The sidebar's Outline page shipped with a serious defect, and rather than patching around it the page is removed — along with the Outline Position option and the side-switching it required. `F8` and the header button toggle the right panel, which keeps its close button, its styling, and its memory. A smoke check now asserts the rail carries no outline page.
+
 ## 1.8.0 — 2026-09-02
 
 One outline, on the side you choose.

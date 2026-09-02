@@ -146,12 +146,6 @@ def run_checks(app):
                 rows += 1 if getattr(row, "anchor", "") else 0
                 row = row.get_next_sibling()
             check("outline panel lists the note's headings", rows == 3)
-            rail_rows = 0
-            row = window.rail_outline_list.get_first_child()
-            while row is not None:
-                rail_rows += 1 if getattr(row, "anchor", "") else 0
-                row = row.get_next_sibling()
-            check("the rail's outline page mirrors the panel", rail_rows == 3)
             window._set_outline_visible(True)
             opened = window.outline_split.get_show_sidebar() and window.outline_toggle.get_active()
             check("outline opens as a native panel", opened)
@@ -164,26 +158,8 @@ def run_checks(app):
             panel = window.outline_split.get_sidebar()
             dressed = "outline-panel" in panel.get_css_classes()
             check("outline panel wears the canvas dress", dressed)
-            side = window.lookup_action("outline-side")
-            side.change_state(GLib.Variant.new_string("left"))
-            window._set_outline_visible(True)
-            on_left = (
-                window.sidebar_stack.get_visible_child_name() == "outline"
-                and not window.outline_split.get_show_sidebar()
-            )
-            check("outline opens on the left when chosen", on_left)
-            side.change_state(GLib.Variant.new_string("right"))
-            moved = (
-                window.outline_split.get_show_sidebar()
-                and window.sidebar_stack.get_visible_child_name() != "outline"
-            )
-            check("changing the side moves the open outline", moved)
-            window.sidebar_stack.set_visible_child_name("outline")
-            exclusive = not window.outline_split.get_show_sidebar()
-            check("picking the rail page collapses the panel", exclusive)
-            window._set_outline_visible(False)
-            back_home = window.sidebar_stack.get_visible_child_name() == "files"
-            check("closing the outline returns the rail to files", back_home)
+            no_rail_page = window.sidebar_stack.get_child_by_name("outline") is None
+            check("the rail carries no outline page", no_rail_page)
             crumb_action = window.lookup_action("show-breadcrumb")
             crumb_action.change_state(GLib.Variant.new_boolean(False))
             plain = window._provide_page("/note/Second Note.md", window.reader.webview)

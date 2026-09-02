@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.8.1" date="2026-09-02">
+      <description>
+        <p>The outline lives in the right panel only; the sidebar page is
+        removed.</p>
+      </description>
+    </release>
     <release version="1.8.0" date="2026-09-02">
       <description>
         <p>The outline shows on one side at a time — left rail page or right

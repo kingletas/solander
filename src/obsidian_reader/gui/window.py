@@ -209,10 +209,6 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._install_drop_target()
         self._load_css()
         self._refresh_recents_menu()
-        self.sidebar_stack.connect("notify::visible-child", self._on_sidebar_page_changed)
-        if self.store.state.outline_visible and self.store.state.outline_side == "left":
-            self.sidebar_stack.set_visible_child_name("outline")
-        self._sync_outline_toggle()
         self._create_tab()
 
     def _build_sidebar(self) -> Gtk.Widget:
@@ -267,17 +263,6 @@ class ReaderWindow(Adw.ApplicationWindow):
         search_box.append(self.search_status)
         search_box.append(results_scroll)
         self._add_sidebar_page(search_box, "search", "Search", "edit-find-symbolic")
-
-        self.rail_outline_list = Gtk.ListBox()
-        self.rail_outline_list.add_css_class("navigation-sidebar")
-        self.rail_outline_list.add_css_class("rail-outline")
-        self.rail_outline_list.connect("row-activated", self._on_outline_row)
-        outline_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        outline_heading = Gtk.Label(label="OUTLINE", xalign=0.0)
-        outline_heading.add_css_class("quick-heading")
-        outline_box.append(outline_heading)
-        outline_box.append(Gtk.ScrolledWindow(child=self.rail_outline_list, vexpand=True))
-        self._add_sidebar_page(outline_box, "outline", "Outline", "view-list-symbolic")
 
         self.links_list = Gtk.ListBox()
         self.links_list.add_css_class("navigation-sidebar")
@@ -613,15 +598,11 @@ class ReaderWindow(Adw.ApplicationWindow):
         context.append("Title & Breadcrumb", "win.show-breadcrumb")
         context.append("Metadata Line", "win.show-note-meta")
         context.append("Linked Mentions", "win.show-backlinks")
-        outline_side = Gio.Menu()
-        outline_side.append("Left Sidebar", "win.outline-side::left")
-        outline_side.append("Right Panel", "win.outline-side::right")
         view = Gio.Menu()
         view.append("New Tab", "win.new-tab")
         view.append("Reading Mode", "win.zen")
         view.append("Raw Source View", "win.toggle-source")
         view.append_submenu("Note Context", context)
-        view.append_submenu("Outline Position", outline_side)
         view.append("Show Hidden Files", "win.show-hidden")
         view.append("Markdown Files Only", "win.markdown-only")
         view.append("Vault CSS Snippets", "win.css-snippets")
@@ -688,11 +669,9 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     def _build_reading_area(self) -> Gtk.Widget:
         """The reading pane with the outline as a real, closable panel on its right."""
-        state = self.store.state
-        restore_right = state.outline_visible and state.outline_side == "right"
         self.outline_split = Adw.OverlaySplitView(
             sidebar_position=Gtk.PackType.END,
-            show_sidebar=restore_right,
+            show_sidebar=self.store.state.outline_visible,
             min_sidebar_width=200,
             max_sidebar_width=300,
             sidebar_width_fraction=0.22,
@@ -726,50 +705,12 @@ class ReaderWindow(Adw.ApplicationWindow):
         return panel
 
     def _set_outline_visible(self, on: bool) -> None:
-        """One switch for the outline, opening it on the chosen side — never both."""
-        if on:
-            if self.store.state.outline_side == "left":
-                self.outline_split.set_show_sidebar(False)
-                self.sidebar_toggle.set_active(True)
-                self.sidebar_stack.set_visible_child_name("outline")
-            else:
-                if self.sidebar_stack.get_visible_child_name() == "outline":
-                    self.sidebar_stack.set_visible_child_name("files")
-                self.outline_split.set_show_sidebar(True)
-        else:
-            self.outline_split.set_show_sidebar(False)
-            if self.sidebar_stack.get_visible_child_name() == "outline":
-                self.sidebar_stack.set_visible_child_name("files")
+        """One switch for the outline panel: split view, header toggle, and session."""
+        if self.outline_split.get_show_sidebar() != on:
+            self.outline_split.set_show_sidebar(on)
+        if self.outline_toggle.get_active() != on:
+            self.outline_toggle.set_active(on)
         self.store.state.outline_visible = on
-        self._sync_outline_toggle()
-
-    def _outline_shown(self) -> bool:
-        on_left = (
-            self.sidebar_widget.get_visible()
-            and self.sidebar_stack.get_visible_child_name() == "outline"
-        )
-        return on_left or self.outline_split.get_show_sidebar()
-
-    def _sync_outline_toggle(self) -> None:
-        shown = self._outline_shown()
-        if self.outline_toggle.get_active() != shown:
-            self.outline_toggle.set_active(shown)
-
-    def _on_sidebar_page_changed(self, *_args) -> None:
-        """Choosing the rail's Outline page collapses the right panel: one outline."""
-        if self.sidebar_stack.get_visible_child_name() == "outline":
-            if self.outline_split.get_show_sidebar():
-                self.outline_split.set_show_sidebar(False)
-        self._sync_outline_toggle()
-
-    def _on_outline_side(self, action, value) -> None:
-        action.set_state(value)
-        shown = self._outline_shown()
-        self.store.state.outline_side = value.get_string()
-        if shown:
-            self._set_outline_visible(True)
-        else:
-            self._sync_outline_toggle()
 
     def _install_drop_target(self) -> None:
         from gi.repository import Gdk
@@ -877,10 +818,6 @@ class ReaderWindow(Adw.ApplicationWindow):
     .atelier-rail stackswitcher button:hover { color: @rail_fg; }
     .atelier-rail expander { color: @rail_muted; }
     .atelier-rail .rail-separator { background: alpha(#ffffff, 0.08); }
-    .atelier-rail .rail-outline row { color: @rail_muted; }
-    .atelier-rail .rail-outline row:hover { color: @rail_accent; }
-    .atelier-rail .rail-outline .outline-l1 { color: @rail_fg; font-weight: 600; }
-    .atelier-rail .rail-outline .outline-l3 { font-size: 0.9em; }
     .atelier-rail stackswitcher button:checked {
         color: @rail_accent;
         background: alpha(@rail_accent, 0.14);
@@ -1032,12 +969,6 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._on_appearance,
             parameter=GLib.VariantType.new("s"),
             state=GLib.Variant.new_string(self.store.state.appearance),
-        )
-        add(
-            "outline-side",
-            self._on_outline_side,
-            parameter=GLib.VariantType.new("s"),
-            state=GLib.Variant.new_string(self.store.state.outline_side),
         )
         for name, key in (
             ("reader-font", "reader_font"),
@@ -1592,11 +1523,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._readers.pop(page.get_child(), None)
 
     def _fill_outline(self, outline) -> None:
-        """The outline shows in two places — the right panel and the rail page."""
-        for listbox in (self.outline_list, self.rail_outline_list):
-            self._fill_outline_list(listbox, outline)
-
-    def _fill_outline_list(self, listbox, outline) -> None:
+        listbox = self.outline_list
         while (row := listbox.get_first_child()) is not None:
             listbox.remove(row)
         for heading in outline:
@@ -1964,7 +1891,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.leave_zen_action.set_enabled(on)
         if on:
             self._pre_zen_sidebar = self.sidebar_widget.get_visible()
-            self._pre_zen_outline = self._outline_shown()
+            self._pre_zen_outline = self.outline_split.get_show_sidebar()
             self.sidebar_widget.set_visible(False)
             self.outline_split.set_show_sidebar(False)
             self.tab_bar.set_visible(False)
