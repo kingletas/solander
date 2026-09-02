@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.1.0" date="2026-09-02">
+      <description>
+        <p>--sandbox prints the AppArmor profile this installation needs;
+        --sandbox-status reports whether it is installed, attached and working.</p>
+      </description>
+    </release>
     <release version="2.0.3" date="2026-09-02">
       <description>
         <p>The application mark sits on its own tile, so it carries the same

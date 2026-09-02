@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.0 — 2026-09-02
+
+Two flags for the sandbox, the same two in every app here.
+
+- **`--sandbox`** prints the AppArmor profile this installation needs and nothing else, so it pipes: `solander --sandbox | sudo tee /etc/apparmor.d/solander`. It replaces the documented recipe of `sed`-ing the profile out of the app's own stderr, which only worked while the app happened to be failing.
+- **`--sandbox-status`** reports the profile, the interpreter, the AppArmor label and whether bubblewrap can actually unshare — and names the two failures that look identical from the outside: a profile naming a **shared interpreter** (which would grant user namespaces to every process using it), and a profile that is installed but **did not attach** to this process. Exits non-zero while anything is wrong.
+
 ## 2.0.3 — 2026-09-02
 
 - **The mark fills its cell.** Enlarging the standalone silhouette was not enough: a plate on a plinth simply carries less ink than the near-full-bleed shapes it sits beside, so it kept reading as half-size in a dock. The sigil now sits on its own tile — **88% coverage against a neighbour's 82%** — with the record, the cut, the seal and the ledge inside it. The identity is unchanged, and it still re-tints per theme. Compared against a square and a round neighbour at 96, 64, 48, 32 and 24px, in five themes, and in silhouette.

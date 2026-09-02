@@ -108,6 +108,11 @@ The hidden list is stored in the reader's config, never in the vault.
 - **Appearance** (menu) → **Theme**, then **Mode**. **Atelier** is the default — a parchment manuscript by day, a candlelit nocturne by night — and takes follow system, light, or dark. The **Archive** family is thirteen dark themes sharing one design language: a dark ground, bone text, an accent for what is important, and one hot colour held back for what actually matters — *Blood Record* (forensic archive), *Ember Archive* (dark academia), *Blackout* (classified terminal), *Corrosion* (industrial decay), *Bruise* (occult), *Drowned* (abyssal), *Sepulcher* (stone, where red is earned), *Cold Iron* (engineering and incident response), *Hazard* (containment facility), *Velvet Knife* (gothic luxury), *Ash* (a burned archive), *Null* (black box), and *Black Blood* (almost nothing, until something matters). Semantics hold across all of them: danger, warning, verified and information mean the same thing in each. None has a light mode, so choosing one greys the mode choice out rather than ignoring it; the mode you had comes back with Atelier. Your choice is remembered. **Zoom**: `Ctrl` `+`/`-`/`0`.
 - **Vault CSS snippets**: the snippets your vault enables apply, reduced by a strict sanitizer (anything network-reaching or escaped is dropped). Pages carry the `markdown-preview-view` class and the note's `cssclasses`, so class-scoped snippets match. Toggle under View.
 
+## The sandbox
+
+- **`solander --sandbox`** prints the AppArmor profile this installation needs, and nothing else, so it pipes straight into `sudo tee`. **`solander --sandbox-status`** reports whether that profile is installed, whether it attached, and whether the sandbox starts, exiting non-zero while anything is wrong. Both are the same two flags every GTK app in this estate offers.
+- Why it exists, and the one-time setup, are in the README under *The sandbox and Ubuntu's user-namespace policy*.
+
 ## Exports and PDFs
 
 - **Export as PDF** (`Ctrl+Shift+E`) prints the current rendered note through a print stylesheet: wide code and tables wrap instead of clipping, boxes are kept whole across page breaks, headings stay with their content, and the palette prints light. A target inside the vault is refused — the zero-write promise covers exports.

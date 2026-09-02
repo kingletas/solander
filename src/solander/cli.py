@@ -14,8 +14,11 @@ Opens PATH as a vault (directory) or a note (.md file) in a read-only reader.
 With no PATH, reopens the last session.
 
 Options:
-  --version   print the version and exit
-  -h, --help  this text
+  --sandbox         print the AppArmor profile this installation needs, and nothing
+                    else, so it can be piped: solander --sandbox | sudo tee PROFILE
+  --sandbox-status  report whether that profile is installed, attached, and working
+  --version         print the version and exit
+  -h, --help        this text
 """
 
 SANDBOX_HELP = """\
@@ -111,12 +114,48 @@ def check_sandbox() -> str:
     return help_text
 
 
+def sandbox_status() -> tuple[str, int]:
+    """Reports the sandbox in one line per fact, and whether it is ready to run."""
+    interpreter = os.path.realpath(sys.executable)
+    installed = os.path.exists(PROFILE_PATH)
+    label = current_label()
+    ready = sandbox_ready()
+    lines = [
+        f"profile     {PROFILE_PATH} {'installed' if installed else 'NOT installed'}",
+        f"interpreter {interpreter}",
+        f"label       {label or '(none)'}",
+        f"sandbox     {'works' if ready else 'REFUSED — WebKit cannot start'}",
+    ]
+    if not interpreter.startswith(sys.prefix):
+        lines.append(
+            "warning     this is a shared interpreter, so the profile would cover "
+            "every process using it; run `make install` for a private copy"
+        )
+    if installed and not label.startswith("solander"):
+        lines.append(
+            "warning     the profile is installed but did not attach here — it names "
+            "a different path, or this process came through a #! shebang"
+        )
+    if not ready:
+        lines.append(f"fix         solander --sandbox | sudo tee {PROFILE_PATH}")
+        lines.append(f"            sudo apparmor_parser -r {PROFILE_PATH}")
+    return "\n".join(lines), 0 if ready else 1
+
+
 def main() -> int:
     """Parses the trivial flags, then hands the real arguments to the GTK application."""
     arguments = sys.argv[1:]
     if "--version" in arguments:
         print(f"solander {__version__}")
         return 0
+    if "--sandbox" in arguments:
+        # Only the profile reaches stdout: this output is meant for a pipe.
+        print(rendered_profile())
+        return 0
+    if "--sandbox-status" in arguments:
+        report, code = sandbox_status()
+        print(report)
+        return code
     if "-h" in arguments or "--help" in arguments:
         print(USAGE, end="")
         return 0
