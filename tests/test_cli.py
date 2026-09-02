@@ -88,3 +88,26 @@ def test_force_setup_variable_trips_the_preflight(monkeypatch):
     monkeypatch.setenv("SOLANDER_FORCE_SETUP", "1")
     monkeypatch.delenv("SOLANDER_SKIP_SANDBOX_CHECK", raising=False)
     assert cli.check_sandbox() != ""
+
+
+def test_a_venv_install_names_its_own_interpreter(monkeypatch):
+    """A private interpreter is already as narrow as a profile can be."""
+    from solander import cli
+
+    monkeypatch.setattr(cli.sys, "prefix", "/opt/app/.venv")
+    monkeypatch.setattr(cli.sys, "base_prefix", "/usr")
+    monkeypatch.setattr(cli.sys, "executable", "/opt/app/.venv/bin/python")
+    assert cli.profile_target() == "/opt/app/.venv/bin/python"
+
+
+def test_a_system_install_names_the_entry_point_not_the_shared_interpreter(monkeypatch, tmp_path):
+    """Naming /usr/bin/python3 would grant user namespaces to every Python process."""
+    from solander import cli
+
+    entry = tmp_path / "solander"
+    entry.write_text("#!/usr/bin/python3\n")
+    monkeypatch.setattr(cli.sys, "prefix", "/usr")
+    monkeypatch.setattr(cli.sys, "base_prefix", "/usr")
+    monkeypatch.setattr(cli.sys, "executable", "/usr/bin/python3.12")
+    monkeypatch.setattr(cli.sys, "argv", [str(entry)])
+    assert cli.profile_target() == str(entry)

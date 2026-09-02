@@ -1,6 +1,6 @@
 [project]
 name = "solander"
-version = "2.1.1"
+version = "2.2.0"
 description = "A read-only GTK4 reading application that opens a Markdown vault in place and never writes into it"
 readme = "README.md"
 license = { file = "LICENSE" }

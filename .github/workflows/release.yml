@@ -1,0 +1,134 @@
+name: Release
+
+# Tagging is the whole trigger: `git tag v2.1.1 && git push --tags` builds the
+# packages, proves each one installs, and publishes them on a GitHub Release
+# whose body is that version's CHANGELOG section.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build, without the leading v (e.g. 2.1.1)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tag, the packaging version and the changelog have to agree, or the
+      # release ships one version's files under another version's notes.
+      - id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ inputs.version }}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          declared="$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)"
+          if [ "$version" != "$declared" ]; then
+            echo "::error::tag says $version, pyproject.toml says $declared"
+            exit 1
+          fi
+          packaging/release-notes.sh "$version" > /dev/null
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  deb:
+    needs: version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the package
+        run: packaging/deb/build.sh dist
+
+      # A package that builds and cannot be installed is not a release artifact.
+      - name: Install it, and check what it put on the system
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ./dist/solander_*_all.deb
+          solander --version
+          test -f /etc/apparmor.d/solander
+          test -f /usr/share/applications/com.kingletas.Solander.desktop
+          test -f /usr/share/icons/hicolor/scalable/apps/com.kingletas.Solander.svg
+          # The shipped profile and the profile the app asks for must name the
+          # same path, or a user following --sandbox would install a second one.
+          solander --sandbox | grep -F 'profile solander /usr/bin/solander'
+          grep -F 'profile solander /usr/bin/solander' /etc/apparmor.d/solander
+
+      - name: Check it uninstalls cleanly
+        run: |
+          sudo apt-get purge -y solander
+          test ! -e /etc/apparmor.d/solander
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  flatpak:
+    needs: version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flatpak-builder and the GNOME runtime
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y --noninteractive flathub \
+            org.gnome.Platform//48 org.gnome.Sdk//48
+
+      # flatpak-builder builds with the network off, which is why every
+      # dependency in the manifest is a wheel pinned by sha256.
+      - name: Build the bundle
+        run: |
+          flatpak-builder --disable-rofiles-fuse --force-clean \
+            --repo=repo build data/flatpak/com.kingletas.Solander.yaml
+          flatpak build-bundle repo \
+            "dist/solander_${{ needs.version.outputs.version }}.flatpak" \
+            com.kingletas.Solander
+
+      - name: Check the bundle installs and the command is there
+        run: |
+          flatpak install -y --user --noninteractive \
+            "dist/solander_${{ needs.version.outputs.version }}.flatpak"
+          flatpak run --command=solander com.kingletas.Solander --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak
+          path: dist/*.flatpak
+          if-no-files-found: error
+
+  publish:
+    needs: [version, deb, flatpak]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      # The release body is the changelog entry rather than a second account of
+      # the same release written by hand.
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ needs.version.outputs.version }}"
+          packaging/release-notes.sh "$version" > notes.md
+          gh release create "v${version}" artifacts/* \
+            --title "Solander ${version}" \
+            --notes-file notes.md

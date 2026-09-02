@@ -80,10 +80,27 @@ def sandbox_ready() -> bool:
     return probe.returncode == 0
 
 
-def rendered_profile() -> str:
-    """Renders the AppArmor profile for the interpreter actually running this app."""
+def profile_target() -> str:
+    """The path AppArmor should attach the profile to, which differs by install.
+
+    From a source install the app runs on a private interpreter inside its own
+    virtualenv, and naming that is as narrow as it gets. From a system package
+    the interpreter is the shared `/usr/bin/python3`, and naming *that* would
+    grant user namespaces to every Python process on the machine — so the entry
+    point is named instead, which is what Ubuntu's own profiles for packaged
+    Python applications do.
+    """
     interpreter = os.path.realpath(sys.executable)
-    return PROFILE_TEMPLATE.format(interpreter=interpreter).rstrip("\n")
+    # sys.prefix diverges from base_prefix exactly when running inside a venv.
+    if sys.prefix != sys.base_prefix:
+        return interpreter
+    entry = os.path.realpath(sys.argv[0]) if sys.argv and sys.argv[0] else ""
+    return entry if entry and os.path.isfile(entry) else interpreter
+
+
+def rendered_profile() -> str:
+    """Renders the AppArmor profile for however this copy of the app was installed."""
+    return PROFILE_TEMPLATE.format(interpreter=profile_target()).rstrip("\n")
 
 
 def current_label() -> str:
@@ -116,7 +133,7 @@ def check_sandbox() -> str:
 
 def sandbox_status() -> tuple[str, int]:
     """Reports the sandbox in one line per fact, and whether it is ready to run."""
-    interpreter = os.path.realpath(sys.executable)
+    interpreter = profile_target()
     installed = os.path.exists(PROFILE_PATH)
     label = current_label()
     ready = sandbox_ready()

@@ -36,6 +36,26 @@ The full walkthrough is the **[user guide](docs/user-guide.md)**; installation i
 
 ## Install
 
+### Flatpak
+
+The simplest route, and the only one with **no sandbox step at all** — Flatpak's own bubblewrap already has the permission WebKit needs, so nothing has to be installed into `/etc`.
+
+```bash
+flatpak install solander.flatpak
+```
+
+Take the bundle from the [latest release](../../releases/latest).
+
+### Debian package
+
+For Ubuntu 24.04+. It pulls the GObject bindings itself and installs the AppArmor profile, so there is nothing to do afterwards:
+
+```bash
+sudo apt install ./solander_2.2.0_all.deb
+```
+
+### From source
+
 Requires Ubuntu 24.04+ (GTK 4, libadwaita 1.5+, WebKitGTK 6.0) with the system GObject bindings:
 
 ```bash
@@ -54,7 +74,7 @@ Then, with [uv](https://docs.astral.sh/uv/) installed:
 make install
 ```
 
-That creates the virtualenv against the system Python (so the GI bindings are visible), installs the dependencies, and puts a `solander` launcher on your `PATH`. `make help` lists everything else.
+That creates the virtualenv against the system Python (so the GI bindings are visible), installs the dependencies, and puts a `solander` launcher on your `PATH`. `make help` lists everything else. A source install needs the one-time [sandbox step](#the-sandbox-and-ubuntus-user-namespace-policy) below; the Flatpak and the deb do not.
 
 ## Run
 

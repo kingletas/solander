@@ -49,6 +49,20 @@ install: ## Install the launcher to PREFIX (default ~/bin) plus desktop entry an
 uninstall: ## Remove what install placed
 	@scripts/uninstall.sh $(PREFIX)
 
+# --- packaging ---
+
+.PHONY: deb
+deb: ## Build the .deb into dist/
+	@packaging/deb/build.sh dist
+
+.PHONY: flatpak
+flatpak: ## Build and install the Flatpak locally (needs the GNOME 48 runtime and SDK)
+	@flatpak-builder --user --install --force-clean build data/flatpak/com.kingletas.Solander.yaml
+
+.PHONY: notes
+notes: ## Print one version's changelog section: make notes VERSION=2.1.1
+	@packaging/release-notes.sh $(VERSION)
+
 # --- housekeeping ---
 
 .PHONY: clean

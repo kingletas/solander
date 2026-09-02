@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.0 — 2026-09-02
+
+Tagging a release now builds and publishes the packages.
+
+- **Debian package.** `packaging/deb/build.sh` produces an `Architecture: all` deb — every dependency is pure Python — that vendors the app and its libraries into `/usr/lib/solander`, declares the GObject bindings as apt dependencies, and **ships the AppArmor profile**, parsed by the postinst. A deb user has no sandbox step at all.
+- **Flatpak.** The manifest is real now rather than a starting point: GNOME 48 runtime, every dependency pinned by sha256 because flatpak-builder builds with the network off, and no network permission granted at runtime. Inside Flatpak there is no AppArmor step either — the sandbox WebKit needs comes from Flatpak's own bubblewrap.
+- **`Release` workflow.** Push a `v*` tag and it builds both, **installs each one and checks what it put on the system**, then publishes them on a GitHub Release whose body is that version's changelog section. It refuses to start when the tag, `pyproject.toml` and the changelog disagree.
+- **CI builds the packages too**, so a tag is never the first time the packaging runs: the deb on every change, the flatpak on pushes to main.
+- **The profile names the right thing for each install shape.** From source it names the private interpreter in the virtualenv; from a system package it names `/usr/bin/solander`, because naming `/usr/bin/python3` would grant user namespaces to every Python process on the machine. That is the shape Ubuntu's own profiles for packaged Python applications use.
+- `make deb`, `make flatpak` and `make notes VERSION=x.y.z` run the same scripts CI runs.
+
 ## 2.1.1 — 2026-09-02
 
 Documentation pass before the first public push.

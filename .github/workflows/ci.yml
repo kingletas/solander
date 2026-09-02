@@ -39,3 +39,36 @@ jobs:
         run: |
           pip install semgrep
           semgrep --config p/python --error --metrics=off src/ tests/ scripts/
+
+  # A tag must not be the first time the packaging runs. The deb is cheap, so it
+  # builds on every change; the flatpak downloads a 1.5 GB runtime, so it builds
+  # on main only.
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and install the deb
+        run: |
+          packaging/deb/build.sh dist
+          sudo apt-get update -qq
+          sudo apt-get install -y ./dist/solander_*_all.deb
+          solander --version
+          solander --sandbox | grep -F 'profile solander /usr/bin/solander'
+
+  flatpak:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install flatpak-builder and the GNOME runtime
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y --noninteractive flathub \
+            org.gnome.Platform//48 org.gnome.Sdk//48
+      - name: Build it
+        run: |
+          flatpak-builder --disable-rofiles-fuse --force-clean \
+            build data/flatpak/com.kingletas.Solander.yaml
