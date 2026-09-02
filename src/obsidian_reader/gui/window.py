@@ -549,10 +549,16 @@ class ReaderWindow(Adw.ApplicationWindow):
             spacings.append(label, f"win.line-spacing::{value}")
         typography.append_submenu("Line Spacing", spacings)
         menu.append_submenu("Typography", typography)
+        context = Gio.Menu()
+        context.append("Title & Breadcrumb", "win.show-breadcrumb")
+        context.append("Metadata Line", "win.show-note-meta")
+        context.append("On This Page Rail", "win.show-page-toc")
+        context.append("Linked Mentions", "win.show-backlinks")
         view = Gio.Menu()
         view.append("New Tab", "win.new-tab")
         view.append("Reading Mode", "win.zen")
         view.append("Raw Source View", "win.toggle-source")
+        view.append_submenu("Note Context", context)
         view.append("Show Hidden Files", "win.show-hidden")
         view.append("Markdown Files Only", "win.markdown-only")
         view.append("Vault CSS Snippets", "win.css-snippets")
@@ -637,27 +643,84 @@ class ReaderWindow(Adw.ApplicationWindow):
         drop.connect("drop", lambda _t, value, _x, _y: self._open_gfile(value) or True)
         self.add_controller(drop)
 
+    # The chrome wears the same atelier palettes as the reading canvas, so the
+    # window and the page read as one surface instead of a browser in a frame.
+    _CHROME_LIGHT = """
+    @define-color accent_bg_color #1c4e9c;
+    @define-color accent_fg_color #ffffff;
+    @define-color accent_color #1c4e9c;
+    @define-color window_bg_color #efe8d6;
+    @define-color window_fg_color #2b2620;
+    @define-color headerbar_bg_color #e8dfc8;
+    @define-color headerbar_fg_color #2b2620;
+    @define-color view_bg_color #f9f4e7;
+    @define-color view_fg_color #2b2620;
+    @define-color popover_bg_color #f6f0df;
+    @define-color popover_fg_color #2b2620;
+    @define-color dialog_bg_color #f6f0df;
+    @define-color dialog_fg_color #2b2620;
+    @define-color card_bg_color #f4eeda;
+    @define-color card_fg_color #2b2620;
+    """
+
+    _CHROME_DARK = """
+    @define-color accent_bg_color #5c84c4;
+    @define-color accent_fg_color #ffffff;
+    @define-color accent_color #8fb0e8;
+    @define-color window_bg_color #211e19;
+    @define-color window_fg_color #d9d2c2;
+    @define-color headerbar_bg_color #262218;
+    @define-color headerbar_fg_color #d9d2c2;
+    @define-color view_bg_color #1c1a16;
+    @define-color view_fg_color #d9d2c2;
+    @define-color popover_bg_color #2a261e;
+    @define-color popover_fg_color #d9d2c2;
+    @define-color dialog_bg_color #2a261e;
+    @define-color dialog_fg_color #d9d2c2;
+    @define-color card_bg_color #262218;
+    @define-color card_fg_color #d9d2c2;
+    """
+
+    _CHROME_STRUCTURE = """
+    headerbar windowtitle .title {
+        font-family: "Noto Serif", "Liberation Serif", Georgia, serif;
+        font-weight: 700;
+    }
+    .readonly-pill { background: alpha(currentColor, 0.1); border-radius: 999px;
+                     padding: 2px 10px; font-size: 0.85em; min-height: 0; }
+    .hover-status { background: alpha(@window_bg_color, 0.9); border-radius: 6px;
+                    padding: 2px 8px; margin: 6px; font-size: 0.85em; }
+    .navigation-sidebar row:selected {
+        box-shadow: inset 3px 0 0 @accent_bg_color;
+        background: alpha(@accent_bg_color, 0.12);
+        color: @window_fg_color;
+    }
+    listview.navigation-sidebar > row { padding-top: 3px; padding-bottom: 3px; }
+    .quick-heading { font-size: 0.72em; font-weight: bold; letter-spacing: 0.12em;
+                     color: alpha(currentColor, 0.55); margin: 10px 12px 2px; }
+    """
+
     def _load_css(self) -> None:
         from gi.repository import Gdk
 
-        css = """
-        .readonly-pill { background: alpha(currentColor, 0.1); border-radius: 999px;
-                         padding: 2px 10px; font-size: 0.85em; min-height: 0; }
-        .hover-status { background: alpha(@window_bg_color, 0.9); border-radius: 6px;
-                        padding: 2px 8px; margin: 6px; font-size: 0.85em; }
-        .navigation-sidebar row:selected {
-            box-shadow: inset 3px 0 0 @accent_bg_color;
-            background: alpha(@accent_bg_color, 0.12);
-            color: @window_fg_color;
-        }
-        .quick-heading { font-size: 0.72em; font-weight: bold; letter-spacing: 0.08em;
-                         color: alpha(currentColor, 0.55); margin: 8px 12px 2px; }
-        """
-        provider = Gtk.CssProvider()
-        provider.load_from_string(css)
+        self._chrome_provider = Gtk.CssProvider()
         Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            Gdk.Display.get_default(),
+            self._chrome_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
+        Adw.StyleManager.get_default().connect("notify::dark", self._on_style_flip)
+        self._apply_chrome_css()
+
+    def _on_style_flip(self, *_args) -> None:
+        """A light/dark flip re-tints the chrome and re-renders every page to match."""
+        self._apply_chrome_css()
+        self._reload_all_tabs()
+
+    def _apply_chrome_css(self) -> None:
+        dark = Adw.StyleManager.get_default().get_dark()
+        palette = self._CHROME_DARK if dark else self._CHROME_LIGHT
+        self._chrome_provider.load_from_string(palette + self._CHROME_STRUCTURE)
 
     # -- actions -----------------------------------------------------------
 
@@ -736,6 +799,17 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._on_css_snippets,
             state=GLib.Variant.new_boolean(self.store.state.css_snippets),
         )
+        for name, key in (
+            ("show-breadcrumb", "show_breadcrumb"),
+            ("show-note-meta", "show_note_meta"),
+            ("show-page-toc", "show_page_toc"),
+            ("show-backlinks", "show_backlinks_footer"),
+        ):
+            add(
+                name,
+                (lambda a, v, k=key: self._on_context_toggle(a, v, k)),
+                state=GLib.Variant.new_boolean(getattr(self.store.state, key)),
+            )
         add(
             "appearance",
             self._on_appearance,
@@ -786,7 +860,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         def build():
             vault = Vault.open(root)
             renderer = NoteRenderer(
-                vault, self._typography, lambda: self.graph, lambda: self._snippets_css
+                vault, self._typography, lambda: self.graph, lambda: self._snippets_css,
+                options=self._page_options,
             )
             GLib.idle_add(self._vault_ready, vault, renderer, focus_note, restore_tabs)
 
@@ -887,8 +962,9 @@ class ReaderWindow(Adw.ApplicationWindow):
                     load_snippets(root) if self.store.state.css_snippets else ""
                 )
                 renderer = NoteRenderer(
-                vault, self._typography, lambda: self.graph, lambda: self._snippets_css
-            )
+                    vault, self._typography, lambda: self.graph, lambda: self._snippets_css,
+                    options=self._page_options,
+                )
                 try:
                     result = sync_indexes(vault, store, progress=progress)
                 except sqlite3.Error:
@@ -994,6 +1070,21 @@ class ReaderWindow(Adw.ApplicationWindow):
             "width": state.line_width,
             "spacing": state.line_spacing,
         }
+
+    def _page_options(self) -> dict:
+        """Which note-context elements are switched on under View → Note Context."""
+        state = self.store.state
+        return {
+            "breadcrumb": state.show_breadcrumb,
+            "meta": state.show_note_meta,
+            "toc": state.show_page_toc,
+            "backlinks": state.show_backlinks_footer,
+        }
+
+    def _on_context_toggle(self, action, value, key: str) -> None:
+        action.set_state(value)
+        setattr(self.store.state, key, value.get_boolean())
+        self._reload_all_tabs()
 
     def _on_typography(self, action, value, key: str) -> None:
         action.set_state(value)
@@ -1133,21 +1224,54 @@ class ReaderWindow(Adw.ApplicationWindow):
             )
         return build_message_page("Not found", f"No app page named {name}", theme)
 
+    def _welcome_mark(self) -> str:
+        """The app mark, inlined so the frontispiece needs no asset request."""
+        from importlib import resources
+
+        try:
+            svg = resources.files("obsidian_reader.assets").joinpath("icons/mark.svg")
+            markup = svg.read_text("utf-8")
+        except OSError:
+            return ""
+        markup = markup.split("?>", 1)[-1].replace(
+            'width="128" height="128"', 'width="96" height="96"', 1
+        )
+        return f'<div class="welcome-mark">{markup}</div>'
+
     def _welcome_page(self, theme: str) -> str:
-        recents = ""
-        for root in self.store.state.recent_vaults:
-            label = html.escape(root)
+        cards = ""
+        for root in self.store.state.recent_vaults[:6]:
+            name = html.escape(Path(root).name)
+            path = html.escape(root)
             href = f"reader:///action/open-recent?arg={quote(root, safe='')}"
-            recents += f'<li><a href="{href}">{label}</a></li>'
-        recents_block = f"<h2>Recent vaults</h2><ul>{recents}</ul>" if recents else ""
+            cards += (
+                f'<a class="vault-card" href="{href}">'
+                f'<span class="vault-card-name">{name}</span>'
+                f'<span class="vault-card-path">{path}</span></a>'
+            )
+        recents_block = ""
+        if cards:
+            recents_block = (
+                '<div class="welcome-recents">'
+                '<div class="welcome-recents-title">Recent vaults</div>'
+                f"{cards}</div>"
+            )
         body = (
-            '<div class="message-state"><h1>Obsidian Reader</h1>'
-            "<p>Open an existing vault or a single Markdown file. "
-            "Everything is read-only: nothing is ever written into your vault.</p>"
-            '<p><a href="reader:///action/open-vault">Open a vault folder…</a> · '
-            '<a href="reader:///action/open-file">Open a file…</a></p>'
-            '<p>New here? <a href="reader:///page/getting-started">Getting started</a> · '
-            '<a href="reader:///page/user-guide">User guide</a></p>'
+            f'<div class="welcome">{self._welcome_mark()}'
+            f'<h1 class="welcome-name">{APP_NAME}</h1>'
+            '<div class="welcome-tagline">Your vault, read in place</div>'
+            '<div class="welcome-rule"></div>'
+            '<div class="action-cards">'
+            '<a class="action-card" href="reader:///action/open-vault">'
+            '<span class="action-card-title">Open a vault</span>'
+            '<span class="action-card-hint">A folder of notes, opened read-only</span></a>'
+            '<a class="action-card" href="reader:///action/open-file">'
+            '<span class="action-card-title">Open a file</span>'
+            '<span class="action-card-hint">A single Markdown note</span></a>'
+            "</div>"
+            '<div class="welcome-docs">New here? '
+            '<a href="reader:///page/getting-started">Getting started</a> · '
+            '<a href="reader:///page/user-guide">User guide</a></div>'
             f"{recents_block}</div>"
         )
         return build_page(body, APP_NAME, theme)

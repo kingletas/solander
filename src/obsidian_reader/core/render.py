@@ -162,17 +162,24 @@ def _find_block(body: str, block_id: str) -> str:
 class NoteRenderer:
     """Renders notes from one vault, resolving links and embeds as it goes."""
 
-    def __init__(self, vault: Vault, typography=None, graph_provider=None, snippets=None):
+    def __init__(
+        self, vault: Vault, typography=None, graph_provider=None, snippets=None, options=None
+    ):
         self.vault = vault
         self.typography = typography
         self.graph_provider = graph_provider
         self.snippets = snippets
+        self.options = options
         self.md = build_parser()
         self.md.core.ruler.before("inline", "obsidian_callouts", callouts_rule)
         self._install_render_rules()
 
     def _typo(self) -> dict | None:
         return self.typography() if callable(self.typography) else None
+
+    def _opts(self) -> dict:
+        """Which note-context elements the person wants shown; everything by default."""
+        return self.options() if callable(self.options) else {}
 
     def _snips(self) -> str:
         return self.snippets() if callable(self.snippets) else ""
@@ -213,11 +220,20 @@ class NoteRenderer:
             body_html = self._render_markdown(split.body, env)
         properties_html = _properties_block(split.properties)
         body = sanitize(properties_html + body_html)
+        opts = self._opts()
         header = note_header(
-            rel, title, split.properties, split.body, env["outline"], self._mtime(rel)
+            rel,
+            title,
+            split.properties,
+            split.body,
+            env["outline"],
+            self._mtime(rel),
+            show_title=opts.get("breadcrumb", True),
+            show_meta=opts.get("meta", True),
         )
-        toc = "" if (typo or {}).get("width") in ("wide", "full") else page_toc(env["outline"])
-        footer = self._backlinks_footer(rel)
+        wide = (typo or {}).get("width") in ("wide", "full")
+        toc = page_toc(env["outline"]) if opts.get("toc", True) and not wide else ""
+        footer = self._backlinks_footer(rel) if opts.get("backlinks", True) else ""
         return RenderedNote(
             page=build_page(
                 header + toc + body + footer,
@@ -621,13 +637,15 @@ def note_header(
     body_text: str,
     outline: list,
     mtime: float | None,
+    show_title: bool = True,
+    show_meta: bool = True,
 ) -> str:
     """Context before content: breadcrumb, inline title, and a compact metadata line."""
-    crumbs = _crumbs_html(rel)
-    heading = "" if _body_opens_with_title(outline, title) else (
-        f'<h1 class="inline-title">{html.escape(title)}</h1>'
-    )
-    meta = _meta_line_html(properties, body_text, mtime)
+    crumbs = _crumbs_html(rel) if show_title else ""
+    heading = ""
+    if show_title and not _body_opens_with_title(outline, title):
+        heading = f'<h1 class="inline-title">{html.escape(title)}</h1>'
+    meta = _meta_line_html(properties, body_text, mtime) if show_meta else ""
     if not (crumbs or heading or meta):
         return ""
     return f'<header class="note-header">{crumbs}{heading}{meta}</header>'
@@ -810,7 +828,11 @@ def _page_css() -> str:
     if not _PYGMENTS_CSS:
         light = HtmlFormatter(style="default").get_style_defs(".theme-light .highlight")
         dark = HtmlFormatter(style="monokai").get_style_defs(".theme-dark .highlight")
-        _PYGMENTS_CSS = f"{light}\n{dark}"
+        # Pygments sets its own panel color; the page's surface stays the one truth.
+        override = (
+            ".theme-light .highlight, .theme-dark .highlight { background: var(--surface); }"
+        )
+        _PYGMENTS_CSS = f"{light}\n{dark}\n{override}"
     return f"{_PAGE_CSS}\n{_PYGMENTS_CSS}"
 
 

@@ -57,6 +57,8 @@ Every note opens with its context before its content:
 - **On this page** — on windows wide enough to hold it, a fixed rail beside the text lists the note's headings (three or more, levels 1–3). It never prints, and it steps aside when the line width is set to Wide or Full — the outline popover in the header bar always works regardless.
 - **Linked mentions** — notes that link to the current one are listed after the content, collapsed, each with the line of context around the mention. The Links panel carries the full list either way.
 
+**Every one of these is a choice, not a fixture.** View → Note Context toggles Title & Breadcrumb, the Metadata Line, the On This Page rail, and Linked Mentions individually — persisted across sessions, applied to every open tab at once.
+
 ## What renders
 
 CommonMark and GFM (tables, task lists, strikethrough, autolinks), plus the Obsidian layer: wikilinks with aliases and heading/block links, embeds with cycle detection, callouts (foldable and nested), highlights, hidden `%%` and HTML comments, inline tags, extended task states, footnotes, image sizing, frontmatter as a collapsible Properties panel, syntax-highlighted code, and TeX math (`$...$`, `$$...$$`) as native MathML. Beyond markdown:
@@ -94,7 +96,7 @@ The hidden list is stored in the reader's config, never in the vault.
 ## Reading comfort
 
 - **Reading mode**: `F11` removes every piece of chrome; `Esc` or `F11` restores.
-- **Typography** (menu): font (theme default, serif, sans, mono), line width (narrow to full), line spacing (compact to relaxed) — persisted, applied everywhere.
+- **Typography** (menu): font (the default is a book serif; sans and mono are one click away), line width (narrow to full), line spacing (compact to relaxed) — persisted, applied everywhere.
 - **Appearance**: follow system, light, or dark. **Zoom**: `Ctrl` `+`/`-`/`0`.
 - **Vault CSS snippets**: the snippets your vault enables apply, reduced by a strict sanitizer (anything network-reaching or escaped is dropped). Pages carry the `markdown-preview-view` class and the note's `cssclasses`, so class-scoped snippets match. Toggle under View.
 

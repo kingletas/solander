@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.0 — 2026-09-02
+
+The atelier redesign: one visual identity across the whole app, and every piece of it under the reader's control.
+
+- **A manuscript identity.** The reading canvas wears parchment and sepia ink with lapis links and gold ornament by day, a candlelit nocturne by night. Serif display type carries titles and headings, the note title gets a short gold rule, section breaks render as a fleuron, blockquotes open with a proper quotation mark, and the app icon is retinted to match.
+- **The chrome wears the same palettes.** The GTK window — sidebar, header bar, popovers, dialogs — is themed to the exact colors of the reading canvas in both light and dark, so the window and the page read as one surface instead of a browser in a frame. The header title is set in the display serif; a system light/dark flip re-tints the chrome and re-renders every open page together.
+- **A real welcome page.** The app opens on a frontispiece: the mark, the name, two action cards, in-app documentation links, and recent vaults as cards — not a bare paragraph.
+- **Note context is a choice, not a fixture.** View → Note Context toggles Title & Breadcrumb, the Metadata Line, the On This Page rail, and Linked Mentions individually — persisted, applied to every tab at once. The rail can now simply be switched off.
+- Syntax-highlighted code blocks sit on the page's own surface in both themes (Pygments used to force its own panel color), and callout tints are softened to sit quietly on the warm background.
+
 ## 1.3.0 — 2026-09-02
 
 The look-and-feel release: editorial rather than dashboard-like, with context before content.

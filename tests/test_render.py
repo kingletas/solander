@@ -288,3 +288,23 @@ def test_backlinks_footer_lists_linked_mentions(vault):
     assert "reader:///note/Index.md" in page
     without_mentions = renderer.render("Index.md").page
     assert 'class="backlinks"' not in without_mentions
+
+
+def test_note_context_elements_honor_their_toggles(vault):
+    from obsidian_reader.core.graph import VaultGraph
+
+    graph = VaultGraph.build(vault)
+    options = {"breadcrumb": False, "meta": False, "toc": False, "backlinks": False}
+    renderer = NoteRenderer(vault, graph_provider=lambda: graph, options=lambda: options)
+    page = renderer.render("Projects/Alpha.md").page
+    assert 'class="crumbs"' not in page
+    assert '<h1 class="inline-title">' not in page
+    assert 'class="note-meta"' not in page
+    assert 'class="page-toc"' not in page
+    assert 'class="backlinks"' not in page
+    options.update({"breadcrumb": True, "meta": True, "toc": True, "backlinks": True})
+    page = renderer.render("Projects/Alpha.md").page
+    assert 'class="crumbs"' in page
+    assert 'class="note-meta"' in page
+    assert 'class="page-toc"' in page
+    assert 'class="backlinks"' in page

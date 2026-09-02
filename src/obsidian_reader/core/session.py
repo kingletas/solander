@@ -40,6 +40,10 @@ class SessionState:
     reader_font: str = "default"
     line_width: str = "normal"
     line_spacing: str = "normal"
+    show_breadcrumb: bool = True
+    show_note_meta: bool = True
+    show_page_toc: bool = True
+    show_backlinks_footer: bool = True
 
 
 class SessionStore:

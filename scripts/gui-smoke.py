@@ -137,6 +137,21 @@ def run_checks(app):
             long_page = window._provide_page("/note/Long.md", window.reader.webview)
             has_rail = 'class="page-toc"' in long_page
             check("on-this-page rail renders for a structured note", has_rail)
+            toc_action = window.lookup_action("show-page-toc")
+            toc_action.change_state(GLib.Variant.new_boolean(False))
+            bare = window._provide_page("/note/Long.md", window.reader.webview)
+            check("the rail can be hidden from the View menu", 'class="page-toc"' not in bare)
+            toc_action.change_state(GLib.Variant.new_boolean(True))
+            crumb_action = window.lookup_action("show-breadcrumb")
+            crumb_action.change_state(GLib.Variant.new_boolean(False))
+            plain = window._provide_page("/note/Second Note.md", window.reader.webview)
+            untitled = '<h1 class="inline-title">' not in plain
+            check("title and breadcrumb can be hidden too", untitled)
+            crumb_action.change_state(GLib.Variant.new_boolean(True))
+            welcome = window._provide_page("/page/welcome", window.reader.webview)
+            hero = 'class="welcome-name"' in welcome and 'class="action-card"' in welcome
+            check("welcome page carries the frontispiece", hero)
+            check("welcome hero inlines the app mark", "<svg" in welcome)
             guide = window._provide_page("/page/user-guide", window.reader.webview)
             check("user guide renders in-app", "The window" in guide and "<table>" in guide)
             check("guide cross-links stay in-app", "reader:///page/getting-started" in guide)
