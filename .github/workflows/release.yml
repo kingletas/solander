@@ -57,7 +57,9 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ./dist/solander_*_all.deb
-          solander --version
+          # The package must announce the version it was built as. __version__
+          # is a second literal beside pyproject's, and 2.2.1 shipped saying 2.2.0.
+          solander --version | grep -Fx "solander ${{ needs.version.outputs.version }}"
           test -f /etc/apparmor.d/solander
           test -f /usr/share/applications/com.kingletas.Solander.desktop
           test -f /usr/share/icons/hicolor/scalable/apps/com.kingletas.Solander.svg
@@ -107,7 +109,8 @@ jobs:
         run: |
           flatpak install -y --user --noninteractive \
             "dist/solander_${{ needs.version.outputs.version }}.flatpak"
-          flatpak run --command=solander com.kingletas.Solander --version
+          flatpak run --command=solander com.kingletas.Solander --version \
+            | grep -Fx "solander ${{ needs.version.outputs.version }}"
           # --version imports almost nothing. This renders a page, which pulls in
           # every vendored dependency, so a runtime missing one fails here rather
           # than in front of a user.
@@ -118,6 +121,13 @@ jobs:
           page = build_page('<p>x</p>', 'Note', 'blood-record')
           assert 'theme-blood-record' in page, 'theme did not apply'
           print('flatpak renders, and carries its dependencies')"
+          # --version and an in-process render both skip the startup path, so a
+          # Flatpak that refuses to start passed both. This is that check.
+          flatpak run --command=python3 com.kingletas.Solander -c "
+          from solander.cli import sandbox_ready, inside_flatpak
+          assert inside_flatpak(), 'not detected as running inside Flatpak'
+          assert sandbox_ready(), 'the app would refuse to start in this bundle'
+          print('flatpak starts: the sandbox check passes inside the bundle')"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

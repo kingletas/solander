@@ -59,6 +59,14 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.2.2" date="2026-09-02">
+      <description>
+        <p>Fixes a Flatpak that would not start. The check deciding whether the
+        renderer's sandbox can run cannot succeed inside Flatpak and does not
+        need to, because Flatpak is itself the sandbox. Also corrects the
+        version the application reports.</p>
+      </description>
+    </release>
     <release version="2.2.1" date="2026-09-02">
       <description>
         <p>Corrects the application metadata a software centre reads: this

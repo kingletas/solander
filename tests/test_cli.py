@@ -110,3 +110,46 @@ def test_a_system_install_names_the_entry_point_not_the_shared_interpreter(monke
     monkeypatch.setattr(cli.sys, "executable", "/usr/bin/python3.12")
     monkeypatch.setattr(cli.sys, "argv", [str(entry)])
     assert cli.profile_target() == str(entry)
+
+
+def test_the_sandbox_probe_is_skipped_inside_flatpak(monkeypatch):
+    """The probe cannot succeed inside Flatpak, and does not need to.
+
+    A Flatpak process is already in Flatpak's own user namespace, so nesting
+    another is refused — while WebKit's sandbox works, because Flatpak is the
+    confinement. Running the probe there refuses to start the application and
+    prints an AppArmor fix that could never change the result.
+    """
+    calls = []
+    monkeypatch.setattr(cli.shutil, "which", lambda name: calls.append(name) or "/usr/bin/bwrap")
+    monkeypatch.setattr(cli.os.path, "exists", lambda path: path == "/.flatpak-info")
+
+    assert cli.sandbox_ready() is True
+    assert calls == [], "the probe ran inside Flatpak"
+
+
+def test_the_sandbox_probe_still_runs_outside_flatpak(monkeypatch):
+    """The exclusion must be Flatpak-only, or the guard is gone everywhere."""
+    monkeypatch.setattr(cli.os.path, "exists", lambda path: False)
+    monkeypatch.setattr(cli.shutil, "which", lambda name: None)
+
+    # which() returning None is the "cannot probe" path, which answers True --
+    # what matters is that inside_flatpak() did not short-circuit ahead of it.
+    assert cli.inside_flatpak() is False
+
+
+def test_the_version_the_app_prints_is_the_version_it_was_built_as():
+    """__version__ and pyproject are two literals that can disagree, and did.
+
+    2.2.1 shipped reporting 2.2.0: the release job compares the tag, pyproject
+    and the changelog, and never looks at this one.
+    """
+    import tomllib
+    from pathlib import Path
+
+    import solander
+
+    root = Path(__file__).resolve().parent.parent
+    with (root / "pyproject.toml").open("rb") as handle:
+        declared = tomllib.load(handle)["project"]["version"]
+    assert solander.__version__ == declared

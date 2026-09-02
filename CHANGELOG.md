@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2.2 — 2026-09-02
+
+Two defects found by installing the published package rather than trusting the build.
+
+- **The Flatpak refused to start.** The check that decides whether WebKit's sandbox can run probes `bwrap --unshare-user`, and inside Flatpak that probe always fails — the process is already in Flatpak's own user namespace and nesting another is refused — **while WebKit's sandbox works perfectly, because Flatpak is the confinement**. So the one install route documented as needing no setup was the only one that would not open, and the AppArmor fix it printed could never have changed the result. The probe is skipped inside Flatpak, and two tests hold the line: one that it is skipped there, one that it still runs everywhere else.
+- **The application reported the wrong version.** `__version__` in the package and `version` in `pyproject.toml` are two literals, and only the second is what the release job checks against the tag and the changelog — so 2.2.1 shipped announcing itself as 2.2.0. A test now asserts the two agree, and both workflows assert that the installed package prints the version they built.
+- **CI now launches what it builds.** The Flatpak job checked `--version` and rendered a page in-process; neither goes through the startup path, which is why a Flatpak that could not start passed every gate. It now asserts the sandbox check answers correctly inside the bundle.
+
+
 ## 2.2.1 — 2026-09-02
 
 A documentation and metadata pass after the first release.

@@ -63,8 +63,22 @@ profile solander {interpreter} flags=(unconfined) {{
 """
 
 
+def inside_flatpak() -> bool:
+    """Reports whether this process is running inside a Flatpak sandbox."""
+    return os.path.exists("/.flatpak-info")
+
+
 def sandbox_ready() -> bool:
-    """Reports whether bubblewrap can build a user namespace under this confinement."""
+    """Reports whether bubblewrap can build a user namespace under this confinement.
+
+    Inside Flatpak the answer is always yes, and the probe below cannot say so:
+    the process is already in Flatpak's own user namespace, nesting another one
+    is refused, and WebKit's sandbox works regardless because Flatpak provides
+    the confinement. Probing there reports a failure no AppArmor profile could
+    ever fix, so the app would refuse to start and hand out unfollowable advice.
+    """
+    if inside_flatpak():
+        return True
     bwrap = shutil.which("bwrap")
     true_bin = shutil.which("true")
     if bwrap is None or true_bin is None:
