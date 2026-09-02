@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.13.0 — 2026-09-02
+
+The app mark is a sealed record now, not a book with a padlock.
+
+- **One sigil, two identities.** A bound archival plate standing on a plinth, with a diamond **cut through the plate** and a seal set into the cut. The geometry is identical in both themes; only three fills change — lapis board and gold seal in Atelier, dried blood and arterial red in Blood Record — and the welcome page re-tints them in CSS, so the mark follows the theme without a second file.
+- **Built to survive 16px**: no gradients, filters, masks, rasters, text or external references; three paths, integer coordinates, the seal cut with `fill-rule="evenodd"` rather than a mask. Checked at 128, 64, 48, 32, 24 and 16, in silhouette, and reversed.
+- The padlock, the ruled text lines and the gradients are gone — they made it a generic document app with security software bolted on.
+
 ## 1.12.0 — 2026-09-02
 
 A second theme, and a place for the next one.

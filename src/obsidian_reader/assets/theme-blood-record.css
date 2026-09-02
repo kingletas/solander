@@ -131,4 +131,10 @@
   /* Diagrams and drawings inherit the tokens; only the note tint needs a hand. */
   body.theme-blood-record .mermaid-note { stroke: var(--copper); }
 
+  /* The app mark is one geometry with two identities: the board goes to dried
+     blood, the plate to bone, and the seal in the cut becomes the accent. */
+  body.theme-blood-record .mark-board { fill: var(--border-strong); }
+  body.theme-blood-record .mark-face { fill: #d8ccb5; }
+  body.theme-blood-record .mark-seal { fill: var(--blood-mid); }
+
 }
