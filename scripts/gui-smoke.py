@@ -127,7 +127,11 @@ def run_checks(app):
             inside = window._provide_page("/note/Sub/Inside.md", window.reader.webview)
             crumb = "reader:///action/reveal-folder?arg=Sub" in inside
             check("nested note header carries the breadcrumb", crumb)
-            check("a duplicate H1 suppresses the inline title", "inline-title\">" not in inside)
+            one_title = (
+                '<h1 class="inline-title">Inside</h1>' in inside
+                and inside.count(">Inside</h1>") == 1
+            )
+            check("a duplicate body H1 yields to the header title", one_title)
             second = window._provide_page("/note/Second Note.md", window.reader.webview)
             titled = '<h1 class="inline-title">Second Note</h1>' in second
             check("inline title shows when the body has none", titled)
@@ -141,7 +145,7 @@ def run_checks(app):
             while row is not None:
                 rows += 1 if getattr(row, "anchor", "") else 0
                 row = row.get_next_sibling()
-            check("outline panel lists the note's headings", rows == 4)
+            check("outline panel lists the note's headings", rows == 3)
             window._set_outline_visible(True)
             opened = window.outline_split.get_show_sidebar() and window.outline_toggle.get_active()
             check("outline opens as a native panel", opened)
@@ -161,6 +165,10 @@ def run_checks(app):
             hero = 'class="welcome-name"' in welcome and 'class="action-card"' in welcome
             check("welcome page carries the frontispiece", hero)
             check("welcome hero inlines the app mark", "<svg" in welcome)
+            railed = "atelier-rail" in window.sidebar_widget.get_css_classes()
+            check("the sidebar is the rail surface", railed)
+            crowned = window.rail_title.get_label() == window.vault.root.name.upper()
+            check("the vault name crowns the rail", crowned)
             guide = window._provide_page("/page/user-guide", window.reader.webview)
             check("user guide renders in-app", "The window" in guide and "<table>" in guide)
             check("guide cross-links stay in-app", "reader:///page/getting-started" in guide)

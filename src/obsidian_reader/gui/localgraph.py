@@ -69,7 +69,7 @@ class LocalGraphView:
         style = area.get_style_context()
         fg = style.get_color()
         accent = Gdk.RGBA()
-        if not accent.parse("#3584e4"):
+        if not accent.parse("#d0a44e"):
             accent = fg
         center_x, center_y = width / 2, height / 2
         count = len(self.neighbors)

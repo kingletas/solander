@@ -6,7 +6,7 @@ The three promises frame every feature below: the vault is **never written**, no
 
 ## The window
 
-A resizable sidebar on the left (drag the divider; the width persists), the reading pane on the right, tabs above it. The sidebar has six pages, switched by the icons at its top:
+A full-height rail on the left — a deep sepia surface against the reading canvas, crowned with the vault's name — resizable by its divider, with six pages switched by the icons under the name:
 
 | Page | What it holds |
 |---|---|
@@ -52,7 +52,7 @@ Three operators narrow full-text queries, combinable with plain words:
 Every note opens with its context before its content:
 
 - **Breadcrumb** — the note's folder path above the title; clicking an ancestor reveals that folder in the file tree.
-- **Inline title** — the filename as a large title, skipped when the note already opens with an identical `#` heading.
+- **Inline title** — the filename as a large serif title. When the note opens with an identical `#` heading, the body's copy yields, so the title appears exactly once.
 - **Metadata line** — updated date, word count, an approximate read time on longer notes, and the note's frontmatter tags as clickable chips (a chip runs a `tag:` search).
 - **Linked mentions** — notes that link to the current one are listed after the content, collapsed, each with the line of context around the mention. The Links panel carries the full list either way.
 

@@ -197,6 +197,7 @@ class NoteRenderer:
                 error=note.error,
             )
         split = split_frontmatter(note.text)
+        opts = self._opts()
         env = self._env(rel)
         if isinstance(split.properties, dict) and split.properties.get("excalidraw-plugin"):
             drawing = excalidraw_body(split.body)
@@ -216,16 +217,19 @@ class NoteRenderer:
             )
             body_html = board
         else:
-            body_html = self._render_markdown(split.body, env)
+            body_md = split.body
+            if opts.get("breadcrumb", True):
+                # The header carries the title, so a leading H1 repeating the
+                # filename would print it twice; the body's copy yields.
+                body_md = _strip_leading_duplicate_title(body_md, title)
+            body_html = self._render_markdown(body_md, env)
         properties_html = _properties_block(split.properties)
         body = sanitize(properties_html + body_html)
-        opts = self._opts()
         header = note_header(
             rel,
             title,
             split.properties,
             split.body,
-            env["outline"],
             self._mtime(rel),
             show_title=opts.get("breadcrumb", True),
             show_meta=opts.get("meta", True),
@@ -632,30 +636,30 @@ def note_header(
     title: str,
     properties: dict,
     body_text: str,
-    outline: list,
     mtime: float | None,
     show_title: bool = True,
     show_meta: bool = True,
 ) -> str:
     """Context before content: breadcrumb, inline title, and a compact metadata line."""
     crumbs = _crumbs_html(rel) if show_title else ""
-    heading = ""
-    if show_title and not _body_opens_with_title(outline, title):
-        heading = f'<h1 class="inline-title">{html.escape(title)}</h1>'
+    heading = f'<h1 class="inline-title">{html.escape(title)}</h1>' if show_title else ""
     meta = _meta_line_html(properties, body_text, mtime) if show_meta else ""
     if not (crumbs or heading or meta):
         return ""
     return f'<header class="note-header">{crumbs}{heading}{meta}</header>'
 
 
-def _body_opens_with_title(outline: list, title: str) -> bool:
-    """True when the note's first heading is an H1 repeating the filename."""
-    first = outline[0] if outline else None
-    return (
-        first is not None
-        and first.level == 1
-        and first.text.strip().casefold() == title.strip().casefold()
-    )
+def _strip_leading_duplicate_title(body: str, title: str) -> str:
+    """Drops a leading H1 that repeats the filename; the note header carries it."""
+    lines = body.split("\n")
+    for index, line in enumerate(lines):
+        if not line.strip():
+            continue
+        match = re.match(r"^#\s+(.+?)\s*$", line)
+        if match and match.group(1).strip().casefold() == title.strip().casefold():
+            return "\n".join(lines[:index] + lines[index + 1 :])
+        break
+    return body
 
 
 def _crumbs_html(rel: str) -> str:

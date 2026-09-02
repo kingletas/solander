@@ -130,9 +130,11 @@ def test_properties_panel_renders_frontmatter(vault):
 
 
 def test_outline_lists_headings_with_anchors(vault):
+    # The leading "# Alpha" repeats the filename, so the header carries it
+    # and the outline starts at the sections.
     outline = rendered(vault, "Projects/Alpha.md").outline
-    assert [h.text for h in outline] == ["Alpha", "Timeline", "Notes"]
-    assert outline[1].anchor == "timeline"
+    assert [h.text for h in outline] == ["Timeline", "Notes"]
+    assert outline[0].anchor == "timeline"
 
 
 def test_remote_image_is_blocked(vault):
@@ -244,12 +246,14 @@ def test_bad_tex_falls_back_to_source(vault, vault_dir):
 # -- the note header, "On this page" rail, and linked-mentions footer -------
 
 
-def test_nested_note_gets_breadcrumb_and_skips_duplicate_title(vault):
+def test_nested_note_gets_breadcrumb_and_one_title(vault):
     page = NoteRenderer(vault).render("Projects/Alpha.md").page
     assert 'class="crumbs"' in page
     assert "reader:///action/reveal-folder?arg=Projects" in page
-    # The body opens with "# Alpha", so no inline title repeats it.
-    assert '<h1 class="inline-title">' not in page
+    # The body opens with "# Alpha"; the header carries the title and the
+    # body's duplicate is stripped, so it appears exactly once.
+    assert '<h1 class="inline-title">Alpha</h1>' in page
+    assert page.count(">Alpha</h1>") == 1
 
 
 def test_root_note_gets_inline_title_and_no_breadcrumb(vault):

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0 — 2026-09-02
+
+The two-surface release: depth instead of tint.
+
+- **The sidebar is a rail now.** A deep sepia surface running the full height of the window — the vault's name in gold small caps at its top, the section switcher under it, gold selection with an accent bar, tinted icons, dark-styled search fields, and the note/tag count at its foot. Against the parchment canvas the window finally has fore- and background instead of one beige sheet. It still resizes by its divider and still hides with F9.
+- **The header belongs to the content.** It sits flat on the canvas beside the rail rather than spanning the window as a third tint.
+- **The note title never doubles and never goes missing.** When a note opens with an H1 repeating its filename, the body's copy yields to the header title — so every note starts the same way: breadcrumb, serif title with its gold rule, metadata line. (Previously the header title was suppressed instead, leaving the metadata line floating alone above the properties panel.)
+- The local-graph pane draws in the identity's gold, and the outline panel keeps its place on the content side.
+
 ## 1.5.0 — 2026-09-02
 
 The UX pass: every surface gets an obvious control, and the one element without one is gone.

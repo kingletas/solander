@@ -188,6 +188,13 @@ class ReaderWindow(Adw.ApplicationWindow):
 
         self.sidebar_widget = self._build_sidebar()
         self.sidebar_widget.set_visible(self.store.state.sidebar_visible)
+
+        # The rail runs the full window height beside a content pane that owns
+        # the header bar — two surfaces, not one tinted sheet.
+        self.toolbar_view = Adw.ToolbarView()
+        self.toolbar_view.add_top_bar(header)
+        self.toolbar_view.set_content(self._build_reading_area())
+
         self.paned = Gtk.Paned(
             orientation=Gtk.Orientation.HORIZONTAL,
             position=self.store.state.sidebar_width,
@@ -195,12 +202,8 @@ class ReaderWindow(Adw.ApplicationWindow):
             resize_start_child=False,
         )
         self.paned.set_start_child(self.sidebar_widget)
-        self.paned.set_end_child(self._build_reading_area())
-
-        self.toolbar_view = Adw.ToolbarView()
-        self.toolbar_view.add_top_bar(header)
-        self.toolbar_view.set_content(self.paned)
-        self.toasts = Adw.ToastOverlay(child=self.toolbar_view)
+        self.paned.set_end_child(self.toolbar_view)
+        self.toasts = Adw.ToastOverlay(child=self.paned)
         self.set_content(self.toasts)
         self.connect("close-request", self._on_close)
         self._install_drop_target()
@@ -280,19 +283,32 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._add_sidebar_page(self.local_graph.area, "graph", "Graph", "reader-graph-symbolic")
 
         switcher = Gtk.StackSwitcher(stack=self.sidebar_stack)
-        switcher.set_margin_top(6)
         switcher.set_halign(Gtk.Align.CENTER)
+
+        self.rail_title = Gtk.Label(label=APP_NAME.upper(), xalign=0.5, ellipsize=3)
+        self.rail_title.add_css_class("rail-title")
+        head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        head.set_margin_top(12)
+        head.set_margin_bottom(6)
+        head.set_margin_start(10)
+        head.set_margin_end(10)
+        head.append(self.rail_title)
+        head.append(switcher)
+        # The rail has no header bar, so its top strip still drags the window.
+        handle = Gtk.WindowHandle(child=head)
 
         self.index_status = Gtk.Label(xalign=0.0)
         self.index_status.add_css_class("dim-label")
-        self.index_status.set_margin_start(10)
-        self.index_status.set_margin_bottom(6)
+        self.index_status.set_margin_start(12)
+        self.index_status.set_margin_top(6)
+        self.index_status.set_margin_bottom(8)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        box.append(switcher)
-        box.append(self.sidebar_stack)
-        box.append(self.index_status)
-        return box
+        rail = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        rail.add_css_class("atelier-rail")
+        rail.append(handle)
+        rail.append(self.sidebar_stack)
+        rail.append(self.index_status)
+        return rail
 
     def _add_sidebar_page(self, child, name: str, title: str, icon: str) -> None:
         page = self.sidebar_stack.add_titled(child, name, title)
@@ -688,15 +704,15 @@ class ReaderWindow(Adw.ApplicationWindow):
         drop.connect("drop", lambda _t, value, _x, _y: self._open_gfile(value) or True)
         self.add_controller(drop)
 
-    # The chrome wears the same atelier palettes as the reading canvas, so the
-    # window and the page read as one surface instead of a browser in a frame.
+    # Two surfaces, one identity: a deep sepia rail beside the parchment canvas,
+    # with the header flattened into the canvas rather than a third tint.
     _CHROME_LIGHT = """
     @define-color accent_bg_color #1c4e9c;
     @define-color accent_fg_color #ffffff;
     @define-color accent_color #1c4e9c;
-    @define-color window_bg_color #efe8d6;
+    @define-color window_bg_color #f9f4e7;
     @define-color window_fg_color #2b2620;
-    @define-color headerbar_bg_color #e8dfc8;
+    @define-color headerbar_bg_color #f9f4e7;
     @define-color headerbar_fg_color #2b2620;
     @define-color view_bg_color #f9f4e7;
     @define-color view_fg_color #2b2620;
@@ -706,15 +722,19 @@ class ReaderWindow(Adw.ApplicationWindow):
     @define-color dialog_fg_color #2b2620;
     @define-color card_bg_color #f4eeda;
     @define-color card_fg_color #2b2620;
+    @define-color rail_bg #2a2420;
+    @define-color rail_fg #d8d0c0;
+    @define-color rail_muted #97907f;
+    @define-color rail_accent #d0a44e;
     """
 
     _CHROME_DARK = """
     @define-color accent_bg_color #5c84c4;
     @define-color accent_fg_color #ffffff;
     @define-color accent_color #8fb0e8;
-    @define-color window_bg_color #211e19;
+    @define-color window_bg_color #1c1a16;
     @define-color window_fg_color #d9d2c2;
-    @define-color headerbar_bg_color #262218;
+    @define-color headerbar_bg_color #1c1a16;
     @define-color headerbar_fg_color #d9d2c2;
     @define-color view_bg_color #1c1a16;
     @define-color view_fg_color #d9d2c2;
@@ -724,6 +744,10 @@ class ReaderWindow(Adw.ApplicationWindow):
     @define-color dialog_fg_color #d9d2c2;
     @define-color card_bg_color #262218;
     @define-color card_fg_color #d9d2c2;
+    @define-color rail_bg #16130f;
+    @define-color rail_fg #cfc7b6;
+    @define-color rail_muted #857d6d;
+    @define-color rail_accent #d0a44e;
     """
 
     _CHROME_STRUCTURE = """
@@ -731,6 +755,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         font-family: "Noto Serif", "Liberation Serif", Georgia, serif;
         font-weight: 700;
     }
+    headerbar { box-shadow: none; }
+    paned > separator { background: alpha(currentColor, 0.12); min-width: 1px; }
     .hover-status { background: alpha(@window_bg_color, 0.9); border-radius: 6px;
                     padding: 2px 8px; margin: 6px; font-size: 0.85em; }
     .navigation-sidebar row:selected {
@@ -743,6 +769,40 @@ class ReaderWindow(Adw.ApplicationWindow):
                      color: alpha(currentColor, 0.55); margin: 10px 12px 2px; }
     .panel-heading { font-size: 0.72em; font-weight: bold; letter-spacing: 0.12em;
                      color: alpha(currentColor, 0.55); }
+
+    /* The rail: one deep surface, gold accents, everything on it made for it. */
+    .atelier-rail { background: @rail_bg; color: @rail_fg; }
+    .atelier-rail .rail-title {
+        font-family: "Noto Serif", "Liberation Serif", Georgia, serif;
+        font-size: 0.78em; font-weight: bold; letter-spacing: 0.18em;
+        color: @rail_accent;
+    }
+    .atelier-rail scrolledwindow, .atelier-rail viewport,
+    .atelier-rail listview, .atelier-rail list { background: transparent; color: @rail_fg; }
+    .atelier-rail row { color: @rail_fg; border-radius: 6px; margin-left: 4px; margin-right: 4px; }
+    .atelier-rail row:hover { background: alpha(#ffffff, 0.05); }
+    .atelier-rail row:selected {
+        background: alpha(@rail_accent, 0.16);
+        box-shadow: inset 3px 0 0 @rail_accent;
+        color: #f4ecd9;
+    }
+    .atelier-rail image { color: @rail_muted; }
+    .atelier-rail row:selected image { color: @rail_accent; }
+    .atelier-rail .dim-label, .atelier-rail .caption { color: @rail_muted; }
+    .atelier-rail .quick-heading { color: alpha(@rail_accent, 0.75); }
+    .atelier-rail entry {
+        background: alpha(#ffffff, 0.07);
+        color: @rail_fg;
+        border: 1px solid alpha(#ffffff, 0.08);
+        caret-color: @rail_fg;
+    }
+    .atelier-rail entry image { color: @rail_muted; }
+    .atelier-rail stackswitcher button { color: @rail_muted; min-width: 30px; }
+    .atelier-rail stackswitcher button:hover { color: @rail_fg; }
+    .atelier-rail stackswitcher button:checked {
+        color: @rail_accent;
+        background: alpha(@rail_accent, 0.14);
+    }
     """
 
     def _load_css(self) -> None:
@@ -945,6 +1005,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.vault_monitor = VaultMonitor(vault.root, self._schedule_sync)
         self.store.remember_vault(str(vault.root))
         self._refresh_recents_menu()
+        self.rail_title.set_label(vault.root.name.upper())
         self.tree.hidden_folders = self._hidden_folders()
         self.tree.set_vault(vault.root)
         self._refresh_quick_list()

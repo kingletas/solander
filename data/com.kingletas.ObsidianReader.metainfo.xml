@@ -26,6 +26,13 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.6.0" date="2026-09-02">
+      <description>
+        <p>Two surfaces instead of one tint: a full-height sepia rail beside
+        the parchment canvas, a flattened header, and a note title that
+        never doubles.</p>
+      </description>
+    </release>
     <release version="1.5.0" date="2026-09-02">
       <description>
         <p>The outline becomes a real panel with a visible toggle and close
