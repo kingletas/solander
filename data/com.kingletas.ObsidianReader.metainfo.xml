@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="0.8.1" date="2026-09-01">
+      <description>
+        <p>PDF export no longer splits boxes across pages or clips wide
+        code and tables; exports print light with dark ink.</p>
+      </description>
+    </release>
     <release version="0.8.0" date="2026-09-01">
       <description>
         <p>Embedded PDF preview through system Poppler, with zoom and an

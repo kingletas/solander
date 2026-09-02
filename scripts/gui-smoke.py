@@ -184,6 +184,12 @@ def run_checks(app):
         continue_pdf()
 
     def continue_pdf():
+        appearance = window.lookup_action("appearance")
+        window._on_appearance(appearance, GLib.Variant.new_string("dark"))
+        window.reader.load_note("A.md")
+        GLib.timeout_add(1500, do_export)
+
+    def do_export():
         import tempfile
 
         from gi.repository import Gio
@@ -194,12 +200,96 @@ def run_checks(app):
         def check_pdf():
             written = pdf_path.exists() and pdf_path.read_bytes()[:5] == b"%PDF-"
             check("PDF export wrote a real PDF", written)
+            if written:
+                check_export_quality(pdf_path)
+            export_split_note()
+            return False
+
+        GLib.timeout_add(2500, check_pdf)
+        return False
+
+    def export_split_note():
+        import tempfile
+
+        from gi.repository import Gio
+
+        blocks = "\n\n".join(
+            f"```text\nB{n}START\n"
+            + "\n".join(f"line {n}-{i}" for i in range(25))
+            + f"\nB{n}END\n```"
+            for n in range(8)
+        )
+        (vault_path / "Split.md").write_text(f"# Split\n\n{blocks}\n")
+        window.reader.load_note("Split.md")
+        split_pdf = Path(tempfile.mkdtemp()) / "split.pdf"
+
+        def do_split_export():
+            window._export_pdf_to(Gio.File.new_for_path(str(split_pdf)))
+            GLib.timeout_add(2500, check_split)
+            return False
+
+        def check_split():
+            import gi
+
+            gi.require_version("Poppler", "0.18")
+            from gi.repository import Gio as gio
+            from gi.repository import Poppler
+
+            uri = gio.File.new_for_path(str(split_pdf)).get_uri()
+            document = Poppler.Document.new_from_file(uri, None)
+            page_of = {}
+            for index in range(document.get_n_pages()):
+                for word in document.get_page(index).get_text().split():
+                    page_of.setdefault(word, index)
+            check("split export spans several pages", document.get_n_pages() >= 2)
+            whole = all(
+                page_of.get(f"B{n}START") is not None
+                and page_of.get(f"B{n}START") == page_of.get(f"B{n}END")
+                for n in range(8)
+            )
+            check("no code block is split across a page boundary", whole)
             toggle = window.lookup_action("toggle-source")
             window._on_toggle_source(toggle, GLib.Variant.new_boolean(True))
             GLib.timeout_add(1200, lambda: (app.quit(), False)[1])
             return False
 
-        GLib.timeout_add(2500, check_pdf)
+        GLib.timeout_add(1500, do_split_export)
+
+    def check_export_quality(pdf_path):
+        import cairo
+        import gi
+
+        gi.require_version("Poppler", "0.18")
+        from gi.repository import Gio as gio
+        from gi.repository import Poppler
+
+        uri = gio.File.new_for_path(str(pdf_path)).get_uri()
+        document = Poppler.Document.new_from_file(uri, None)
+        text = "".join(
+            document.get_page(i).get_text() for i in range(document.get_n_pages())
+        )
+        check("export keeps the tail of an overflowing code line", "ENDOFLONGLINE" in text)
+        page = document.get_page(0)
+        width, height = page.get_size()
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(width), int(height))
+        context = cairo.Context(surface)
+        context.set_source_rgb(1, 1, 1)
+        context.paint()
+        page.render_for_printing(context)
+        stride = surface.get_stride()
+        data = bytes(surface.get_data())
+        # Backgrounds are not printed, so a dark-theme export means light-gray
+        # text on white paper. Sample the pixels of one known word, not the whole
+        # page — borders are dark in every theme and would mask pale text.
+        rects = page.find_text("ENDOFLONGLINE")
+        darkest = 255
+        for rect in rects:
+            top = int(height - rect.y2)
+            bottom = int(height - rect.y1)
+            for row in range(max(0, top), min(int(height), bottom)):
+                for column in range(max(0, int(rect.x1)), min(int(width), int(rect.x2))):
+                    darkest = min(darkest, data[row * stride + column * 4])
+        check("export text ink is dark even from the dark theme", bool(rects) and darkest < 100)
 
     GLib.timeout_add(1500, after_navigation)
     return False

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.1 — 2026-09-01
+
+- **Fixed PDF export splitting and clipping content.** The stylesheet had no print rules, so paper got the screen layout: code and tables kept their scroll containers (which clip on paper — long lines simply vanished off the right edge), and boxes could be sliced across page boundaries. A print stylesheet now makes wide code and tables wrap instead of clip, keeps code blocks, callouts, tables rows, images, math, and the properties panel whole across page breaks, keeps headings attached to what follows them, repeats table headers on each page, forces the light palette (backgrounds are not printed, so a dark-theme export was pale-gray text on white paper), hides media players, and prints only the open state of foldable sections.
+- The GUI smoke now proves export quality in both directions, not just that a PDF exists: the tail of an overflowing code line must survive into the extracted text, the ink of a known word must be dark even when exporting from the dark theme, and an eight-block document must reach page two with no block straddling a page boundary — each check shown to fail against the unfixed stylesheet.
+
 ## 0.8.0 — 2026-09-01
 
 - **Embedded PDF preview.** Opening a PDF from the file tree (or a PDF embed's link) now shows it in an in-app viewer: pages rendered on demand through the system's own Poppler library, fit-to-width with zoom, an Open Externally escape hatch, and a page cap plus a small surface cache bounding memory. Requires the optional `gir1.2-poppler-0.18` package; without it, PDFs open externally exactly as before — the viewer is never half-present.

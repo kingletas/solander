@@ -296,3 +296,30 @@ section.footnotes {
 .math-block { text-align: center; margin: 1em 0; overflow-x: auto; }
 .math-block math { font-size: 1.15em; }
 code.math-source { color: var(--muted); }
+
+/* Print — the PDF exporter renders through this. Paper scrolls nothing and has
+   no dark mode, so wide content wraps instead of clipping, boxes refuse to be
+   sliced across page boundaries, and the palette is forced light. */
+@media print {
+  body, body.theme-dark {
+    --bg: #ffffff; --fg: #24292f; --muted: #57606a; --border: #d0d7de;
+    --surface: #f6f8fa; --accent: #0969da; --accent-soft: #ddf4ff;
+    --missing: #cf222e; --mark-bg: #fff8c5;
+  }
+  main.note { max-width: none; padding: 0.5rem 0.75rem; }
+  pre { overflow-x: visible; white-space: pre-wrap; word-break: break-word; }
+  pre code { white-space: pre-wrap; word-break: break-word; }
+  table { display: table; overflow-x: visible; width: 100%; }
+  thead { display: table-header-group; }
+  td, th { word-break: break-word; }
+  tr { break-inside: avoid; page-break-inside: avoid; }
+  pre, blockquote, .callout, .embed, img, figure,
+  details.properties, .math-block, .inert-block {
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; page-break-after: avoid; }
+  .math-block { overflow-x: visible; }
+  audio, video { display: none; }
+  details:not([open]) { display: none; }
+  details[open] > summary { list-style: none; }
+}
