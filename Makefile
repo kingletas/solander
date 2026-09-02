@@ -56,7 +56,7 @@ deb: ## Build the .deb into dist/
 	@packaging/deb/build.sh dist
 
 .PHONY: flatpak
-flatpak: ## Build and install the Flatpak locally (needs the GNOME 48 runtime and SDK)
+flatpak: ## Build and install the Flatpak locally (needs the GNOME 50 runtime and SDK)
 	@flatpak-builder --user --install --force-clean build data/flatpak/com.kingletas.Solander.yaml
 
 .PHONY: notes

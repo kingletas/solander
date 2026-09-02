@@ -69,8 +69,21 @@ jobs:
           sudo flatpak remote-add --if-not-exists flathub \
             https://dl.flathub.org/repo/flathub.flatpakrepo
           sudo flatpak install -y --noninteractive flathub \
-            org.gnome.Platform//48 org.gnome.Sdk//48
-      - name: Build it
+            org.gnome.Platform//50 org.gnome.Sdk//50
+      - name: Build it, install it, and prove it carries its dependencies
         run: |
-          flatpak-builder --disable-rofiles-fuse --force-clean \
+          flatpak-builder --disable-rofiles-fuse --force-clean --repo=repo \
             build data/flatpak/com.kingletas.Solander.yaml
+          flatpak build-bundle repo solander.flatpak com.kingletas.Solander
+          flatpak install -y --user --noninteractive solander.flatpak
+          flatpak run --command=solander com.kingletas.Solander --version
+          # --version imports almost nothing. This renders a page, which pulls in
+          # every vendored dependency, so a runtime missing one fails here rather
+          # than in front of a user.
+          flatpak run --command=python3 com.kingletas.Solander -c "
+          from solander.core.render import build_page
+          import solander.core.frontmatter, solander.core.markdown
+          import solander.core.dataview, solander.core.mermaid
+          page = build_page('<p>x</p>', 'Note', 'blood-record')
+          assert 'theme-blood-record' in page, 'theme did not apply'
+          print('flatpak renders, and carries its dependencies')"
