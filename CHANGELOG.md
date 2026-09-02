@@ -10,6 +10,7 @@ Tagging a release now builds and publishes the packages.
 - **CI builds the packages too**, so a tag is never the first time the packaging runs: the deb on every change, the flatpak on pushes to main.
 - **The profile names the right thing for each install shape.** From source it names the private interpreter in the virtualenv; from a system package it names `/usr/bin/solander`, because naming `/usr/bin/python3` would grant user namespaces to every Python process on the machine. That is the shape Ubuntu's own profiles for packaged Python applications use.
 - `make deb`, `make flatpak` and `make notes VERSION=x.y.z` run the same scripts CI runs.
+- **The packaging scripts were untracked when first written**, for the third time from the same cause: this machine's global `core.excludesFile` refuses `*.sh`, and the negation added when the installer hit it was scoped to `scripts/` alone. The release workflow would have failed on a file that had never been pushed. The negation now covers the whole repository, and every shell script in the tree is confirmed tracked.
 
 ## 2.1.1 — 2026-09-02
 

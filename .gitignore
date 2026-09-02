@@ -10,5 +10,7 @@ build/
 .flatpak-builder/
 
 # ~/.gitignore is core.excludesFile for every repository under $HOME and it
-# excludes *.sh, so without this negation a clone ships no installer at all.
-!scripts/*.sh
+# excludes *.sh, so without this negation a clone ships no installer and no
+# packaging scripts — and the release workflow fails on a file that was never
+# pushed. Scoped to scripts/ once, which silently missed packaging/ later.
+!**/*.sh
