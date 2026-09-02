@@ -9,6 +9,14 @@ def test_splits_properties_from_body():
     assert note.body == "Body text.\n"
 
 
+def test_splits_frontmatter_with_windows_line_endings():
+    note = split_frontmatter(
+        "---\r\ntitle: Windows Note\r\ntags: [cross-platform]\r\n---\r\nBody text.\r\n"
+    )
+    assert note.properties == {"title": "Windows Note", "tags": ["cross-platform"]}
+    assert note.body == "Body text.\r\n"
+
+
 def test_no_frontmatter_returns_whole_body():
     note = split_frontmatter("Just text.\n---\nnot frontmatter\n")
     assert note.properties == {}
