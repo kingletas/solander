@@ -32,7 +32,7 @@ make sync
 make check
 ```
 
-That is ruff plus the test suite, and it is exactly what the pre-commit hook runs. Both must be clean.
+That is ruff, the test suite and the metadata validation, and it is exactly what the pre-commit hook runs. All three must be clean. The metadata step checks the desktop entry and the AppStream metainfo — the two files a software centre reads, which nothing else exercises; it degrades to a visible skip if `desktop-file-utils` and `appstream` are not installed, and CI installs both so it always runs there.
 
 ```bash
 make smoke

@@ -25,6 +25,15 @@ jobs:
         run: uv sync --frozen
       - name: Lint
         run: uv run ruff check .
+      # A software centre reads these two files, and nothing else in the suite
+      # touches them. Installed explicitly so the check always runs on CI even
+      # though it degrades to a skip on a contributor's machine.
+      - name: Validate the desktop entry and AppStream metainfo
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y desktop-file-utils appstream
+          scripts/validate-metadata.sh
+
       - name: Test
         run: uv run pytest -q
 

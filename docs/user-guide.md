@@ -167,7 +167,7 @@ State lives outside every vault: `~/.config/solander/` (session, preferences, hi
 
 ## Troubleshooting
 
-- **A setup window appears instead of the reader, or a terminal launch prints an AppArmor profile** — the one-time sandbox step; see [getting started](getting-started.md#3-first-launch--the-one-time-sandbox-step). If the profile is installed but the app still refuses, it was started around its launcher: a `#!` shebang launch bypasses AppArmor's attachment. Start it from the applications grid or via `solander`.
+- **A setup window appears instead of the reader, or a terminal launch prints an AppArmor profile** — the one-time sandbox step; see [getting started](getting-started.md#3-the-one-time-sandbox-step--source-installs-only). If the profile is installed but the app still refuses, it was started around its launcher: a `#!` shebang launch bypasses AppArmor's attachment. Start it from the applications grid or via `solander`.
 - **Dataview blocks say "the index is still building"** — the first index of a large vault is running; they render on their own when it finishes.
 - **A Dataview block shows its source with a reason** — that query uses syntax outside the supported surface; the label says which part.
 - **A mermaid block shows its source with a reason** — the diagram kind is outside the supported three (flowchart, sequence, pie), or a line could not be read; the label says which.

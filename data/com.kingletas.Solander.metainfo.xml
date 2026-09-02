@@ -19,8 +19,41 @@
     </p>
   </description>
   <launchable type="desktop-id">com.kingletas.Solander.desktop</launchable>
-  <developer_name>Luis Tineo</developer_name>
+  <developer id="com.kingletas">
+    <name>Luis Tineo</name>
+  </developer>
   <content_rating type="oars-1.1"/>
+  <url type="homepage">https://github.com/kingletas/solander</url>
+  <url type="bugtracker">https://github.com/kingletas/solander/issues</url>
+  <url type="vcs-browser">https://github.com/kingletas/solander</url>
+  <url type="help">https://github.com/kingletas/solander/blob/main/docs/user-guide.md</url>
+  <url type="contribute">https://github.com/kingletas/solander/blob/main/CONTRIBUTING.md</url>
+  <categories>
+    <category>Office</category>
+    <category>Viewer</category>
+  </categories>
+  <keywords>
+    <keyword>markdown</keyword>
+    <keyword>obsidian</keyword>
+    <keyword>notes</keyword>
+    <keyword>vault</keyword>
+    <keyword>reader</keyword>
+    <keyword>wikilinks</keyword>
+  </keywords>
+  <branding>
+    <color type="primary" scheme_preference="light">#e8dcc2</color>
+    <color type="primary" scheme_preference="dark">#263b73</color>
+  </branding>
+  <screenshots>
+    <screenshot type="default">
+      <caption>A note in the Atelier theme</caption>
+      <image type="source" width="1100" height="760">https://raw.githubusercontent.com/kingletas/solander/main/docs/images/atelier.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The same note in Blood Record, one of the thirteen Archive themes</caption>
+      <image type="source" width="1100" height="760">https://raw.githubusercontent.com/kingletas/solander/main/docs/images/blood-record.png</image>
+    </screenshot>
+  </screenshots>
   <supports>
     <control>keyboard</control>
     <control>pointing</control>

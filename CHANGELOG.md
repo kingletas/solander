@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+A documentation and metadata pass after the first release.
+
+- **The AppStream metainfo did not validate**, which matters because it is the file a software centre reads and Flathub refuses a submission whose metainfo fails. It had no homepage URL, used a deprecated developer tag, and carried **no screenshots, categories or keywords at all** — so the app would have appeared in GNOME Software as a name and a paragraph. It now carries the five project URLs, two screenshots, the categories and keywords the desktop entry already declared, and branding colours taken from the app's own icon.
+- **Nothing validated either the desktop entry or the metainfo.** `make check` now runs both, and CI installs the validators so the check always runs there rather than degrading to a skip. That is how the metainfo came to be invalid without anyone knowing.
+- **Getting started only knew how to build from source.** It walked a new reader through installing `uv`, cloning the repository and the one-time sandbox step — while a released Flatpak skips all of it. It now leads with the two packaged installs and marks the sandbox step as source-only.
+- **The Flatpak instructions could not be followed.** The bundle is 3 MB and does not contain the GNOME 50 runtime it needs, so installing it requires a remote that provides the runtime. Neither document said so. Both now do, along with the note that a Flatpak install puts no `solander` on the `PATH`.
+- **The documentation is checked the way the code is.** A new test resolves every relative link and heading anchor across the six documents, asserts that package filenames in the docs match the version in `pyproject.toml`, and asserts that the theme counts written in prose match the registry. It caught a link broken by renaming a heading in this same pass. The changelog is exempt from the last two: it records what was true at each release.
+
+
 ## 2.2.0 — 2026-09-02
 
 Tagging a release now builds and publishes the packages.

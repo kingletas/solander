@@ -40,11 +40,19 @@ The full walkthrough is the **[user guide](docs/user-guide.md)**; installation i
 
 The simplest route, and the only one with **no sandbox step at all** — Flatpak's own bubblewrap already has the permission WebKit needs, so nothing has to be installed into `/etc`.
 
+The bundle is 3 MB and does not contain the GNOME 50 runtime it runs on, so a remote that provides it has to be configured. If you have ever installed anything from Flathub, it already is:
+
 ```bash
-flatpak install solander.flatpak
+flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 ```
 
-Take the bundle from the [latest release](../../releases/latest).
+Then take the bundle from the [latest release](https://github.com/kingletas/solander/releases/latest):
+
+```bash
+flatpak install --user solander_2.2.0.flatpak
+```
+
+The first install also pulls the runtime — about a gigabyte, once, shared with every other Flatpak. A Flatpak install puts no `solander` on your `PATH`; `flatpak run com.kingletas.Solander` is the terminal equivalent.
 
 ### Debian package
 

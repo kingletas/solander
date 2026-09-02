@@ -19,9 +19,14 @@ sync: ## Create the virtualenv (system GI bindings visible) and install dependen
 	@uv sync
 
 .PHONY: check
-check: ## Everything a commit has to pass: ruff and the test suite
+check: ## Everything a commit has to pass: ruff, the test suite, the metadata
 	@uv run ruff check .
 	@uv run pytest -q
+	@scripts/validate-metadata.sh
+
+.PHONY: metadata
+metadata: ## Validate the desktop entry and the AppStream metainfo
+	@scripts/validate-metadata.sh
 
 .PHONY: test
 test: ## Run the test suite only
