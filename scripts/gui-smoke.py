@@ -111,6 +111,9 @@ def run_checks(app):
             check("new tag is live in the graph", graph is not None and "livetag" in graph.tags)
             hits = window.search_index.search_content("watched")
             check("new note is searchable without a reload", any(h.path == "Live.md" for h in hits))
+            page = window._provide_page("/note/Query.md", window.reader.webview)
+            check("dataview table renders", '<div class="dataview"><table>' in page)
+            check("dataview inline expression evaluates", ">8</span>" in page)
             check_retrieval()
             return False
 

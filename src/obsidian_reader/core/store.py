@@ -11,7 +11,7 @@ from pathlib import Path
 
 from .graph import NoteScan, RawLink
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 4
 SNIPPET_TOKENS = 14
 
 
@@ -66,6 +66,10 @@ class IndexStore:
                 scans[rel] = NoteScan(
                     links=tuple(RawLink(t, bool(e), c) for t, e, c in data["links"]),
                     tags=tuple(str(tag) for tag in data["tags"]),
+                    props=data.get("props") or {},
+                    tasks=tuple(
+                        (str(status), str(text)) for status, text in data.get("tasks") or []
+                    ),
                 )
             except (ValueError, KeyError, TypeError):
                 continue
@@ -77,6 +81,8 @@ class IndexStore:
             {
                 "links": [[link.target, int(link.embed), link.context] for link in scan.links],
                 "tags": list(scan.tags),
+                "props": scan.props,
+                "tasks": [list(task) for task in scan.tasks],
             }
         )
         db = self.db

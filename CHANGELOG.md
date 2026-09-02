@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.0 — 2026-09-01
+
+Dataview, in pure Python — no JavaScript, same as everything else.
+
+- **DQL queries evaluate.** `TABLE` (with `WITHOUT ID` and aliases), `LIST`, and `TASK` blocks run against the live index: `FROM` folder/tag/`[[]]` sources with `and`/`or`/negation, chained `WHERE`/`SORT`/`GROUP BY`/`FLATTEN`/`LIMIT` in written order, `this.` context, bracket access for spaced field names, lambdas in `filter`/`map`, date and duration arithmetic, and a 30-function standard library (`choice`, `default`, `dateformat` with Luxon tokens, `dur`, `contains`, `length`, and friends). Results are live: the vault monitor already re-renders what changes.
+- **Inline expressions evaluate** — the `= this.field` spans templates lean on render their values in place.
+- **`.base` files render**: table views with filters (`and`/`or`/`not` over the Bases expression dialect — `file.hasTag`, `file.inFolder`, `file.hasProperty`, comparisons, `today()` date math), column order, sort, and displayName mapping. Plugin view types (TaskNotes and similar) are named as not rendered, never faked.
+- **Anything outside the surface degrades honestly**: the block renders as labeled source with the parser's reason, and `dataviewjs` stays inert by design.
+- **Acceptance against a real 10,700-note vault**: 481 of 486 Dataview blocks evaluate (99% — the five failures are deliberately broken examples inside an archived chat export) at 58 ms average, 1,203 of 1,206 inline expressions, and all six `.base` files row-for-row correct against grep ground truth.
+- Fixed en route, and it matters beyond Dataview: PyYAML reads YAML 1.1, where a bare `Yes` is a boolean — Obsidian keeps it a string, so `Outage: Yes` never matched `== "Yes"`. The frontmatter loader now resolves only `true`/`false` as booleans, matching Obsidian.
+- The index schema bumped (cached scans now carry frontmatter and tasks), so the first launch after upgrading rebuilds the cache — cold ~21 s on a 10,700-note vault, warm ~2 s after.
+
 ## 0.8.1 — 2026-09-01
 
 - **Fixed PDF export splitting and clipping content.** The stylesheet had no print rules, so paper got the screen layout: code and tables kept their scroll containers (which clip on paper — long lines simply vanished off the right edge), and boxes could be sliced across page boundaries. A print stylesheet now makes wide code and tables wrap instead of clip, keeps code blocks, callouts, tables rows, images, math, and the properties panel whole across page breaks, keeps headings attached to what follows them, repeats table headers on each page, forces the light palette (backgrounds are not printed, so a dark-theme export was pale-gray text on white paper), hides media players, and prints only the open state of foldable sections.

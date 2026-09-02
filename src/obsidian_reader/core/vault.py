@@ -140,4 +140,6 @@ def file_kind(rel: str) -> str:
         return "pdf"
     if lower.endswith(".canvas"):
         return "canvas"
+    if lower.endswith(".base"):
+        return "base"
     return "other"

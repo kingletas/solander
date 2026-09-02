@@ -18,6 +18,7 @@ It is a fallback reader, not an Obsidian replacement: something dependable to re
 - Hover previews: rest the pointer on a wikilink and a popover shows the opening of the target note.
 - A reading (zen) mode — `F11` strips every piece of chrome, `Esc` brings it back — and PDF export (`Ctrl+Shift+E`) of the current rendered note, which refuses to write inside the vault.
 - Tabs: middle-click or `Ctrl+click` a note or wikilink to open it in a new tab (`Ctrl+T`/`Ctrl+W` to open and close); a plain click opens in the current tab. The sidebar drags to any width, and both survive a restart.
+- **Dataview, evaluated in pure Python** — no JavaScript: `TABLE`/`LIST`/`TASK` queries with `FROM`/`WHERE`/`SORT`/`GROUP BY`/`FLATTEN`, inline `= expression` spans, and `.base` table views, all live against the watched index. Unsupported syntax degrades to labeled source with the reason; `dataviewjs` stays inert by design.
 - Typography controls — font, line width, line spacing — persisted and applied everywhere.
 - PDFs preview in-app through system Poppler (zoom, fit-to-width, open-externally), when the optional `gir1.2-poppler-0.18` package is installed.
 - Reads `.obsidian/app.json` (read-only) to honor the vault's attachment-folder setting.
@@ -25,7 +26,7 @@ It is a fallback reader, not an Obsidian replacement: something dependable to re
 ## What it will never do
 
 - **Write into the vault.** No caches, indexes, locks, conflict files, or thumbnails. All application state lives under `~/.config/obsidian-reader/` and `~/.cache/obsidian-reader/`.
-- **Execute anything from a note.** JavaScript is disabled in the rendering surface; raw HTML in notes is escaped, and the generated HTML passes through an allowlist sanitizer before display. Dataview, Templater, and plugin syntax render as labeled inert source.
+- **Execute anything from a note.** JavaScript is disabled in the rendering surface; raw HTML in notes is escaped, and the generated HTML passes through an allowlist sanitizer before display. Templater and `dataviewjs` render as labeled inert source.
 - **Touch the network.** Remote images, scripts, stylesheets, and fonts are blocked; `http`/`https` links open in your system browser, and every other URI scheme is refused.
 
 ## Install

@@ -48,3 +48,13 @@ def test_oversized_frontmatter_degrades_to_no_properties(monkeypatch):
     note = split_frontmatter("---\ntitle: " + "x" * 100 + "\n---\nbody\n")
     assert note.properties == {}
     assert note.body == "body\n"
+
+
+def test_bare_yes_stays_a_string_like_obsidian():
+    from obsidian_reader.core.frontmatter import split_frontmatter
+
+    split = split_frontmatter("---\nOutage: Yes\npatch: no\nflag: true\noff: false\n---\nBody\n")
+    assert split.properties["Outage"] == "Yes"
+    assert split.properties["patch"] == "no"
+    assert split.properties["flag"] is True
+    assert split.properties["off"] is False

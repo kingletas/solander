@@ -80,7 +80,7 @@ class VaultTree:
                 directories.append(TreeNode(self.root, child_rel, True))
             elif entry.is_file(follow_symlinks=False):
                 name = entry.name.casefold()
-                readable = name.endswith(NOTE_EXTENSIONS) or name.endswith(".canvas")
+                readable = name.endswith(NOTE_EXTENSIONS) or name.endswith((".canvas", ".base"))
                 if self.markdown_only and not readable:
                     continue
                 files.append(TreeNode(self.root, child_rel, False))

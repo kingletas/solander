@@ -20,6 +20,18 @@ class _NoAliasLoader(yaml.SafeLoader):
         return super().compose_node(parent, index)
 
 
+# YAML 1.1 reads bare yes/no/on/off as booleans; Obsidian does not, and a vault
+# writing `Outage: Yes` means the string. Only true/false stay booleans here.
+_NoAliasLoader.yaml_implicit_resolvers = {
+    key: [
+        (tag, regexp)
+        for tag, regexp in resolvers
+        if tag != "tag:yaml.org,2002:bool" or key in ("t", "T", "f", "F")
+    ]
+    for key, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+
+
 @dataclass(frozen=True)
 class SplitNote:
     """A note's parsed frontmatter mapping and the Markdown body below it."""

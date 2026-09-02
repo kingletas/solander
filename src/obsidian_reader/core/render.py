@@ -13,8 +13,11 @@ from pygments.formatters import HtmlFormatter
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 
+from .bases import render_base
 from .callouts import callouts_rule
 from .canvas import canvas_body, parse_canvas
+from .dataview import DataviewEngine
+from .dql import DqlError
 from .frontmatter import split_frontmatter
 from .links import WikiLink, slugify
 from .markdown import build_parser, strip_block_comments, strip_html_comments
@@ -34,7 +37,7 @@ PREVIEW_MAX_CHARS = int(os.environ.get("READER_PREVIEW_MAX_CHARS", "2500"))
 PREVIEW_EMBED_BUDGET = 4
 
 # Fence languages that Obsidian executes and this reader deliberately does not.
-INERT_FENCES = {"dataview", "dataviewjs", "templater", "tasks", "query", "meta-bind"}
+INERT_FENCES = {"dataviewjs", "templater", "tasks", "query", "meta-bind"}
 
 # TeX past this length is not a formula, and the converter's cost grows with it.
 MAX_MATH_CHARS = int(os.environ.get("READER_MAX_MATH_CHARS", "5000"))
@@ -148,9 +151,10 @@ def _find_block(body: str, block_id: str) -> str:
 class NoteRenderer:
     """Renders notes from one vault, resolving links and embeds as it goes."""
 
-    def __init__(self, vault: Vault, typography=None):
+    def __init__(self, vault: Vault, typography=None, graph_provider=None):
         self.vault = vault
         self.typography = typography
+        self.graph_provider = graph_provider
         self.md = build_parser()
         self.md.core.ruler.before("inline", "obsidian_callouts", callouts_rule)
         self._install_render_rules()
@@ -186,6 +190,20 @@ class NoteRenderer:
             lossy=note.lossy,
         )
 
+    def render_base_page(self, rel: str, theme: str = "light") -> str:
+        """Renders a `.base` file's table views, read-only."""
+        note = self.vault.read_note(rel)
+        title = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        if note.error:
+            return build_message_page("Cannot open base", note.error, theme)
+        graph = self._graph()
+        if graph is None:
+            return build_message_page(
+                title, "The index is still building — reload shortly.", theme
+            )
+        body = f"<h1>{html.escape(title)}</h1>{render_base(graph, note.text)}"
+        return build_page(body, title, theme, typography=self._typo())
+
     def render_canvas(self, rel: str, theme: str = "light") -> str:
         """Renders a `.canvas` file as a static, positioned page."""
         note = self.vault.read_note(rel)
@@ -212,6 +230,29 @@ class NoteRenderer:
         more = '<div class="preview-more">…</div>' if truncated else ""
         page_body = f'<div class="preview"><h1>{html.escape(title)}</h1>{inner}{more}</div>'
         return build_page(page_body, title, theme, typography=self._typo())
+
+    def _graph(self):
+        graph = self.graph_provider() if callable(self.graph_provider) else None
+        return graph if graph is not None and graph.ready else None
+
+    def _dataview_html(self, code: str, env: dict) -> str:
+        graph = self._graph()
+        if graph is None:
+            return _inert_dataview(code, "dataview — the index is still building")
+        try:
+            return DataviewEngine(graph).run_query(code, env.get("source", ""))
+        except DqlError as error:
+            return _inert_dataview(code, f"dataview — not evaluated: {error}")
+
+    def _inline_dataview_html(self, content: str, env: dict) -> str | None:
+        graph = self._graph()
+        if graph is None:
+            return None
+        try:
+            markup = DataviewEngine(graph).run_inline(content, env.get("source", ""))
+        except DqlError:
+            return None
+        return f'<span class="dataview-inline">{markup}</span>'
 
     def _env(
         self,
@@ -264,7 +305,7 @@ class NoteRenderer:
             return f'<span class="tag">#{html.escape(tokens[idx].content)}</span>'
 
         def render_fence(self_r, tokens, idx, options, env):
-            return renderer._fence_html(tokens[idx])
+            return renderer._fence_html(tokens[idx], env)
 
         def render_blockquote_open(self_r, tokens, idx, options, env):
             meta = tokens[idx].meta or {}
@@ -307,6 +348,14 @@ class NoteRenderer:
         def render_math_block(self_r, tokens, idx, options, env):
             return _math_html(tokens[idx].content, display=True)
 
+        def render_code_inline(self_r, tokens, idx, options, env):
+            content = tokens[idx].content
+            if content.startswith("= ") and len(content) > 2:
+                markup = renderer._inline_dataview_html(content[2:], env)
+                if markup is not None:
+                    return markup
+            return f"<code>{html.escape(content)}</code>"
+
         def render_link_open(self_r, tokens, idx, options, env):
             token = tokens[idx]
             href = token.attrGet("href") or ""
@@ -325,6 +374,7 @@ class NoteRenderer:
                     token.attrJoin("class", "unsupported-link")
             return self_r.renderToken(tokens, idx, options, env)
 
+        md.add_render_rule("code_inline", render_code_inline)
         md.add_render_rule("obsidian_math_inline", render_math_inline)
         md.add_render_rule("obsidian_math_block", render_math_block)
         md.add_render_rule("obsidian_wikilink", render_wikilink)
@@ -427,9 +477,11 @@ class NoteRenderer:
             f'alt="{html.escape(alt, quote=True)}"{size} />'
         )
 
-    def _fence_html(self, token) -> str:
+    def _fence_html(self, token, env: dict) -> str:
         info = (token.info or "").strip().split()[0].casefold() if token.info else ""
         code = token.content
+        if info == "dataview":
+            return self._dataview_html(code, env)
         if info in INERT_FENCES:
             return (
                 f'<div class="inert-block"><div class="inert-label">'
@@ -482,6 +534,13 @@ def _math_html(tex: str, display: bool) -> str:
     if display:
         return f'<div class="math-block">{markup}</div>\n'
     return markup
+
+
+def _inert_dataview(code: str, label: str) -> str:
+    return (
+        f'<div class="inert-block"><div class="inert-label">{html.escape(label)}</div>'
+        f"<pre><code>{html.escape(code)}</code></pre></div>"
+    )
 
 
 def _embed_error(message: str) -> str:

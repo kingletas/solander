@@ -102,10 +102,20 @@ def test_a_normal_page_never_sees_the_embed_limit(vault):
     assert "Embed limit" not in body
 
 
-def test_inert_fences_do_not_execute(vault):
+def test_dataview_without_a_graph_degrades_to_inert_source(vault):
     body = rendered(vault).body
-    assert "dataview — not executed in read-only mode" in body
+    assert "dataview — the index is still building" in body
     assert "TABLE file.mtime" in body
+
+
+def test_dataview_with_a_graph_renders_a_table(vault):
+    from obsidian_reader.core.graph import VaultGraph
+
+    graph = VaultGraph.build(vault)
+    renderer = NoteRenderer(vault, graph_provider=lambda: graph)
+    body = renderer.render("Index.md").body
+    assert "dataview — the index is still building" not in body
+    assert '<div class="dataview"><table>' in body
 
 
 def test_code_fence_is_highlighted(vault):

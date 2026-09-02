@@ -51,4 +51,5 @@ def sync_indexes(vault: Vault, store: IndexStore, progress=None) -> SyncResult:
             progress(position + 1, total)
     store.commit()
     graph = VaultGraph.assemble(vault, scans)
+    graph.meta = stats
     return SyncResult(graph=graph, scanned=len(changed), removed=len(gone))

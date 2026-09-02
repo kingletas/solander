@@ -323,3 +323,9 @@ code.math-source { color: var(--muted); }
   details:not([open]) { display: none; }
   details[open] > summary { list-style: none; }
 }
+
+/* Dataview results */
+.dataview table { display: table; width: 100%; }
+.dataview-note { color: var(--muted); font-size: 0.85em; margin: 0.4em 0; }
+.dataview-source { color: var(--muted); font-size: 0.85em; }
+.dataview-inline { color: var(--fg); }

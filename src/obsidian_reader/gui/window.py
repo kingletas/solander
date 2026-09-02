@@ -659,7 +659,7 @@ class ReaderWindow(Adw.ApplicationWindow):
 
         def build():
             vault = Vault.open(root)
-            renderer = NoteRenderer(vault, self._typography)
+            renderer = NoteRenderer(vault, self._typography, lambda: self.graph)
             GLib.idle_add(self._vault_ready, vault, renderer, focus_note, restore_tabs)
 
         threading.Thread(target=build, daemon=True).start()
@@ -753,7 +753,7 @@ class ReaderWindow(Adw.ApplicationWindow):
                     GLib.idle_add(self.index_status.set_text, f"Indexing {done}/{total}…")
 
                 vault = Vault.open(root)
-                renderer = NoteRenderer(vault, self._typography)
+                renderer = NoteRenderer(vault, self._typography, lambda: self.graph)
                 try:
                     result = sync_indexes(vault, store, progress=progress)
                 except sqlite3.Error:
@@ -774,6 +774,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         """Swaps in the freshly synced vault, renderer, and graph on the main loop."""
         if self.vault is None or vault.root != self.vault.root or search is not self.search_index:
             return False
+        first_sync = not search.ready
         files_changed = vault.files != self.vault.files
         self.vault = vault
         self.renderer = renderer
@@ -786,6 +787,10 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._refresh_tags_panel()
         self._update_links_panel()
         self._update_local_graph()
+        if first_sync:
+            # The first render happened before the graph existed, so any
+            # dataview blocks showed "index is still building" — render again.
+            self._reload_all_tabs()
         return False
 
     def _typography(self) -> dict:
@@ -866,6 +871,10 @@ class ReaderWindow(Adw.ApplicationWindow):
                 if reader is not None:
                     reader.last_render = None
                 return self.renderer.render_canvas(rel, theme)
+            if rel.casefold().endswith(".base"):
+                if reader is not None:
+                    reader.last_render = None
+                return self.renderer.render_base_page(rel, theme)
             rendered = self.renderer.render(rel, theme)
             if reader is not None:
                 reader.last_render = rendered
@@ -1010,7 +1019,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             self.reader.load_note(self.current_note, row.anchor)
 
     def _on_tree_activate(self, node) -> None:
-        if node.is_note or file_kind(node.rel) == "canvas":
+        if node.is_note or file_kind(node.rel) in ("canvas", "base"):
             self.reader.load_note(node.rel)
         elif file_kind(node.rel) in ("image", "audio", "video", "pdf"):
             self._launch_file(self.vault.root / node.rel)

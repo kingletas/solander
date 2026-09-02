@@ -19,6 +19,7 @@ from .vault import Vault
 # list without bound; past this many mentions of a target, the rest are dropped.
 MAX_MENTIONS_PER_TARGET = int(os.environ.get("READER_MAX_MENTIONS_PER_TARGET", "1000"))
 MAX_LINKS_PER_NOTE = int(os.environ.get("READER_MAX_LINKS_PER_NOTE", "2000"))
+MAX_TASKS_PER_NOTE = int(os.environ.get("READER_MAX_TASKS_PER_NOTE", "2000"))
 
 CONTEXT_RADIUS = 80
 
@@ -26,6 +27,7 @@ _WIKILINK = re.compile(r"!?\[\[([^\[\]\n]+?)\]\]")
 _INLINE_CODE = re.compile(r"`[^`\n]+`")
 _FENCE_LINE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 _TAG = re.compile(r"(?:^|(?<=[ \t(\[{'\"“‘>,;:]))#([\w/-]+)")
+_TASK_LINE = re.compile(r"^\s*[-*+] \[(.)\] (.+)$")
 _TAG_BODY = re.compile(r"[\w/-]+")
 
 
@@ -44,6 +46,8 @@ class NoteScan:
 
     links: tuple[RawLink, ...] = ()
     tags: tuple[str, ...] = ()
+    props: dict = field(default_factory=dict)
+    tasks: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -69,16 +73,21 @@ def scan_note(text: str) -> NoteScan:
     Links and tags inside fenced code, inline code, and comments do not count,
     and a media embed is classified later, at resolution time.
     """
-    # A full YAML parse per note measured as 60% of the whole build on a
-    # 10k-note vault, so the bulk pass reads the tag keys out of the raw block.
-    split = split_frontmatter(text, parse_properties=False)
+    # The Dataview engine needs the parsed frontmatter, so the scan pays the
+    # YAML cost once per changed note; the raw tag scan stays, because it also
+    # covers the blocks the YAML parser refuses.
+    split = split_frontmatter(text)
     tags: list[str] = []
     seen_tags: set[str] = set()
     for tag in _frontmatter_tags(split.raw_frontmatter):
         _collect_tag(tag, tags, seen_tags)
     links: list[RawLink] = []
+    tasks: list[tuple[str, str]] = []
     body = strip_html_comments(strip_block_comments(split.body))
     for line in _content_lines(body):
+        task = _TASK_LINE.match(line)
+        if task and len(tasks) < MAX_TASKS_PER_NOTE:
+            tasks.append((task.group(1), task.group(2).strip()))
         has_link = "[[" in line
         has_tag = "#" in line
         if not has_link and not has_tag:
@@ -94,7 +103,12 @@ def scan_note(text: str) -> NoteScan:
             source = _WIKILINK.sub(" ", plain) if has_link else plain
             for match in _TAG.finditer(source):
                 _collect_tag(match.group(1), tags, seen_tags)
-    return NoteScan(links=tuple(links), tags=tuple(tags))
+    return NoteScan(
+        links=tuple(links),
+        tags=tuple(tags),
+        props=_portable(split.properties),
+        tasks=tuple(tasks),
+    )
 
 
 @dataclass
@@ -106,6 +120,9 @@ class VaultGraph:
     tags: dict[str, list[str]] = field(default_factory=dict)
     tag_names: dict[str, str] = field(default_factory=dict)
     note_tags: dict[str, set[str]] = field(default_factory=dict)
+    props: dict[str, dict] = field(default_factory=dict)
+    tasks: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
+    meta: dict[str, tuple[float, int]] = field(default_factory=dict)
     ready: bool = False
 
     @classmethod
@@ -134,6 +151,12 @@ class VaultGraph:
         return graph
 
     def _add_scan(self, vault: Vault, rel: str, scan: NoteScan, exists) -> None:
+        if scan.props:
+            self.props[rel] = scan.props
+        else:
+            self.props.setdefault(rel, {})
+        if scan.tasks:
+            self.tasks[rel] = list(scan.tasks)
         for tag in scan.tags:
             self._add_tag(rel, tag)
         outgoing: list[Outgoing] = []
@@ -196,6 +219,19 @@ def local_neighbors(graph: "VaultGraph", rel: str, cap: int = 30) -> list[tuple[
     ordered += [(path, "in") for path in sorted(incoming - both)]
     ordered += [(path, "out") for path in sorted(outgoing - both)]
     return ordered[:cap]
+
+
+def _portable(value):
+    """Converts parsed YAML into JSON-safe values; dates become ISO strings."""
+    if isinstance(value, dict):
+        return {str(k): _portable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_portable(v) for v in value]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
 
 
 def _collect_tag(tag: str, tags: list[str], seen: set[str]) -> None:
