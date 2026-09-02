@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Frontmatter works in notes with Windows line endings.** A leading YAML block delimited
+  with CRLF is now recognized like the same block with Unix line endings, so its title, tags,
+  CSS classes and plugin metadata no longer appear as Markdown body text.
+
 ## 2.2.0 — 2026-09-02
 
 Tagging a release now builds and publishes the packages.

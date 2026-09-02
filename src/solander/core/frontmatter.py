@@ -47,7 +47,7 @@ def split_frontmatter(text: str, parse_properties: bool = True) -> SplitNote:
     `parse_properties=False` skips the YAML parse and returns empty properties —
     the raw block is still split off, which is all a bulk pass over a vault needs.
     """
-    if not text.startswith("---\n") and text.strip() != "---":
+    if not text.startswith(("---\n", "---\r\n")) and text.strip() != "---":
         return SplitNote(body=text)
     lines = text.split("\n")
     for index in range(1, len(lines)):
