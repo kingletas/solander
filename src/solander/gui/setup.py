@@ -33,17 +33,6 @@ SHEBANG_INTRO = (
 )
 
 
-def setup_command(profile: str, profile_path: str) -> str:
-    """One paste-able command: write the profile, then reload AppArmor."""
-    marker = "SOLANDER_PROFILE"
-    return (
-        f"sudo tee {profile_path} > /dev/null << '{marker}'\n"
-        f"{profile}\n"
-        f"{marker}\n"
-        f"sudo apparmor_parser -r {profile_path}"
-    )
-
-
 class SetupWindow(Adw.ApplicationWindow):
     """Explains the sandbox situation and walks the user through the fix."""
 

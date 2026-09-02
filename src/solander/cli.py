@@ -98,6 +98,21 @@ def profile_target() -> str:
     return entry if entry and os.path.isfile(entry) else interpreter
 
 
+def setup_command(profile: str, profile_path: str) -> str:
+    """One paste-able command: write the profile, then reload AppArmor.
+
+    It lives here rather than with the setup window because it is a string and
+    nothing else — and a test for it must not have to import GTK.
+    """
+    marker = "SOLANDER_PROFILE"
+    return (
+        f"sudo tee {profile_path} > /dev/null << '{marker}'\n"
+        f"{profile}\n"
+        f"{marker}\n"
+        f"sudo apparmor_parser -r {profile_path}"
+    )
+
+
 def rendered_profile() -> str:
     """Renders the AppArmor profile for however this copy of the app was installed."""
     return PROFILE_TEMPLATE.format(interpreter=profile_target()).rstrip("\n")
@@ -182,7 +197,7 @@ def main() -> int:
         # From the applications grid there is no terminal to read that on, so a
         # plain-GTK setup window guides the fix wherever a display exists.
         if os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
-            from .gui.setup import run_setup, setup_command
+            from .gui.setup import run_setup
 
             shebang = sandbox_problem is SHEBANG_HELP
             command = setup_command(rendered_profile(), PROFILE_PATH)

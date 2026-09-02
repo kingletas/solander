@@ -73,8 +73,7 @@ def test_profile_names_the_running_interpreter():
 
 
 def test_setup_command_is_one_pasteable_block():
-    from solander.cli import PROFILE_PATH, rendered_profile
-    from solander.gui.setup import setup_command
+    from solander.cli import PROFILE_PATH, rendered_profile, setup_command
 
     command = setup_command(rendered_profile(), PROFILE_PATH)
     assert command.startswith(f"sudo tee {PROFILE_PATH}")

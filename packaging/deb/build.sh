@@ -39,6 +39,11 @@ if ! "$PYTHON" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 12)
   exit 1
 fi
 
+if ! "$PYTHON" -m pip --version >/dev/null 2>&1; then
+  echo "build.sh: $PYTHON has no pip -- install python3-pip" >&2
+  exit 1
+fi
+
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 

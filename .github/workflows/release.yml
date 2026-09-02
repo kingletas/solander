@@ -47,7 +47,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build the package
-        run: packaging/deb/build.sh dist
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y python3-pip
+          packaging/deb/build.sh dist
 
       # A package that builds and cannot be installed is not a release artifact.
       - name: Install it, and check what it put on the system
@@ -93,6 +96,7 @@ jobs:
       # dependency in the manifest is a wheel pinned by sha256.
       - name: Build the bundle
         run: |
+          mkdir -p dist
           flatpak-builder --disable-rofiles-fuse --force-clean \
             --repo=repo build data/flatpak/com.kingletas.Solander.yaml
           flatpak build-bundle repo \
