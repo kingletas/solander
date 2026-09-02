@@ -35,6 +35,7 @@ class SessionState:
     open_tabs: list[str] = field(default_factory=list)
     recent_notes: list[str] = field(default_factory=list)
     css_snippets: bool = True
+    hidden_folders: dict[str, list[str]] = field(default_factory=dict)
     reader_font: str = "default"
     line_width: str = "normal"
     line_spacing: str = "normal"

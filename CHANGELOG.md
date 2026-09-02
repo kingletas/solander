@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0 — 2026-09-01
+
+- **Folders can be hidden.** Right-click a folder in the tree to hide it — it leaves the tree, quick-open, and search results (link panels, graph, and Dataview stay complete, since those answer explicit questions). The toast offers Unhide, and View → Unhide All Folders clears the reader's list. Obsidian's own excluded-files setting (`userIgnoreFilters` in `.obsidian/app.json`) is honored read-only on top, and stays in force when the reader's list is cleared. The reader's list lives in its own config, never in the vault.
+- **Any note can be viewed as a mind map** (`Ctrl+M`, or Note menu → View as Mind Map): headings and nested bullets become a right-growing tree of rounded nodes with per-depth colors, heading nodes link to their place in the note, and Back returns to the rendered page. Static SVG, no JavaScript, labels cleaned of markup and escaped.
+
 ## 1.0.0 — 2026-09-01
 
 The completion release: the reader now renders every content type the vault it was built against actually contains.

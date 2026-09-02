@@ -23,6 +23,7 @@ from .frontmatter import split_frontmatter
 from .kanban import kanban_body, parse_kanban
 from .links import WikiLink, slugify
 from .markdown import build_parser, strip_block_comments, strip_html_comments
+from .mindmap import mindmap_body
 from .resolver import Resolution, resolve_attachment, resolve_embed, resolve_note
 from .sanitize import sanitize
 from .vault import Vault
@@ -235,6 +236,19 @@ class NoteRenderer:
             )
         body = f"<h1>{html.escape(title)}</h1>{render_base(graph, note.text)}"
         return build_page(body, title, theme, typography=self._typo(), extra_css=self._snips())
+
+    def render_mindmap(self, rel: str, theme: str = "light") -> str:
+        """Renders a note's headings and bullets as a mind-map page."""
+        note = self.vault.read_note(rel)
+        title = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        if note.error:
+            return build_message_page("Cannot open note", note.error, theme)
+        body = strip_html_comments(strip_block_comments(split_frontmatter(note.text).body))
+        page_body = mindmap_body(title, body, rel)
+        return build_page(
+            page_body, f"{title} (mind map)", theme,
+            typography=self._typo(), note_classes="mindmap-note",
+        )
 
     def render_canvas(self, rel: str, theme: str = "light") -> str:
         """Renders a `.canvas` file as a static, positioned page."""

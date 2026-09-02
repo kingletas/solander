@@ -21,6 +21,8 @@ It is a fallback reader, not an Obsidian replacement: something dependable to re
 - **Dataview, evaluated in pure Python** — no JavaScript: `TABLE`/`LIST`/`TASK` queries with `FROM`/`WHERE`/`SORT`/`GROUP BY`/`FLATTEN`, inline `= expression` spans, and `.base` table views, all live against the watched index. Unsupported syntax degrades to labeled source with the reason; `dataviewjs` stays inert by design.
 - Kanban board notes render as read-only boards (columns, cards, archive lane), and Excalidraw drawings render as static SVG — the LZ-String decoding is pure Python.
 - The vault's enabled CSS snippets apply, reduced by a strict sanitizer (no `url()`, no `@import`, no escapes), with the note's `cssclasses` honored — toggleable in the View menu.
+- Hide folders: right-click one to remove it from the tree, quick-open, and search (undoable; Obsidian's own excluded-files setting is honored on top, and the reader's list is stored outside the vault).
+- View any note as a mind map (`Ctrl+M`) — its headings and bullets laid out as a static SVG tree, heading nodes linking back into the note.
 - Typography controls — font, line width, line spacing — persisted and applied everywhere.
 - PDFs preview in-app through system Poppler (zoom, fit-to-width, open-externally), when the optional `gir1.2-poppler-0.18` package is installed.
 - Reads `.obsidian/app.json` (read-only) to honor the vault's attachment-folder setting.

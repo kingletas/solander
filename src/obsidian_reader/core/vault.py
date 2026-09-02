@@ -37,6 +37,7 @@ class Vault:
     _notes_by_name: dict[str, list[str]] = field(default_factory=dict)
     _files_by_name: dict[str, list[str]] = field(default_factory=dict)
     attachment_folder: str = ""
+    ignore_filters: list[str] = field(default_factory=list)
 
     @classmethod
     def open(cls, root: Path) -> "Vault":
@@ -44,6 +45,7 @@ class Vault:
         vault = cls(root=root.resolve())
         vault.reindex()
         vault.attachment_folder = vault._read_attachment_folder()
+        vault.ignore_filters = vault._read_ignore_filters()
         return vault
 
     def reindex(self) -> None:
@@ -123,6 +125,31 @@ class Vault:
         if not isinstance(folder, str) or folder.startswith("."):
             return ""
         return folder.strip("/")
+
+
+    def _read_ignore_filters(self) -> list[str]:
+        """Reads Obsidian's own excluded-files list out of `.obsidian/app.json`."""
+        config = self.root / ".obsidian" / "app.json"
+        try:
+            parsed = json.loads(config.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return []
+        filters = parsed.get("userIgnoreFilters") if isinstance(parsed, dict) else None
+        if not isinstance(filters, list):
+            return []
+        return [
+            entry.rstrip("/")
+            for entry in filters
+            if isinstance(entry, str) and entry.strip("/") and not entry.startswith(".")
+        ]
+
+
+def hidden_under(rel: str, hidden) -> bool:
+    """Reports whether a vault-relative path sits inside any hidden folder."""
+    for folder in hidden:
+        if rel == folder or rel.startswith(f"{folder}/"):
+            return True
+    return False
 
 
 def file_kind(rel: str) -> str:

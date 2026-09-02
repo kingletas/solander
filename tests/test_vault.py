@@ -64,3 +64,18 @@ def test_file_kind_classification():
     assert file_kind("x.webm") == "video"
     assert file_kind("x.pdf") == "pdf"
     assert file_kind("x.xlsx") == "other"
+
+
+def test_ignore_filters_read_from_app_json(vault_dir):
+    import json
+
+    from obsidian_reader.core.vault import Vault, hidden_under
+
+    config = {"userIgnoreFilters": ["Projects/", "99 Archive/", ".hidden/", "", 42]}
+    (vault_dir / ".obsidian" / "app.json").write_text(json.dumps(config))
+    vault = Vault.open(vault_dir)
+    assert vault.ignore_filters == ["Projects", "99 Archive"]
+    assert hidden_under("Projects/Alpha.md", vault.ignore_filters)
+    assert hidden_under("Projects", vault.ignore_filters)
+    assert not hidden_under("Personal/Meeting Notes.md", vault.ignore_filters)
+    assert not hidden_under("Projectsish/x.md", vault.ignore_filters)

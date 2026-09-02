@@ -357,3 +357,9 @@ code.math-source { color: var(--muted); }
 .note.excalidraw-note { max-width: none; }
 .excalidraw { overflow: auto; }
 .excalidraw svg { color: var(--fg); max-width: none; }
+
+/* Mind maps */
+.note.mindmap-note { max-width: none; }
+.mindmap { overflow: auto; }
+.mindmap svg text { fill: var(--fg); }
+.mindmap svg a { border-bottom: none; }

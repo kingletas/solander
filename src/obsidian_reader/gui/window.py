@@ -26,7 +26,7 @@ from ..core.resolver import resolve_note
 from ..core.search import VaultSearch, parse_query, search_filenames
 from ..core.session import SessionStore
 from ..core.store import open_index_store
-from ..core.vault import Vault, file_kind
+from ..core.vault import Vault, file_kind, hidden_under
 from .filetree import VaultTree
 from .localgraph import LocalGraphView
 from .monitor import VaultMonitor
@@ -50,6 +50,8 @@ SHORTCUTS = [
     ("Middle-click or Ctrl+click", "Open note or link in a new tab"),
     ("F9", "Toggle sidebar"),
     ("F11", "Reading mode (Esc leaves)"),
+    ("Ctrl+M", "View the note as a mind map"),
+    ("Right-click a folder", "Hide it (View menu unhides)"),
     ("Ctrl+Shift+E", "Export as PDF"),
     ("Ctrl++ / Ctrl+- / Ctrl+0", "Zoom in / out / reset"),
     ("Ctrl+?", "This window"),
@@ -199,7 +201,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._install_bundled_icons()
         self.sidebar_stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
 
-        self.tree = VaultTree(self._on_tree_activate, self._on_tree_open_new_tab)
+        self.tree = VaultTree(
+            self._on_tree_activate, self._on_tree_open_new_tab, self._on_hide_folder
+        )
         self.tree.show_hidden = self.store.state.show_hidden
         self.tree.markdown_only = self.store.state.markdown_only
         tree_scroll = Gtk.ScrolledWindow(child=self.tree.view, vexpand=True)
@@ -492,9 +496,11 @@ class ReaderWindow(Adw.ApplicationWindow):
         view.append("Show Hidden Files", "win.show-hidden")
         view.append("Markdown Files Only", "win.markdown-only")
         view.append("Vault CSS Snippets", "win.css-snippets")
+        view.append("Unhide All Folders", "win.unhide-folders")
         view.append("Restore Session on Launch", "win.restore-session")
         menu.append_section(None, view)
         note = Gio.Menu()
+        note.append("View as Mind Map", "win.mindmap")
         note.append("Export as PDF…", "win.export-pdf")
         note.append("Reveal in Files", "win.reveal")
         note.append("Open Externally", "win.open-external")
@@ -581,6 +587,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.leave_zen_action = add("leave-zen", lambda *_: self._set_zen(False), ["Escape"])
         self.leave_zen_action.set_enabled(False)
         add("export-pdf", lambda *_: self._export_pdf_dialog(), ["<Control><Shift>e"])
+        add("mindmap", lambda *_: self._show_mindmap(), ["<Control>m"])
+        add("unhide-folders", lambda *_: self._unhide_all_folders())
         add("zoom-in", lambda *_: self._zoom(0.1), ["<Control>plus", "<Control>equal"])
         add("zoom-out", lambda *_: self._zoom(-0.1), ["<Control>minus"])
         add("zoom-reset", lambda *_: self._zoom(None), ["<Control>0"])
@@ -703,6 +711,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.vault_monitor = VaultMonitor(vault.root, self._schedule_sync)
         self.store.remember_vault(str(vault.root))
         self._refresh_recents_menu()
+        self.tree.hidden_folders = self._hidden_folders()
         self.tree.set_vault(vault.root)
         self._refresh_bookmarks_panel()
         self._refresh_tags_panel()
@@ -808,6 +817,58 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._reload_all_tabs()
         return False
 
+    def _hidden_folders(self) -> set[str]:
+        """Obsidian's own excluded folders plus the ones hidden in this reader."""
+        if self.vault is None:
+            return set()
+        mine = self.store.state.hidden_folders.get(str(self.vault.root), [])
+        return set(self.vault.ignore_filters) | set(mine)
+
+    def _apply_hidden_folders(self) -> None:
+        self.tree.hidden_folders = self._hidden_folders()
+        self.tree.refresh()
+
+    def _on_hide_folder(self, node) -> None:
+        if self.vault is None:
+            return
+        key = str(self.vault.root)
+        folders = self.store.state.hidden_folders.setdefault(key, [])
+        if node.rel in folders:
+            return
+        folders.append(node.rel)
+        self._apply_hidden_folders()
+        toast = Adw.Toast(title=f"Hidden {node.rel}", button_label="Unhide")
+
+        def undo(*_args):
+            if node.rel in folders:
+                folders.remove(node.rel)
+            self._apply_hidden_folders()
+
+        toast.connect("button-clicked", undo)
+        self.toasts.add_toast(toast)
+
+    def _unhide_all_folders(self) -> None:
+        if self.vault is None:
+            return
+        removed = self.store.state.hidden_folders.pop(str(self.vault.root), [])
+        self._apply_hidden_folders()
+        obsidian = len(self.vault.ignore_filters)
+        message = f"Unhid {len(removed)} folder(s)"
+        if obsidian:
+            message += f" — {obsidian} stay hidden by Obsidian's own excluded-files setting"
+        self._toast(message)
+
+    def _visible_hits(self, hits):
+        hidden = self._hidden_folders()
+        return [hit for hit in hits if not hidden_under(hit.path, hidden)]
+
+    def _show_mindmap(self) -> None:
+        if not self.current_note or not self.current_note.casefold().endswith((".md", ".markdown")):
+            self._toast("Open a note first")
+            return
+        rel = GLib.uri_escape_string(self.current_note, "/", True)
+        self.reader.webview.load_uri(f"reader:///mindmap/{rel}")
+
     def _typography(self) -> dict:
         """The reading-comfort settings the page shell injects as CSS overrides."""
         state = self.store.state
@@ -896,6 +957,10 @@ class ReaderWindow(Adw.ApplicationWindow):
             return rendered.page
         if segments and segments[0] == "preview" and self.renderer is not None:
             return self.renderer.render_preview("/".join(segments[1:]), theme)
+        if segments and segments[0] == "mindmap" and self.renderer is not None:
+            if reader is not None:
+                reader.last_render = None
+            return self.renderer.render_mindmap("/".join(segments[1:]), theme)
         if segments and segments[0] == "page":
             return self._app_page(segments[1] if len(segments) > 1 else "", theme)
         return ""
@@ -1064,12 +1129,17 @@ class ReaderWindow(Adw.ApplicationWindow):
         query = entry.get_text().strip()
         self._clear_results()
         if not query:
-            recents = [rel for rel in self.store.state.recent_notes if self.vault.has_file(rel)]
+            hidden = self._hidden_folders()
+            recents = [
+                rel
+                for rel in self.store.state.recent_notes
+                if self.vault.has_file(rel) and not hidden_under(rel, hidden)
+            ]
             self.search_status.set_text("Recent notes" if recents else "")
             for rel in recents:
                 self._add_result(rel, "")
             return
-        hits = search_filenames(self.vault, query)
+        hits = self._visible_hits(search_filenames(self.vault, query))
         self.search_status.set_text(
             f"{len(hits)} filename matches — press Enter for full-text search"
             if hits
@@ -1092,7 +1162,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             return
         self._clear_results()
         note_tags = self.graph.note_tags if self.graph is not None else None
-        hits = self.search_index.search_content(query, note_tags)
+        hits = self._visible_hits(self.search_index.search_content(query, note_tags))
         if not hits:
             self.search_status.set_text(f"No matches for “{query}”")
             return

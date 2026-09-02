@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.1.0" date="2026-09-01">
+      <description>
+        <p>Hide folders from the tree and search, and view any note as a
+        mind map of its headings and bullets.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-09-01">
       <description>
         <p>Kanban boards, Excalidraw drawings, and sanitized vault CSS

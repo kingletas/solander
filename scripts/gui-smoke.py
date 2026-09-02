@@ -124,6 +124,22 @@ def run_checks(app):
             drawing = window._provide_page("/note/Draw.excalidraw.md", window.reader.webview)
             check("excalidraw note renders as SVG", "<svg" in drawing and "<rect" in drawing)
             check("vault css snippet is applied sanitized", "teal" in page and "url(" not in page)
+            mindmap = window._provide_page("/mindmap/A.md", window.reader.webview)
+            check("mind map renders the note structure", "<svg" in mindmap and ">A<" in mindmap)
+            from obsidian_reader.core.search import search_filenames
+
+            names = [node.rel for node in window.tree._list_directory("")]
+            check("tree lists the soon-hidden folder", "Sub" in names)
+            key = str(window.vault.root)
+            window.store.state.hidden_folders[key] = ["Sub"]
+            window._apply_hidden_folders()
+            names = [node.rel for node in window.tree._list_directory("")]
+            hits = window._visible_hits(search_filenames(window.vault, "inside"))
+            check("hidden folder leaves the tree", "Sub" not in names)
+            check("hidden folder leaves quick-open", all("Sub/" not in h.path for h in hits))
+            window._unhide_all_folders()
+            names = [node.rel for node in window.tree._list_directory("")]
+            check("unhide restores the folder", "Sub" in names)
             check_retrieval()
             return False
 
@@ -312,6 +328,8 @@ def write_extra_fixtures() -> None:
     """Fixture files for the 1.0 surfaces, written before the vault opens."""
     import json
 
+    (vault_path / "Sub").mkdir(exist_ok=True)
+    (vault_path / "Sub" / "Inside.md").write_text("# Inside\n")
     (vault_path / "Sprint.md").write_text(
         "---\nkanban-plugin: board\n---\n\n## Todo\n\n- [ ] [[A|card one]]\n\n"
         "## Done\n\n- [x] finished\n"

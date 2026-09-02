@@ -152,7 +152,7 @@ class ReaderView(GObject.Object):
             decision.ignore()
             self.emit("navigate-note-new-tab", "/".join(segments[1:]), unquote(parsed.fragment))
             return True
-        if head in ("note", "page", "preview"):
+        if head in ("note", "page", "preview", "mindmap"):
             decision.use()
             return True
         decision.ignore()
