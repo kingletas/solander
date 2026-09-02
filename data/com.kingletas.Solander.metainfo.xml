@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.0.2" date="2026-09-02">
+      <description>
+        <p>The application mark fills its canvas, so it no longer reads as
+        half-size beside other icons in a dock.</p>
+      </description>
+    </release>
     <release version="2.0.1" date="2026-09-02">
       <description>
         <p>The window carries its own icon: the process now identifies itself by

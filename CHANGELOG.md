@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2 — 2026-09-02
+
+- **The mark fills its canvas.** The sigil covered 38% of the 128px square, so beside near-full-bleed neighbours it read as half-size in a dock. The geometry is unchanged in kind — plate, cut, seal, plinth — and now covers about 75%: a wider plate, a full-width plinth, and a larger seal. Checked against a square and a round neighbour at 64, 48, 40, 32 and 24px.
+
 ## 2.0.1 — 2026-09-02
 
 The window had never carried its own icon, and the rename made it visible.
