@@ -26,6 +26,13 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.7.0" date="2026-09-02">
+      <description>
+        <p>Sidebar structure: a collapsible pinned-and-recent section, a
+        labeled folder tree, an outline page in the rail, and tag and graph
+        icons that actually show on the dark surface.</p>
+      </description>
+    </release>
     <release version="1.6.1" date="2026-09-02">
       <description>
         <p>The outline panel joins the visual identity: a warm card surface,

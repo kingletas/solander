@@ -6,11 +6,12 @@ The three promises frame every feature below: the vault is **never written**, no
 
 ## The window
 
-A full-height rail on the left — a deep sepia surface against the reading canvas, crowned with the vault's name — resizable by its divider, with six pages switched by the icons under the name:
+A full-height rail on the left — a deep sepia surface against the reading canvas, crowned with the vault's name — resizable by its divider, with seven pages switched by the icons under the name:
 
 | Page | What it holds |
 |---|---|
-| **Files** | Pinned & recent notes above the vault tree (Note menu → Pin/Unpin Note). Single click opens a note or expands a folder; middle-click or `Ctrl+click` opens a note in a new tab; right-click a folder hides it. |
+| **Files** | A collapsible Pinned & recent section (Note menu → Pin/Unpin Note), then the folder tree under its own label. Single click opens a note or expands a folder; middle-click or `Ctrl+click` opens a note in a new tab; right-click a folder hides it. |
+| **Outline** | The current note's headings as a rail page — the same outline the right panel shows, for when you'd rather have it on the left. |
 | **Search** | Quick-open and full-text search (below). |
 | **Links** | For the current note: every note that links to it, each with the line of context around the mention, then its outgoing links with missing and ambiguous targets named. |
 | **Tags** | Every tag in the vault — inline and frontmatter — with counts and a filter box. Activating a tag runs a `tag:` search. |

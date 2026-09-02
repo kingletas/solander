@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.0 — 2026-09-02
+
+Sidebar structure, on request.
+
+- **Pinned & recent is a section now, and collapsible.** A disclosure on its label folds it away (remembered), a separator and a FOLDERS label separate it from the tree — no more two lists running into each other.
+- **The outline can live in the rail too.** A seventh sidebar page shows the current note's headings on the left, mirroring the right panel — use whichever side suits the note, or both.
+- **The tags and graph icons are visible again.** The custom bundled icons were never treated as symbolic by GTK, so they drew their baked dark gray — invisible on the dark rail. Replaced with the theme's own recolorable icons (a smoke check now asserts both stay symbolic).
+
 ## 1.6.1 — 2026-09-02
 
 - **The outline panel matches the interface now.** It sits on a warm card surface in the canvas family, its label in the identity's gold, its entries in muted serif that answer in lapis on hover — instead of the stock widget styling it launched with.

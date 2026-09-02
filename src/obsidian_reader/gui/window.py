@@ -221,13 +221,25 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.tree.show_hidden = self.store.state.show_hidden
         self.tree.markdown_only = self.store.state.markdown_only
         files_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.quick_heading = Gtk.Label(label="PINNED & RECENT", xalign=0.0, visible=False)
+        self.quick_heading = Gtk.Label(label="PINNED & RECENT", xalign=0.0)
         self.quick_heading.add_css_class("quick-heading")
-        self.quick_list = Gtk.ListBox(visible=False)
+        self.quick_list = Gtk.ListBox()
         self.quick_list.add_css_class("navigation-sidebar")
         self.quick_list.connect("row-activated", self._on_panel_row)
-        files_box.append(self.quick_heading)
-        files_box.append(self.quick_list)
+        self.quick_expander = Gtk.Expander(
+            expanded=self.store.state.quick_expanded, visible=False
+        )
+        self.quick_expander.set_label_widget(self.quick_heading)
+        self.quick_expander.set_child(self.quick_list)
+        self.quick_expander.connect("notify::expanded", self._on_quick_expanded)
+        files_box.append(self.quick_expander)
+        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator.set_margin_top(6)
+        separator.add_css_class("rail-separator")
+        files_box.append(separator)
+        folders_heading = Gtk.Label(label="FOLDERS", xalign=0.0)
+        folders_heading.add_css_class("quick-heading")
+        files_box.append(folders_heading)
         files_box.append(Gtk.ScrolledWindow(child=self.tree.view, vexpand=True))
         self._add_sidebar_page(files_box, "files", "Files", "folder-symbolic")
 
@@ -252,6 +264,12 @@ class ReaderWindow(Adw.ApplicationWindow):
         search_box.append(results_scroll)
         self._add_sidebar_page(search_box, "search", "Search", "edit-find-symbolic")
 
+        self.rail_outline_list = Gtk.ListBox()
+        self.rail_outline_list.add_css_class("navigation-sidebar")
+        self.rail_outline_list.connect("row-activated", self._on_outline_row)
+        outline_scroll = Gtk.ScrolledWindow(child=self.rail_outline_list, vexpand=True)
+        self._add_sidebar_page(outline_scroll, "outline", "Outline", "view-list-symbolic")
+
         self.links_list = Gtk.ListBox()
         self.links_list.add_css_class("navigation-sidebar")
         self.links_list.connect("row-activated", self._on_panel_row)
@@ -269,7 +287,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.tags_list.connect("row-activated", self._on_tag_row)
         tags_box.append(self.tag_filter)
         tags_box.append(Gtk.ScrolledWindow(child=self.tags_list, vexpand=True))
-        self._add_sidebar_page(tags_box, "tags", "Tags", "reader-tag-symbolic")
+        self._add_sidebar_page(tags_box, "tags", "Tags", "tag-symbolic")
 
         self.bookmarks_list = Gtk.ListBox()
         self.bookmarks_list.add_css_class("navigation-sidebar")
@@ -280,7 +298,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         )
 
         self.local_graph = LocalGraphView(lambda rel: self.reader.load_note(rel))
-        self._add_sidebar_page(self.local_graph.area, "graph", "Graph", "reader-graph-symbolic")
+        self._add_sidebar_page(
+            self.local_graph.area, "graph", "Graph", "network-workgroup-symbolic"
+        )
 
         switcher = Gtk.StackSwitcher(stack=self.sidebar_stack)
         switcher.set_halign(Gtk.Align.CENTER)
@@ -489,12 +509,14 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._toast("Pinned to the sidebar")
         self._refresh_quick_list()
 
+    def _on_quick_expanded(self, expander, _param) -> None:
+        self.store.state.quick_expanded = expander.get_expanded()
+
     def _refresh_quick_list(self) -> None:
         """Rebuilds the Pinned & recent section: pins first, then the latest notes."""
         self._clear_list(self.quick_list)
         if self.vault is None:
-            self.quick_heading.set_visible(False)
-            self.quick_list.set_visible(False)
+            self.quick_expander.set_visible(False)
             return
         hidden = self._hidden_folders()
         pinned = [
@@ -519,9 +541,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             row.note_path = rel
             row.set_tooltip_text(rel)
             self.quick_list.append(row)
-        populated = bool(pinned or recents)
-        self.quick_heading.set_visible(populated)
-        self.quick_list.set_visible(populated)
+        self.quick_expander.set_visible(bool(pinned or recents))
 
     def _build_content(self) -> Gtk.Widget:
         self.tab_bar = Adw.TabBar(view=self.tab_view, autohide=True)
@@ -802,6 +822,8 @@ class ReaderWindow(Adw.ApplicationWindow):
     .atelier-rail entry image { color: @rail_muted; }
     .atelier-rail stackswitcher button { color: @rail_muted; min-width: 30px; }
     .atelier-rail stackswitcher button:hover { color: @rail_fg; }
+    .atelier-rail expander { color: @rail_muted; }
+    .atelier-rail .rail-separator { background: alpha(#ffffff, 0.08); }
     .atelier-rail stackswitcher button:checked {
         color: @rail_accent;
         background: alpha(@rail_accent, 0.14);
@@ -1505,8 +1527,13 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._readers.pop(page.get_child(), None)
 
     def _fill_outline(self, outline) -> None:
-        while (row := self.outline_list.get_first_child()) is not None:
-            self.outline_list.remove(row)
+        """The outline shows in two places — the right panel and the rail page."""
+        for listbox in (self.outline_list, self.rail_outline_list):
+            self._fill_outline_list(listbox, outline)
+
+    def _fill_outline_list(self, listbox, outline) -> None:
+        while (row := listbox.get_first_child()) is not None:
+            listbox.remove(row)
         for heading in outline:
             label = Gtk.Label(label=heading.text, xalign=0.0, wrap=True)
             label.set_margin_start((heading.level - 1) * 12)
@@ -1514,12 +1541,12 @@ class ReaderWindow(Adw.ApplicationWindow):
             label.set_margin_bottom(2)
             row = Gtk.ListBoxRow(child=label)
             row.anchor = heading.anchor
-            self.outline_list.append(row)
+            listbox.append(row)
         if not outline:
             placeholder = Gtk.Label(label="No headings in this note", xalign=0.0, wrap=True)
             placeholder.add_css_class("dim-label")
             row = Gtk.ListBoxRow(child=placeholder, activatable=False, selectable=False)
-            self.outline_list.append(row)
+            listbox.append(row)
 
     def _on_outline_row(self, _list, row) -> None:
         anchor = getattr(row, "anchor", "")

@@ -146,6 +146,12 @@ def run_checks(app):
                 rows += 1 if getattr(row, "anchor", "") else 0
                 row = row.get_next_sibling()
             check("outline panel lists the note's headings", rows == 3)
+            rail_rows = 0
+            row = window.rail_outline_list.get_first_child()
+            while row is not None:
+                rail_rows += 1 if getattr(row, "anchor", "") else 0
+                row = row.get_next_sibling()
+            check("the rail's outline page mirrors the panel", rail_rows == 3)
             window._set_outline_visible(True)
             opened = window.outline_split.get_show_sidebar() and window.outline_toggle.get_active()
             check("outline opens as a native panel", opened)
@@ -255,6 +261,19 @@ def run_checks(app):
             window._toggle_pin()
             unpinned = "A.md" not in window.store.state.pinned_notes.get(key, [])
             check("unpin removes it again", unpinned)
+            window.quick_expander.set_expanded(False)
+            check("pinned & recent collapses", window.store.state.quick_expanded is False)
+            window.quick_expander.set_expanded(True)
+            check("pinned & recent expands again", window.store.state.quick_expanded is True)
+            from gi.repository import Gtk as _Gtk
+
+            theme = _Gtk.IconTheme.get_for_display(window.get_display())
+            recolorable = all(
+                theme.has_icon(name)
+                and theme.lookup_icon(name, None, 16, 1, _Gtk.TextDirection.LTR, 0).is_symbolic()
+                for name in ("tag-symbolic", "network-workgroup-symbolic")
+            )
+            check("tags and graph icons recolor with the theme", recolorable)
             check_fidelity()
             return False
 

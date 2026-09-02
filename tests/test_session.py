@@ -53,3 +53,10 @@ def test_outline_visibility_persists(tmp_path):
     store.state.outline_visible = True
     store.save()
     assert SessionStore(tmp_path / "conf").state.outline_visible is True
+
+
+def test_quick_section_expansion_persists(tmp_path):
+    store = SessionStore(tmp_path / "conf")
+    store.state.quick_expanded = False
+    store.save()
+    assert SessionStore(tmp_path / "conf").state.quick_expanded is False

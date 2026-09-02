@@ -44,6 +44,7 @@ class SessionState:
     show_note_meta: bool = True
     show_backlinks_footer: bool = True
     outline_visible: bool = False
+    quick_expanded: bool = True
 
 
 class SessionStore:
