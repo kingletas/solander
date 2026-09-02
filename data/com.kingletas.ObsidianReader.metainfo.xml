@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.11.1" date="2026-09-02">
+      <description>
+        <p>The page indicator gets its own strip, pages keep a book measure on
+        large screens, and the desk paints opaquely behind the page.</p>
+      </description>
+    </release>
     <release version="1.11.0" date="2026-09-02">
       <description>
         <p>Book mode turns real pages: chapters are paginated by WebKit's

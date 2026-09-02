@@ -14,37 +14,48 @@ from gi.repository import Adw, Gdk, GLib, GObject, Gtk
 TURN_MS = 300
 
 
-class BookPagedView(Gtk.Overlay):
-    """One printed page at a time, with e-reader turning."""
+class BookPagedView(Gtk.Box):
+    """One printed page at a time, with e-reader turning.
+
+    The page sits on an opaque desk with the place indicator in its own strip
+    below — the indicator can never overlap the page's text.
+    """
 
     __gsignals__ = {
         "turn-chapter": (GObject.SignalFlags.RUN_FIRST, None, (int,)),
     }
 
     def __init__(self):
-        super().__init__()
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.document = None
         self.index = 0
         self.count = 0
         self._desk = "#e8dcc0"
         self._current_texture = None
+        self._desk_provider = Gtk.CssProvider()
+        self.get_style_context().add_provider(
+            self._desk_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+        self.add_css_class("book-desk")
 
         self.page_picture = Gtk.Picture(content_fit=Gtk.ContentFit.CONTAIN)
-        self.set_child(self.page_picture)
+        self.page_area = Gtk.Overlay(vexpand=True, hexpand=True)
+        self.page_area.set_child(self.page_picture)
+        self.append(self.page_area)
 
         self.indicator = Gtk.Label()
         self.indicator.add_css_class("book-indicator")
         self.indicator.set_halign(Gtk.Align.CENTER)
-        self.indicator.set_valign(Gtk.Align.END)
-        self.indicator.set_margin_bottom(8)
-        self.add_overlay(self.indicator)
+        self.indicator.set_margin_top(4)
+        self.indicator.set_margin_bottom(6)
+        self.append(self.indicator)
 
         self.binding = Gtk.Label(label="Laying out the pages…")
         self.binding.add_css_class("book-indicator")
         self.binding.set_halign(Gtk.Align.CENTER)
         self.binding.set_valign(Gtk.Align.CENTER)
         self.binding.set_visible(False)
-        self.add_overlay(self.binding)
+        self.page_area.add_overlay(self.binding)
 
         # An e-reader's tap zones: the left third turns back, the rest turns on.
         click = Gtk.GestureClick()
@@ -52,9 +63,13 @@ class BookPagedView(Gtk.Overlay):
         self.add_controller(click)
         self.set_focusable(True)
         self.connect("notify::scale-factor", lambda *_: self._refresh())
+        self.set_desk(self._desk)
 
     def set_desk(self, color: str) -> None:
         self._desk = color
+        self._desk_provider.load_from_string(
+            f".book-desk {{ background-color: {color}; }}"
+        )
 
     def show_binding(self, on: bool) -> None:
         self.binding.set_visible(on)
@@ -115,8 +130,8 @@ class BookPagedView(Gtk.Overlay):
 
         page = self.document.get_page(index)
         page_w, page_h = page.get_size()
-        widget_w = max(self.get_width(), 1)
-        widget_h = max(self.get_height(), 1)
+        widget_w = max(self.page_area.get_width(), 1)
+        widget_h = max(self.page_area.get_height(), 1)
         hidpi = self.get_scale_factor() or 1
         scale = min(widget_w / page_w, widget_h / page_h) * hidpi
         pixel_w, pixel_h = max(int(page_w * scale), 1), max(int(page_h * scale), 1)
@@ -144,7 +159,7 @@ class BookPagedView(Gtk.Overlay):
 
     def _slide_away(self, old_texture, direction: int) -> None:
         """The outgoing page slides off over the new one, like a turned leaf."""
-        width, height = self.get_width(), self.get_height()
+        width, height = self.page_area.get_width(), self.page_area.get_height()
         if width <= 0 or height <= 0:
             return
         old_picture = Gtk.Picture.new_for_paintable(old_texture)
@@ -153,7 +168,7 @@ class BookPagedView(Gtk.Overlay):
         holder = Gtk.Fixed()
         holder.set_can_target(False)
         holder.put(old_picture, 0, 0)
-        self.add_overlay(holder)
+        self.page_area.add_overlay(holder)
 
         def frame(value):
             offset = -value * width if direction > 0 else value * width
@@ -163,6 +178,6 @@ class BookPagedView(Gtk.Overlay):
         target = Adw.CallbackAnimationTarget.new(frame)
         animation = Adw.TimedAnimation.new(holder, 0.0, 1.0, TURN_MS, target)
         animation.set_easing(Adw.Easing.EASE_OUT_CUBIC)
-        animation.connect("done", lambda *_: self.remove_overlay(holder))
+        animation.connect("done", lambda *_: self.page_area.remove_overlay(holder))
         animation.play()
         self._turn_animation = animation

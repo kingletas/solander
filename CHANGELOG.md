@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.11.1 — 2026-09-02
+
+- **The place indicator can no longer overlap the page.** It sits in its own strip below the page instead of floating over the last line.
+- **Pages keep a book's measure.** The printed page is capped at a focused width (~880px) regardless of screen size, centered on the desk — on a large monitor the book is a book, not a wall.
+- **The desk is opaque.** The paged view paints the desk color behind the page, so nothing shows through around it, and showing pages re-asserts reading mode.
+
 ## 1.11.0 — 2026-09-02
 
 Book mode turns pages now, not chapters.

@@ -303,6 +303,10 @@ def run_checks(app):
         check("book mode enters reading mode", getattr(window, "_zen", False))
         check("book opens at the first chapter", window.current_note == "Book/01 One.md")
         check("the chapter prints to multiple pages", window.paged_view.count > 1)
+        page_w = window.paged_view.document.get_page(0).get_size()[0]
+        check("the printed page keeps a book measure", page_w <= 880 * 72 / 96 + 1)
+        strip = window.paged_view.indicator.get_parent() is window.paged_view
+        check("the place indicator has its own strip", strip)
         book_state["one_pages"] = window.paged_view.count
         page = window._provide_page("/note/Book/01 One.md", window.reader.webview)
         navigated = 'class="book-nav"' in page and "1 of 3" in page

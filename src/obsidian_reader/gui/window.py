@@ -800,6 +800,8 @@ class ReaderWindow(Adw.ApplicationWindow):
                      color: alpha(currentColor, 0.55); margin: 10px 12px 2px; }
     .panel-heading { font-size: 0.72em; font-weight: bold; letter-spacing: 0.12em;
                      color: alpha(currentColor, 0.55); }
+    .book-indicator { font-size: 0.72em; letter-spacing: 0.14em;
+                      color: alpha(currentColor, 0.5); }
 
     /* The rail: one deep surface, gold accents, everything on it made for it. */
     .atelier-rail { background: @rail_bg; color: @rail_fg; }
@@ -1389,9 +1391,11 @@ class ReaderWindow(Adw.ApplicationWindow):
         if not self._book_tmp:
             self._book_tmp = tempfile.mkdtemp(prefix="reader-book-")
         target = Path(self._book_tmp) / f"{len(self._book_pdfs):03d}.pdf"
-        area = self.paged_view or self.content_overlay
-        width = max(area.get_width(), 400)
-        height = max(area.get_height(), 300)
+        area = self.paged_view.page_area if self.paged_view else self.content_overlay
+        # A page keeps a book's measure: on a large screen it stays a focused
+        # page on the desk, never a wall of text.
+        width = min(max(area.get_width(), 400), 880)
+        height = max(area.get_height() - 4, 300)
         paper = Gtk.PaperSize.new_custom(
             "book-page", "Book Page", width * 72 / 96, height * 72 / 96, Gtk.Unit.POINTS
         )
@@ -1438,6 +1442,8 @@ class ReaderWindow(Adw.ApplicationWindow):
             return
         self.paged_view.set_visible(True)
         self.paged_view.grab_focus()
+        if not getattr(self, "_zen", False):
+            self._set_zen(True)
 
     def _on_turn_chapter(self, _view, delta: int) -> None:
         """Past a chapter's cover: on to the neighbor, backward landing on its last page."""
