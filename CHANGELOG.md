@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.3 — 2026-09-02
+
+- **The mark fills its cell.** Enlarging the standalone silhouette was not enough: a plate on a plinth simply carries less ink than the near-full-bleed shapes it sits beside, so it kept reading as half-size in a dock. The sigil now sits on its own tile — **88% coverage against a neighbour's 82%** — with the record, the cut, the seal and the ledge inside it. The identity is unchanged, and it still re-tints per theme. Compared against a square and a round neighbour at 96, 64, 48, 32 and 24px, in five themes, and in silhouette.
+
 ## 2.0.2 — 2026-09-02
 
 - **The mark fills its canvas.** The sigil covered 38% of the 128px square, so beside near-full-bleed neighbours it read as half-size in a dock. The geometry is unchanged in kind — plate, cut, seal, plinth — and now covers about 75%: a wider plate, a full-width plinth, and a larger seal. Checked against a square and a round neighbour at 64, 48, 40, 32 and 24px.

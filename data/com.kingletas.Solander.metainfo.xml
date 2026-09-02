@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.0.3" date="2026-09-02">
+      <description>
+        <p>The application mark sits on its own tile, so it carries the same
+        visual weight as the icons beside it.</p>
+      </description>
+    </release>
     <release version="2.0.2" date="2026-09-02">
       <description>
         <p>The application mark fills its canvas, so it no longer reads as

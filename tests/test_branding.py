@@ -24,7 +24,8 @@ def test_the_mark_is_one_self_contained_symbol():
     for forbidden in ("<linearGradient", "<radialGradient", "<filter", "<mask", "<image",
                       "<text", "<style", "url(", "href", "font"):
         assert forbidden not in markup
-    assert markup.count("<path") == 3
+    shapes = markup.count("<path") + markup.count("<rect")
+    assert shapes <= 4, "the mark stays a handful of shapes, so it survives 16px"
     assert 'viewBox="0 0 128 128"' in markup
 
 

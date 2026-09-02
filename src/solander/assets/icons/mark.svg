@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <path class="mark-board" fill="#263b73" d="M 26 4 H 102 A 12 12 0 0 1 114 16 V 104 H 116 A 6 6 0 0 1 122 110 V 118 A 6 6 0 0 1 116 124 H 12 A 6 6 0 0 1 6 118 V 110 A 6 6 0 0 1 12 104 H 14 V 16 A 12 12 0 0 1 26 4 Z"/>
-  <path class="mark-face" fill="#e8dcc2" fill-rule="evenodd" d="M 26 16 H 102 V 92 H 26 Z M 64 29 L 89 54 L 64 79 L 39 54 Z"/>
-  <path class="mark-seal" fill="#b28a3b" d="M 64 38 L 80 54 L 64 70 L 48 54 Z"/>
+  <rect class="mark-board" x="4" y="4" width="120" height="120" rx="26" fill="#263b73"/>
+  <path class="mark-face" fill="#e8dcc2" fill-rule="evenodd" d="M 24 16 H 104 V 92 H 24 Z M 64 28 L 91 55 L 64 82 L 37 55 Z M 24 100 H 104 V 112 H 24 Z"/>
+  <path class="mark-seal" fill="#b28a3b" d="M 64 38 L 81 55 L 64 72 L 47 55 Z"/>
 </svg>
