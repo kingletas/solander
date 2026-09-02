@@ -26,6 +26,13 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.3.0" date="2026-09-02">
+      <description>
+        <p>An editorial redesign of the reading surface: note headers with
+        breadcrumb and metadata, an on-this-page rail, linked mentions after
+        the content, and pinned notes in the sidebar.</p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-09-01">
       <description>
         <p>A guided setup window replaces the terminal-only sandbox step,

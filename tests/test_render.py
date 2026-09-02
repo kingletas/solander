@@ -239,3 +239,52 @@ def test_bad_tex_falls_back_to_source(vault, vault_dir):
     vault.reindex()
     body = NoteRenderer(vault).render("Math.md").body
     assert "<math" not in body
+
+
+# -- the note header, "On this page" rail, and linked-mentions footer -------
+
+
+def test_nested_note_gets_breadcrumb_and_skips_duplicate_title(vault):
+    page = NoteRenderer(vault).render("Projects/Alpha.md").page
+    assert 'class="crumbs"' in page
+    assert "reader:///action/reveal-folder?arg=Projects" in page
+    # The body opens with "# Alpha", so no inline title repeats it.
+    assert '<h1 class="inline-title">' not in page
+
+
+def test_root_note_gets_inline_title_and_no_breadcrumb(vault):
+    page = NoteRenderer(vault).render("Index.md").page
+    assert 'class="crumbs"' not in page
+    assert '<h1 class="inline-title">Index</h1>' in page
+
+
+def test_meta_line_counts_words_and_links_tags(vault):
+    page = NoteRenderer(vault).render("Index.md").page
+    assert "words</span>" in page
+    assert "reader:///action/tag?arg=home" in page
+    assert "Updated " in page
+
+
+def test_toc_rail_needs_three_headings(vault):
+    with_toc = NoteRenderer(vault).render("Projects/Alpha.md").page
+    assert 'class="page-toc"' in with_toc
+    without = NoteRenderer(vault).render("Index.md").page
+    assert 'class="page-toc"' not in without
+
+
+def test_toc_rail_yields_to_full_width_reading(vault):
+    typography = {"font": "default", "width": "full", "spacing": "normal"}
+    page = NoteRenderer(vault, typography=lambda: typography).render("Projects/Alpha.md").page
+    assert 'class="page-toc"' not in page
+
+
+def test_backlinks_footer_lists_linked_mentions(vault):
+    from obsidian_reader.core.graph import VaultGraph
+
+    graph = VaultGraph.build(vault)
+    renderer = NoteRenderer(vault, graph_provider=lambda: graph)
+    page = renderer.render("Projects/Alpha.md").page
+    assert 'class="backlinks"' in page
+    assert "reader:///note/Index.md" in page
+    without_mentions = renderer.render("Index.md").page
+    assert 'class="backlinks"' not in without_mentions

@@ -124,6 +124,19 @@ def run_checks(app):
             drawing = window._provide_page("/note/Draw.excalidraw.md", window.reader.webview)
             check("excalidraw note renders as SVG", "<svg" in drawing and "<rect" in drawing)
             check("vault css snippet is applied sanitized", "teal" in page and "url(" not in page)
+            inside = window._provide_page("/note/Sub/Inside.md", window.reader.webview)
+            crumb = "reader:///action/reveal-folder?arg=Sub" in inside
+            check("nested note header carries the breadcrumb", crumb)
+            check("a duplicate H1 suppresses the inline title", "inline-title\">" not in inside)
+            second = window._provide_page("/note/Second Note.md", window.reader.webview)
+            titled = '<h1 class="inline-title">Second Note</h1>' in second
+            check("inline title shows when the body has none", titled)
+            check("metadata line reports the update date", "Updated " in second)
+            mentions_shown = 'class="backlinks"' in second and "reader:///note/A.md" in second
+            check("linked mentions follow the content", mentions_shown)
+            long_page = window._provide_page("/note/Long.md", window.reader.webview)
+            has_rail = 'class="page-toc"' in long_page
+            check("on-this-page rail renders for a structured note", has_rail)
             guide = window._provide_page("/page/user-guide", window.reader.webview)
             check("user guide renders in-app", "The window" in guide and "<table>" in guide)
             check("guide cross-links stay in-app", "reader:///page/getting-started" in guide)
@@ -147,6 +160,19 @@ def run_checks(app):
             window._unhide_all_folders()
             names = [node.rel for node in window.tree._list_directory("")]
             check("unhide restores the folder", "Sub" in names)
+            from gi.repository import Gtk
+
+            window._on_page_action(None, "reveal-folder", "Sub")
+            position = window.tree.selection.get_selected()
+            selected = None
+            if position != Gtk.INVALID_LIST_POSITION:
+                row = window.tree.selection.get_model().get_item(position)
+                selected = row.get_item() if row is not None else None
+            revealed = selected is not None and selected.rel == "Sub"
+            check("breadcrumb reveal selects the folder in the tree", revealed)
+            window._on_page_action(None, "tag", "alpha")
+            searched = window.search_entry.get_text() == "tag:alpha"
+            check("tag chip action runs a tag search", searched)
             check_retrieval()
             return False
 
@@ -182,6 +208,18 @@ def run_checks(app):
         def check_map_toggle_off():
             uri = window.reader.webview.get_uri() or ""
             check("Ctrl+M toggles back to the note", uri.startswith("reader:///note/A.md"))
+            window._refresh_quick_list()
+            has_rows = window.quick_list.get_first_child() is not None
+            check("recent notes populate the sidebar quick list", has_rows)
+            key = str(window.vault.root)
+            window._toggle_pin()
+            check("pin adds the note", "A.md" in window.store.state.pinned_notes.get(key, []))
+            first = window.quick_list.get_first_child()
+            leads = first is not None and getattr(first, "note_path", "") == "A.md"
+            check("pinned note leads the quick list", leads)
+            window._toggle_pin()
+            unpinned = "A.md" not in window.store.state.pinned_notes.get(key, [])
+            check("unpin removes it again", unpinned)
             check_fidelity()
             return False
 
@@ -201,7 +239,7 @@ def run_checks(app):
             action = window.lookup_action("line-width")
             action.change_state(GLib.Variant.new_string("narrow"))
             page = window._provide_page("/note/A.md", window.reader.webview)
-            check("typography override reaches the page", "max-width: 38rem" in page)
+            check("typography override reaches the page", "max-width: 35rem" in page)
             check_pdf_preview()
             return False
 
@@ -352,6 +390,9 @@ def write_extra_fixtures() -> None:
 
     (vault_path / "Sub").mkdir(exist_ok=True)
     (vault_path / "Sub" / "Inside.md").write_text("# Inside\n")
+    (vault_path / "Long.md").write_text(
+        "# Long\n\n## First\n\ntext\n\n## Second\n\ntext\n\n## Third\n\ntext\n"
+    )
     (vault_path / "Sprint.md").write_text(
         "---\nkanban-plugin: board\n---\n\n## Todo\n\n- [ ] [[A|card one]]\n\n"
         "## Done\n\n- [x] finished\n"

@@ -4,6 +4,7 @@ import html
 import os
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 from importlib import resources
 from urllib.parse import quote, unquote
 
@@ -44,6 +45,13 @@ INERT_FENCES = {"dataviewjs", "templater", "tasks", "query", "meta-bind"}
 
 # TeX past this length is not a formula, and the converter's cost grows with it.
 MAX_MATH_CHARS = int(os.environ.get("READER_MAX_MATH_CHARS", "5000"))
+
+# The in-page "On this page" rail and the linked-mentions footer stay readable
+# by staying bounded; the sidebar panels carry the full lists.
+MAX_TOC_ENTRIES = 40
+MAX_FOOTER_BACKLINKS = 50
+MAX_HEADER_TAGS = 8
+READING_WORDS_PER_MINUTE = 220
 
 _BLOCK_ID_TAIL = re.compile(r"[ \t]+\^[A-Za-z0-9-]+[ \t]*$")
 _FENCE_LINE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
@@ -205,9 +213,14 @@ class NoteRenderer:
             body_html = self._render_markdown(split.body, env)
         properties_html = _properties_block(split.properties)
         body = sanitize(properties_html + body_html)
+        header = note_header(
+            rel, title, split.properties, split.body, env["outline"], self._mtime(rel)
+        )
+        toc = "" if (typo or {}).get("width") in ("wide", "full") else page_toc(env["outline"])
+        footer = self._backlinks_footer(rel)
         return RenderedNote(
             page=build_page(
-                body,
+                header + toc + body + footer,
                 title,
                 theme,
                 lossy=note.lossy,
@@ -221,6 +234,42 @@ class NoteRenderer:
             properties=split.properties,
             source=note.text,
             lossy=note.lossy,
+        )
+
+    def _mtime(self, rel: str) -> float | None:
+        try:
+            return (self.vault.root / rel).stat().st_mtime
+        except OSError:
+            return None
+
+    def _backlinks_footer(self, rel: str) -> str:
+        """Lists the notes linking here after the content, quietly and collapsed."""
+        graph = self._graph()
+        if graph is None:
+            return ""
+        mentions = graph.backlinks.get(rel, [])
+        if not mentions:
+            return ""
+        items = []
+        for mention in mentions[:MAX_FOOTER_BACKLINKS]:
+            source_title = html.escape(mention.source.rsplit("/", 1)[-1].rsplit(".", 1)[0])
+            path = html.escape(mention.source)
+            context = html.escape(mention.context or "")
+            context_html = f'<div class="backlink-context">{context}</div>' if context else ""
+            items.append(
+                f'<li><a class="wikilink" href="{note_uri(mention.source)}">{source_title}</a>'
+                f'<span class="backlink-path">{path}</span>{context_html}</li>'
+            )
+        more = ""
+        if len(mentions) > MAX_FOOTER_BACKLINKS:
+            more = (
+                f'<div class="backlink-more">…and {len(mentions) - MAX_FOOTER_BACKLINKS} more '
+                "— the Links panel lists them all</div>"
+            )
+        label = "1 note links here" if len(mentions) == 1 else f"{len(mentions)} notes link here"
+        return (
+            f'<section class="backlinks"><details><summary>{label}</summary>'
+            f'<ul>{"".join(items)}</ul>{more}</details></section>'
         )
 
     def render_base_page(self, rel: str, theme: str = "light") -> str:
@@ -565,6 +614,98 @@ class NoteRenderer:
         return f"<pre><code>{html.escape(code)}</code></pre>\n"
 
 
+def note_header(
+    rel: str,
+    title: str,
+    properties: dict,
+    body_text: str,
+    outline: list,
+    mtime: float | None,
+) -> str:
+    """Context before content: breadcrumb, inline title, and a compact metadata line."""
+    crumbs = _crumbs_html(rel)
+    heading = "" if _body_opens_with_title(outline, title) else (
+        f'<h1 class="inline-title">{html.escape(title)}</h1>'
+    )
+    meta = _meta_line_html(properties, body_text, mtime)
+    if not (crumbs or heading or meta):
+        return ""
+    return f'<header class="note-header">{crumbs}{heading}{meta}</header>'
+
+
+def _body_opens_with_title(outline: list, title: str) -> bool:
+    """True when the note's first heading is an H1 repeating the filename."""
+    first = outline[0] if outline else None
+    return (
+        first is not None
+        and first.level == 1
+        and first.text.strip().casefold() == title.strip().casefold()
+    )
+
+
+def _crumbs_html(rel: str) -> str:
+    parts = rel.split("/")[:-1]
+    if not parts:
+        return ""
+    links = []
+    prefix = ""
+    for part in parts:
+        prefix = f"{prefix}/{part}" if prefix else part
+        href = f"reader:///action/reveal-folder?arg={quote(prefix, safe='')}"
+        links.append(f'<a href="{href}">{html.escape(part)}</a>')
+    joined = '<span class="crumb-sep">/</span>'.join(links)
+    return f'<nav class="crumbs" aria-label="Location">{joined}</nav>'
+
+
+def _meta_line_html(properties: dict, body_text: str, mtime: float | None) -> str:
+    pieces = []
+    if mtime is not None:
+        stamp = datetime.fromtimestamp(mtime).strftime("%b %-d, %Y")
+        pieces.append(f"<span>Updated {html.escape(stamp)}</span>")
+    words = len(re.findall(r"\S+", body_text))
+    if words:
+        pieces.append(f"<span>{words:,} words</span>")
+        minutes = round(words / READING_WORDS_PER_MINUTE)
+        if minutes >= 2:
+            pieces.append(f"<span>~{minutes} min read</span>")
+    tags = _header_tags(properties)
+    for tag in tags[:MAX_HEADER_TAGS]:
+        href = f"reader:///action/tag?arg={quote(tag, safe='')}"
+        pieces.append(f'<a class="tag" href="{href}">#{html.escape(tag)}</a>')
+    if len(tags) > MAX_HEADER_TAGS:
+        pieces.append(f"<span>+{len(tags) - MAX_HEADER_TAGS} more</span>")
+    if not pieces:
+        return ""
+    return f'<div class="note-meta">{"".join(pieces)}</div>'
+
+
+def _header_tags(properties: dict) -> list[str]:
+    values: list[str] = []
+    for key in ("tags", "tag"):
+        value = properties.get(key) if isinstance(properties, dict) else None
+        if isinstance(value, str):
+            values.extend(re.split(r"[,\s]+", value))
+        elif isinstance(value, list):
+            values.extend(str(item) for item in value if item is not None)
+    cleaned = [v.strip().lstrip("#") for v in values]
+    return list(dict.fromkeys(v for v in cleaned if v))
+
+
+def page_toc(outline: list) -> str:
+    """The wide-window "On this page" rail; CSS hides it below the width it needs."""
+    entries = [h for h in outline if h.level <= 3][:MAX_TOC_ENTRIES]
+    if len(entries) < 3:
+        return ""
+    items = "".join(
+        f'<li class="toc-l{h.level}"><a href="#{quote(h.anchor)}">{html.escape(h.text)}</a></li>'
+        for h in entries
+    )
+    return (
+        '<nav class="page-toc" aria-label="On this page">'
+        f'<div class="page-toc-title">On this page</div><ul>{items}</ul></nav>'
+    )
+
+
 def _preview_slice(body: str) -> tuple[str, bool]:
     """Cuts a body to the preview budget at a line boundary, reporting the cut."""
     if len(body) <= PREVIEW_MAX_CHARS:
@@ -679,7 +820,7 @@ _FONT_STACKS = {
     "sans": "'Cantarell', 'Ubuntu', 'Segoe UI', system-ui, sans-serif",
     "mono": "'Ubuntu Mono', 'Source Code Pro', 'DejaVu Sans Mono', monospace",
 }
-_LINE_WIDTHS = {"narrow": "38rem", "wide": "62rem", "full": "none"}
+_LINE_WIDTHS = {"narrow": "35rem", "wide": "58rem", "full": "none"}
 _LINE_HEIGHTS = {"compact": "1.45", "relaxed": "1.85"}
 
 

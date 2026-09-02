@@ -162,13 +162,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         header.pack_start(self.back_button)
         header.pack_start(self.forward_button)
 
-        readonly = Gtk.Box(spacing=4)
-        readonly.append(Gtk.Image(icon_name="changes-prevent-symbolic"))
-        readonly.append(Gtk.Label(label="Read-only"))
-        readonly.add_css_class("readonly-pill")
-        readonly.set_tooltip_text("This vault is opened read-only; nothing is ever written into it")
         header.pack_end(self._main_menu_button())
-        header.pack_end(readonly)
+        header.pack_end(self._readonly_badge())
         self.outline_button = self._outline_button()
         header.pack_end(self.outline_button)
         search_button = Gtk.Button(icon_name="system-search-symbolic")
@@ -207,12 +202,22 @@ class ReaderWindow(Adw.ApplicationWindow):
         )
         self.tree.show_hidden = self.store.state.show_hidden
         self.tree.markdown_only = self.store.state.markdown_only
-        tree_scroll = Gtk.ScrolledWindow(child=self.tree.view, vexpand=True)
-        self._add_sidebar_page(tree_scroll, "files", "Files", "folder-symbolic")
+        files_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.quick_heading = Gtk.Label(label="PINNED & RECENT", xalign=0.0, visible=False)
+        self.quick_heading.add_css_class("quick-heading")
+        self.quick_list = Gtk.ListBox(visible=False)
+        self.quick_list.add_css_class("navigation-sidebar")
+        self.quick_list.connect("row-activated", self._on_panel_row)
+        files_box.append(self.quick_heading)
+        files_box.append(self.quick_list)
+        files_box.append(Gtk.ScrolledWindow(child=self.tree.view, vexpand=True))
+        self._add_sidebar_page(files_box, "files", "Files", "folder-symbolic")
 
         search_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         search_box.set_margin_top(6)
-        self.search_entry = Gtk.SearchEntry(placeholder_text="Search — words, path:, file:, tag:")
+        self.search_entry = Gtk.SearchEntry(
+            placeholder_text="Search notes (Ctrl+P) — path:, file:, tag:"
+        )
         self.search_entry.set_margin_start(6)
         self.search_entry.set_margin_end(6)
         self.search_entry.connect("search-changed", self._on_search_typed)
@@ -433,6 +438,60 @@ class ReaderWindow(Adw.ApplicationWindow):
                 self._panel_row(bookmark.title, bookmark.rel, "", bookmark.rel)
             )
 
+    def _pinned_notes(self) -> list[str]:
+        if self.vault is None:
+            return []
+        return self.store.state.pinned_notes.get(str(self.vault.root), [])
+
+    def _toggle_pin(self) -> None:
+        """Pins or unpins the current note in the sidebar's Pinned & recent section."""
+        if self.vault is None or not self.current_note:
+            self._toast("Open a note first")
+            return
+        key = str(self.vault.root)
+        pinned = self.store.state.pinned_notes.setdefault(key, [])
+        if self.current_note in pinned:
+            pinned.remove(self.current_note)
+            self._toast("Unpinned from the sidebar")
+        else:
+            pinned.append(self.current_note)
+            self._toast("Pinned to the sidebar")
+        self._refresh_quick_list()
+
+    def _refresh_quick_list(self) -> None:
+        """Rebuilds the Pinned & recent section: pins first, then the latest notes."""
+        self._clear_list(self.quick_list)
+        if self.vault is None:
+            self.quick_heading.set_visible(False)
+            self.quick_list.set_visible(False)
+            return
+        hidden = self._hidden_folders()
+        pinned = [
+            rel for rel in self._pinned_notes()
+            if self.vault.has_file(rel) and not hidden_under(rel, hidden)
+        ]
+        recents = [
+            rel for rel in self.store.state.recent_notes
+            if rel not in pinned and self.vault.has_file(rel) and not hidden_under(rel, hidden)
+        ][:5]
+        for rel, icon in [(r, "view-pin-symbolic") for r in pinned] + [
+            (r, "document-open-recent-symbolic") for r in recents
+        ]:
+            box = Gtk.Box(spacing=6)
+            box.append(Gtk.Image(icon_name=icon))
+            name = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+            label = Gtk.Label(label=name, xalign=0.0, ellipsize=3)
+            box.append(label)
+            box.set_margin_top(2)
+            box.set_margin_bottom(2)
+            row = Gtk.ListBoxRow(child=box)
+            row.note_path = rel
+            row.set_tooltip_text(rel)
+            self.quick_list.append(row)
+        populated = bool(pinned or recents)
+        self.quick_heading.set_visible(populated)
+        self.quick_list.set_visible(populated)
+
     def _build_content(self) -> Gtk.Widget:
         self.tab_bar = Adw.TabBar(view=self.tab_view, autohide=True)
         self.find_bar = Gtk.SearchBar()
@@ -501,6 +560,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         view.append("Restore Session on Launch", "win.restore-session")
         menu.append_section(None, view)
         note = Gio.Menu()
+        note.append("Pin / Unpin Note", "win.pin-note")
         note.append("View as Mind Map", "win.mindmap")
         note.append("Export as PDF…", "win.export-pdf")
         note.append("Reveal in Files", "win.reveal")
@@ -519,6 +579,43 @@ class ReaderWindow(Adw.ApplicationWindow):
         button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu)
         button.set_tooltip_text("Main menu")
         return button
+
+    def _readonly_badge(self) -> Gtk.MenuButton:
+        """The read-only state, with its reason and a next action — not a lock icon alone."""
+        face = Gtk.Box(spacing=4)
+        face.append(Gtk.Image(icon_name="changes-prevent-symbolic"))
+        face.append(Gtk.Label(label="Read-only"))
+
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        content.set_margin_top(12)
+        content.set_margin_bottom(12)
+        content.set_margin_start(12)
+        content.set_margin_end(12)
+        explanation = Gtk.Label(
+            label=(
+                "This app reads your vault in place and never writes into it — "
+                "by design, not by permission. To change a note, open it in "
+                "Obsidian or any editor; edits show up here within seconds."
+            ),
+            wrap=True,
+            xalign=0.0,
+            max_width_chars=42,
+        )
+        content.append(explanation)
+        for label, action in (
+            ("View Raw Source", "win.toggle-source"),
+            ("Open in Default Editor", "win.open-external"),
+            ("Reveal in Files", "win.reveal"),
+        ):
+            button = Gtk.Button(label=label, action_name=action)
+            button.set_has_frame(False)
+            button.get_child().set_xalign(0.0)
+            content.append(button)
+        badge = Gtk.MenuButton(child=face, popover=Gtk.Popover(child=content))
+        badge.add_css_class("readonly-pill")
+        badge.add_css_class("flat")
+        badge.set_tooltip_text("Why this app cannot edit — and what to do instead")
+        return badge
 
     def _outline_button(self) -> Gtk.MenuButton:
         self.outline_list = Gtk.ListBox()
@@ -545,9 +642,16 @@ class ReaderWindow(Adw.ApplicationWindow):
 
         css = """
         .readonly-pill { background: alpha(currentColor, 0.1); border-radius: 999px;
-                         padding: 2px 10px; font-size: 0.85em; }
+                         padding: 2px 10px; font-size: 0.85em; min-height: 0; }
         .hover-status { background: alpha(@window_bg_color, 0.9); border-radius: 6px;
                         padding: 2px 8px; margin: 6px; font-size: 0.85em; }
+        .navigation-sidebar row:selected {
+            box-shadow: inset 3px 0 0 @accent_bg_color;
+            background: alpha(@accent_bg_color, 0.12);
+            color: @window_fg_color;
+        }
+        .quick-heading { font-size: 0.72em; font-weight: bold; letter-spacing: 0.08em;
+                         color: alpha(currentColor, 0.55); margin: 8px 12px 2px; }
         """
         provider = Gtk.CssProvider()
         provider.load_from_string(css)
@@ -591,6 +695,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.leave_zen_action.set_enabled(False)
         add("export-pdf", lambda *_: self._export_pdf_dialog(), ["<Control><Shift>e"])
         add("mindmap", lambda *_: self._show_mindmap(), ["<Control>m"])
+        add("pin-note", lambda *_: self._toggle_pin())
         add("unhide-folders", lambda *_: self._unhide_all_folders())
         add("zoom-in", lambda *_: self._zoom(0.1), ["<Control>plus", "<Control>equal"])
         add("zoom-out", lambda *_: self._zoom(-0.1), ["<Control>minus"])
@@ -718,6 +823,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._refresh_recents_menu()
         self.tree.hidden_folders = self._hidden_folders()
         self.tree.set_vault(vault.root)
+        self._refresh_quick_list()
         self._refresh_bookmarks_panel()
         self._refresh_tags_panel()
         self._update_links_panel()
@@ -832,6 +938,7 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _apply_hidden_folders(self) -> None:
         self.tree.hidden_folders = self._hidden_folders()
         self.tree.refresh()
+        self._refresh_quick_list()
 
     def _on_hide_folder(self, node) -> None:
         if self.vault is None:
@@ -1113,6 +1220,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._cancel_preview()
         self._update_links_panel()
         self._update_local_graph()
+        self._refresh_quick_list()
 
     def _update_local_graph(self) -> None:
         if self.graph is None or not self.current_note:
@@ -1322,6 +1430,14 @@ class ReaderWindow(Adw.ApplicationWindow):
                 self._open_vault(path)
             else:
                 self._toast(f"Vault no longer exists: {path}")
+        elif action == "tag" and argument:
+            self.search_entry.set_text(f"tag:{argument}")
+            self._show_search()
+            self._on_search_submitted(self.search_entry)
+        elif action == "reveal-folder" and argument:
+            self.sidebar_widget.set_visible(True)
+            self.sidebar_stack.set_visible_child_name("files")
+            self.tree.reveal(argument)
 
     def _on_hover_link(self, _reader, uri: str) -> None:
         self._cancel_preview()

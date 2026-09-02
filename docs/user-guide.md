@@ -10,14 +10,14 @@ A resizable sidebar on the left (drag the divider; the width persists), the read
 
 | Page | What it holds |
 |---|---|
-| **Files** | The vault tree. Single click opens a note or expands a folder; middle-click or `Ctrl+click` opens a note in a new tab; right-click a folder hides it. |
+| **Files** | Pinned & recent notes above the vault tree (Note menu → Pin/Unpin Note). Single click opens a note or expands a folder; middle-click or `Ctrl+click` opens a note in a new tab; right-click a folder hides it. |
 | **Search** | Quick-open and full-text search (below). |
 | **Links** | For the current note: every note that links to it, each with the line of context around the mention, then its outgoing links with missing and ambiguous targets named. |
 | **Tags** | Every tag in the vault — inline and frontmatter — with counts and a filter box. Activating a tag runs a `tag:` search. |
 | **Bookmarks** | The vault's own `.obsidian/bookmarks.json`, read-only, groups flattened. |
 | **Graph** | The current note's neighborhood: bidirectional links in accent color, backlinks solid, outgoing dimmed. Click a node to open it. |
 
-`F9` toggles the sidebar. The header bar has back/forward (WebKit's real history), the outline popover for the current note's headings, and the read-only pill as a standing reminder of the first promise.
+`F9` toggles the sidebar. The header bar has back/forward (WebKit's real history), the outline popover for the current note's headings, and the **read-only badge** — click it for the reason (the app cannot write by design, not by permission) and the next action: view raw source, open the note in your default editor, or reveal it in Files.
 
 ## Opening things
 
@@ -46,6 +46,16 @@ Three operators narrow full-text queries, combinable with plain words:
 | `path:journal` | The note's path contains the term |
 | `file:meeting` | The filename contains the term |
 | `tag:project` | The note carries the tag — nested children match, so `tag:project` finds `project/alpha` |
+
+## The note page
+
+Every note opens with its context before its content:
+
+- **Breadcrumb** — the note's folder path above the title; clicking an ancestor reveals that folder in the file tree.
+- **Inline title** — the filename as a large title, skipped when the note already opens with an identical `#` heading.
+- **Metadata line** — updated date, word count, an approximate read time on longer notes, and the note's frontmatter tags as clickable chips (a chip runs a `tag:` search).
+- **On this page** — on windows wide enough to hold it, a fixed rail beside the text lists the note's headings (three or more, levels 1–3). It never prints, and it steps aside when the line width is set to Wide or Full — the outline popover in the header bar always works regardless.
+- **Linked mentions** — notes that link to the current one are listed after the content, collapsed, each with the line of context around the mention. The Links panel carries the full list either way.
 
 ## What renders
 

@@ -38,3 +38,11 @@ def test_recents_deduplicate_and_cap(tmp_path):
     assert store.state.recent_vaults[0] == "/vault-3"
     assert len(store.state.recent_vaults) == 10
     assert store.state.last_vault == "/vault-3"
+
+
+def test_pinned_notes_persist_per_vault(tmp_path):
+    store = SessionStore(tmp_path / "conf")
+    store.state.pinned_notes["/vault"] = ["Projects/Alpha.md"]
+    store.save()
+    reloaded = SessionStore(tmp_path / "conf")
+    assert reloaded.state.pinned_notes == {"/vault": ["Projects/Alpha.md"]}

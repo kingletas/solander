@@ -178,3 +178,21 @@ class VaultTree:
             if node is not None and node.rel == rel:
                 self.selection.set_selected(position)
                 return
+
+    def reveal(self, rel: str) -> None:
+        """Expands every ancestor of a path, then selects and scrolls to its row."""
+        parts = rel.split("/")
+        for depth in range(1, len(parts) + 1):
+            target = "/".join(parts[:depth])
+            model = self.selection.get_model()
+            for position in range(model.get_n_items()):
+                row = model.get_item(position)
+                node = row.get_item()
+                if node is None or node.rel != target:
+                    continue
+                if node.is_dir:
+                    row.set_expanded(True)
+                if target == rel:
+                    self.selection.set_selected(position)
+                    self.view.scroll_to(position, Gtk.ListScrollFlags.NONE, None)
+                break

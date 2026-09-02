@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0 — 2026-09-02
+
+The look-and-feel release: editorial rather than dashboard-like, with context before content.
+
+- **Every note opens with its context.** A clickable breadcrumb above the title (each ancestor reveals its folder in the tree), an inline title when the body does not start with one, and a quiet metadata line — updated date, word count, read time on longer notes, and clickable tag chips that run a tag search.
+- **An "On this page" rail** lists the note's headings beside the text on windows wide enough to hold it — fixed, scrollable, and gone in print. It steps aside when the line width is set to Wide or Full.
+- **Linked mentions follow the content.** Notes that link to the current one are listed after it, collapsed, each with the line of context around the mention; the Links panel still carries the full list.
+- **The reading canvas is editorial now**: a warm paper background with charcoal ink and one cobalt accent, 17px body text on a 65–80 character measure, callouts as tinted surfaces with a colored left edge instead of full colored boxes, tables ruled horizontally with a firmer line under the header, and consistent 8px-scale radii.
+- **The read-only badge explains itself.** Clicking it says why the app cannot edit — by design, not by permission — and offers the next action: view raw source, open in the default editor, or reveal in Files.
+- **Pinned & recent sits above the file tree.** Note menu → Pin/Unpin Note keeps a note at the top of the Files page; the five most recent notes follow. Selected sidebar rows now carry a left accent marker, not contrast alone.
+
 ## 1.2.0 — 2026-09-01
 
 The GUI-first release: nothing about installing or using the reader requires a terminal beyond one paste.
