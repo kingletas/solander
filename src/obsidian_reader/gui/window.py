@@ -12,13 +12,16 @@ gi.require_version("Adw", "1")
 gi.require_version("WebKit", "6.0")
 import hashlib
 import os
+import re
 import sqlite3
 
 from gi.repository import Adw, Gio, GLib, Gtk, WebKit
 
 from .. import APP_ID, APP_NAME, __version__
+from ..core.book import chapter_title, chapters_in
 from ..core.bookmarks import read_bookmarks
 from ..core.csssnippets import load_snippets
+from ..core.frontmatter import split_frontmatter
 from ..core.graph import VaultGraph, local_neighbors
 from ..core.indexing import sync_indexes
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
@@ -83,6 +86,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._pending_highlight = ""
         self._snippets_css = ""
         self._pointer = (0.0, 0.0)
+        self.book: dict | None = None
+        self._book_css = ""
         self.set_default_size(self.store.state.window_width, self.store.state.window_height)
         self._apply_appearance(self.store.state.appearance)
         self._build_ui()
@@ -206,6 +211,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.toasts = Adw.ToastOverlay(child=self.paned)
         self.set_content(self.toasts)
         self.connect("close-request", self._on_close)
+        book_keys = Gtk.EventControllerKey()
+        book_keys.connect("key-pressed", self._on_book_key)
+        self.add_controller(book_keys)
         self._install_drop_target()
         self._load_css()
         self._refresh_recents_menu()
@@ -216,7 +224,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.sidebar_stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
 
         self.tree = VaultTree(
-            self._on_tree_activate, self._on_tree_open_new_tab, self._on_hide_folder
+            self._on_tree_activate, self._on_tree_open_new_tab, self._on_folder_menu
         )
         self.tree.show_hidden = self.store.state.show_hidden
         self.tree.markdown_only = self.store.state.markdown_only
@@ -1014,8 +1022,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         def build():
             vault = Vault.open(root)
             renderer = NoteRenderer(
-                vault, self._typography, lambda: self.graph, lambda: self._snippets_css,
-                options=self._page_options,
+                vault, self._typography, lambda: self.graph,
+                lambda: self._snippets_css + self._book_css,
+                options=self._page_options, book=self._book_info,
             )
             GLib.idle_add(self._vault_ready, vault, renderer, focus_note, restore_tabs)
 
@@ -1117,8 +1126,9 @@ class ReaderWindow(Adw.ApplicationWindow):
                     load_snippets(root) if self.store.state.css_snippets else ""
                 )
                 renderer = NoteRenderer(
-                    vault, self._typography, lambda: self.graph, lambda: self._snippets_css,
-                    options=self._page_options,
+                    vault, self._typography, lambda: self.graph,
+                    lambda: self._snippets_css + self._book_css,
+                    options=self._page_options, book=self._book_info,
                 )
                 try:
                     result = sync_indexes(vault, store, progress=progress)
@@ -1171,6 +1181,28 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.tree.refresh()
         self._refresh_quick_list()
 
+    def _on_folder_menu(self, node, anchor) -> None:
+        """The folder's right-click choices: read it as a book, or hide it."""
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        popover = Gtk.Popover(child=content)
+        popover.set_parent(anchor)
+        for label, handler in (
+            ("Read as Book", lambda: self._start_book(node.rel)),
+            ("Hide Folder", lambda: self._on_hide_folder(node)),
+        ):
+            button = Gtk.Button(label=label)
+            button.set_has_frame(False)
+            button.get_child().set_xalign(0.0)
+
+            def clicked(_button, run=handler):
+                popover.popdown()
+                run()
+
+            button.connect("clicked", clicked)
+            content.append(button)
+        popover.connect("closed", lambda *_: GLib.idle_add(popover.unparent))
+        popover.popup()
+
     def _on_hide_folder(self, node) -> None:
         if self.vault is None:
             return
@@ -1216,6 +1248,151 @@ class ReaderWindow(Adw.ApplicationWindow):
             return
         rel = GLib.uri_escape_string(self.current_note, "/", True)
         self.reader.webview.load_uri(f"reader:///mindmap/{rel}")
+
+    # -- book mode ---------------------------------------------------------
+
+    def _book_info(self, rel: str) -> dict | None:
+        """Chapter placement for the renderer; None outside the active book."""
+        if not self.book or rel not in self.book["index_of"]:
+            return None
+        chapters = self.book["chapters"]
+        index = self.book["index_of"][rel]
+        return {
+            "place": f"{index + 1} of {len(chapters)}",
+            "prev_title": chapter_title(chapters[index - 1]) if index > 0 else None,
+            "next_title": (
+                chapter_title(chapters[index + 1]) if index + 1 < len(chapters) else None
+            ),
+            "default_classes": ["book-default"],
+        }
+
+    def _start_book(self, folder_rel: str) -> None:
+        """Opens a folder of chapters as a book: zen, book dress, and page turns."""
+        if self.vault is None:
+            return
+        chapters = chapters_in(self.vault, folder_rel)
+        if not chapters:
+            self._toast("No notes sit directly in that folder")
+            return
+        name = folder_rel.rsplit("/", 1)[-1]
+        if name.casefold() in ("chapters", "content", "manuscript") and "/" in folder_rel:
+            name = folder_rel.rsplit("/", 2)[-2]
+        self.book = {
+            "root": folder_rel,
+            "title": name,
+            "chapters": chapters,
+            "index_of": {rel: index for index, rel in enumerate(chapters)},
+        }
+        self._book_css = self._compose_book_css(chapters[0])
+        resume = self.store.state.book_progress.get(folder_rel, "")
+        target = resume if resume in self.book["index_of"] else chapters[0]
+        self._set_zen(True)
+        self.reader.load_note(target)
+        self._toast(f"Reading “{name}” — N and P turn chapters, Esc closes the book")
+
+    def _end_book(self) -> None:
+        if self.book is None:
+            return
+        self.book = None
+        self._book_css = ""
+        self._reload_all_tabs()
+
+    def _compose_book_css(self, first_chapter: str) -> str:
+        """The desk behind the book, taken from the book's own stylesheet if it has one."""
+        note = self.vault.read_note(first_chapter)
+        properties = split_frontmatter(note.text).properties
+        classes: list[str] = []
+        for key in ("cssclasses", "cssclass"):
+            value = properties.get(key) if isinstance(properties, dict) else None
+            if isinstance(value, str):
+                classes.extend(value.split())
+            elif isinstance(value, list):
+                classes.extend(str(item) for item in value)
+        paper = ""
+        for cls in classes:
+            if not re.fullmatch(r"[\w-]+", cls):
+                continue
+            match = re.search(
+                rf"--{re.escape(cls)}-paper(?:-deep)?:\s*(#[0-9a-fA-F]{{3,8}})",
+                self._snippets_css,
+            )
+            if match:
+                paper = match.group(1)
+                break
+        if not paper:
+            return "main.note.book-page { margin: 1rem auto; }"
+        desk = _darken(paper, 0.84)
+        return (
+            f"body.theme-light {{ background: {desk}; }} "
+            "main.note.book-page { margin: 2.2rem auto 3rem; border-radius: 3px; }"
+        )
+
+    def _open_chapter(self, delta: int) -> None:
+        if not self.book or self.current_note not in self.book["index_of"]:
+            return
+        chapters = self.book["chapters"]
+        index = self.book["index_of"][self.current_note] + delta
+        if index < 0:
+            self._toast("This is the first chapter")
+            return
+        if index >= len(chapters):
+            self._toast("This is the last chapter")
+            return
+        self._turn_page(delta)
+        self.reader.load_note(chapters[index])
+
+    def _turn_page(self, direction: int) -> None:
+        """A page-turn: the old page slides off over the incoming chapter."""
+        widget = self.tab_view
+        width, height = widget.get_width(), widget.get_height()
+        if width <= 0 or height <= 0:
+            return
+        paintable = Gtk.WidgetPaintable.new(widget)
+        snapshot = Gtk.Snapshot()
+        paintable.snapshot(snapshot, width, height)
+        node = snapshot.to_node()
+        if node is None:
+            return
+        try:
+            texture = self.get_native().get_renderer().render_texture(node, None)
+        except GLib.Error:
+            return
+        picture = Gtk.Picture.new_for_paintable(texture)
+        picture.set_size_request(width, height)
+        holder = Gtk.Fixed()
+        holder.set_can_target(False)
+        holder.put(picture, 0, 0)
+        self.content_overlay.add_overlay(holder)
+
+        def frame(value):
+            offset = -value * width if direction > 0 else value * width
+            holder.move(picture, offset, 0)
+            picture.set_opacity(1.0 - value * 0.2)
+
+        target = Adw.CallbackAnimationTarget.new(frame)
+        animation = Adw.TimedAnimation.new(holder, 0.0, 1.0, 340, target)
+        animation.set_easing(Adw.Easing.EASE_OUT_CUBIC)
+        animation.connect("done", lambda *_: self.content_overlay.remove_overlay(holder))
+        animation.play()
+        self._page_animation = animation
+
+    def _on_book_key(self, _controller, keyval, _keycode, _state) -> bool:
+        if not self.book:
+            return False
+        focus = self.get_focus()
+        if focus is not None and (
+            isinstance(focus, (Gtk.Text, Gtk.TextView)) or focus.get_ancestor(Gtk.Entry)
+        ):
+            return False
+        from gi.repository import Gdk
+
+        if keyval in (Gdk.KEY_n, Gdk.KEY_N):
+            self._open_chapter(1)
+            return True
+        if keyval in (Gdk.KEY_p, Gdk.KEY_P):
+            self._open_chapter(-1)
+            return True
+        return False
 
     def _typography(self) -> dict:
         """The reading-comfort settings the page shell injects as CSS overrides."""
@@ -1431,7 +1608,19 @@ class ReaderWindow(Adw.ApplicationWindow):
         return build_page(body, APP_NAME, theme)
 
     def _provide_asset(self, rel: str):
-        if self.vault is None or not self.vault.has_file(rel):
+        if self.vault is None:
+            return None
+        # Vault fonts live under .obsidian, outside the note index; they are
+        # served by explicit containment so @font-face can reach them.
+        if rel.startswith(".obsidian/fonts/") and rel.casefold().endswith(
+            (".ttf", ".otf", ".woff", ".woff2")
+        ):
+            path = (self.vault.root / rel).resolve()
+            fonts_dir = (self.vault.root / ".obsidian" / "fonts").resolve()
+            if path.is_file() and path.parent == fonts_dir:
+                return path
+            return None
+        if not self.vault.has_file(rel):
             return None
         if file_kind(rel) not in ("image", "audio", "video"):
             return None
@@ -1483,6 +1672,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         if reader.current_note:
             self.store.state.last_note = reader.current_note
             self.store.remember_note(reader.current_note)
+            if self.book and reader.current_note in self.book["index_of"]:
+                self.store.state.book_progress[self.book["root"]] = reader.current_note
             title = reader.current_note.rsplit("/", 1)[-1].rsplit(".", 1)[0]
             self.title_widget.set_title(title)
             self.tree.select_path(reader.current_note)
@@ -1720,6 +1911,10 @@ class ReaderWindow(Adw.ApplicationWindow):
             self.search_entry.set_text(f"tag:{argument}")
             self._show_search()
             self._on_search_submitted(self.search_entry)
+        elif action == "book-next":
+            self._open_chapter(1)
+        elif action == "book-prev":
+            self._open_chapter(-1)
         elif action == "reveal-folder" and argument:
             self.sidebar_widget.set_visible(True)
             self.sidebar_stack.set_visible_child_name("files")
@@ -1906,6 +2101,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             self.sidebar_widget.set_visible(restored)
             self.sidebar_toggle.set_active(restored)
             self._set_outline_visible(getattr(self, "_pre_zen_outline", False))
+            self._end_book()
 
     def _export_pdf_dialog(self) -> None:
         if not self.current_note:
@@ -2054,3 +2250,12 @@ class ReaderWindow(Adw.ApplicationWindow):
         ]
         self.store.save()
         return False
+
+
+def _darken(hex_color: str, factor: float) -> str:
+    """A deeper shade of a hex color — the desk a book page sits on."""
+    value = hex_color.lstrip("#")
+    if len(value) == 3:
+        value = "".join(char * 2 for char in value)
+    red, green, blue = (int(value[i:i + 2], 16) for i in (0, 2, 4))
+    return f"#{int(red * factor):02x}{int(green * factor):02x}{int(blue * factor):02x}"

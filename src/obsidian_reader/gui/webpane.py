@@ -17,6 +17,7 @@ ASSET_MIME_ALLOWLIST = {
     ".flac": "audio/flac", ".m4a": "audio/mp4", ".opus": "audio/opus",
     ".mp4": "video/mp4", ".webm": "video/webm", ".ogv": "video/ogg", ".mov": "video/quicktime",
     ".mkv": "video/x-matroska",
+    ".ttf": "font/ttf", ".otf": "font/otf", ".woff": "font/woff", ".woff2": "font/woff2",
 }
 
 

@@ -10,11 +10,21 @@ import json
 import os
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 MAX_SNIPPET_BYTES = int(os.environ.get("READER_MAX_SNIPPET_BYTES", str(256 * 1024)))
 
 _COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 _DANGEROUS = re.compile(r"url\s*\(|expression\s*\(|@import|javascript:|\\|</", re.IGNORECASE)
+
+# The one url() that survives: a vault-local font file, rewritten to the vault
+# scheme so @font-face works while the network stays unreachable.
+_FONT_DECLARATIONS = {"font-family", "font-weight", "font-style", "font-display", "src"}
+_FONT_SRC = re.compile(
+    r"""^url\(\s*["']?(?:\.\./)?fonts/(?P<name>[\w\[\],. -]{1,80}\.(?:ttf|otf|woff2?))["']?\s*\)
+    (?:\s*format\(["'][\w-]{1,20}["']\))?$""",
+    re.X | re.IGNORECASE,
+)
 
 
 def load_snippets(root: Path) -> str:
@@ -69,6 +79,10 @@ def _safe_rules(text: str):
                 inner = "".join(_safe_rules(block))
                 if inner:
                     yield f"{selector} {{ {inner} }}\n"
+            elif selector.casefold() == "@font-face":
+                rule = _font_face_rule(block)
+                if rule:
+                    yield rule
             continue
         if _DANGEROUS.search(selector) or "{" in block:
             continue
@@ -79,6 +93,33 @@ def _safe_rules(text: str):
         ]
         if declarations:
             yield f"{selector} {{ {'; '.join(declarations)}; }}\n"
+
+
+def _font_face_rule(block: str) -> str:
+    """Rebuilds a @font-face whose src is a vault font file; anything else is dropped."""
+    if "{" in block:
+        return ""
+    kept = []
+    for part in block.split(";"):
+        part = part.strip()
+        if not part or ":" not in part:
+            continue
+        name, _, value = part.partition(":")
+        name = name.strip().casefold()
+        value = value.strip()
+        if name not in _FONT_DECLARATIONS:
+            return ""
+        if name == "src":
+            src = _FONT_SRC.match(value)
+            if not src:
+                return ""
+            value = f'url("vault:///.obsidian/fonts/{quote(src.group("name"), safe="")}")'
+        elif _DANGEROUS.search(part):
+            return ""
+        kept.append(f"{name}: {value}")
+    if not any(part.startswith("src:") for part in kept):
+        return ""
+    return f"@font-face {{ {'; '.join(kept)}; }}\n"
 
 
 def _read_block(text: str, brace: int) -> tuple[str, int]:

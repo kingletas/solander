@@ -276,10 +276,46 @@ def run_checks(app):
                 for name in ("tag-symbolic", "network-workgroup-symbolic")
             )
             check("tags and graph icons recolor with the theme", recolorable)
-            check_fidelity()
+            start_book()
             return False
 
         GLib.timeout_add(1500, check_highlight)
+
+    def start_book():
+        window._start_book("Book")
+
+        def check_book_open():
+            check("book mode enters reading mode", getattr(window, "_zen", False))
+            check("book opens at the first chapter", window.current_note == "Book/01 One.md")
+            page = window._provide_page("/note/Book/01 One.md", window.reader.webview)
+            navigated = 'class="book-nav"' in page and "1 of 3" in page
+            check("chapter page carries the book nav", navigated)
+            check("book page drops the vault machinery", 'class="crumbs"' not in page)
+            titled = window._provide_page("/note/Book/02 Two.md", window.reader.webview)
+            check("frontmatter title names the chapter", ">The Middle Way</h1>" in titled)
+            window._open_chapter(1)
+            GLib.timeout_add(1400, check_book_turn)
+            return False
+
+        def check_book_turn():
+            check("N turns to the next chapter", window.current_note == "Book/02 Two.md")
+            saved = window.store.state.book_progress.get("Book") == "Book/02 Two.md"
+            check("reading progress is remembered", saved)
+            window._on_page_action(None, "book-prev", "")
+            GLib.timeout_add(1400, check_book_back)
+            return False
+
+        def check_book_back():
+            check("the footer link turns back", window.current_note == "Book/01 One.md")
+            window._set_zen(False)
+            check("closing the book leaves book mode", window.book is None)
+            page = window._provide_page("/note/Book/01 One.md", window.reader.webview)
+            check("outside the book the page is a note again", 'class="book-nav"' not in page)
+            window.reader.load_note("A.md")
+            GLib.timeout_add(1200, lambda: (check_fidelity(), False)[1])
+            return False
+
+        GLib.timeout_add(1600, check_book_open)
 
     def check_fidelity():
         rendered = window.reader.last_render
@@ -449,6 +485,12 @@ def write_extra_fixtures() -> None:
     (vault_path / "Long.md").write_text(
         "# Long\n\n## First\n\ntext\n\n## Second\n\ntext\n\n## Third\n\ntext\n"
     )
+    (vault_path / "Book").mkdir(exist_ok=True)
+    (vault_path / "Book" / "01 One.md").write_text("First prose here.\n")
+    (vault_path / "Book" / "02 Two.md").write_text(
+        "---\ntitle: The Middle Way\n---\nSecond prose here.\n"
+    )
+    (vault_path / "Book" / "03 Three.md").write_text("Last prose here.\n")
     (vault_path / "Flow.md").write_text(
         "# Flow\n\n```mermaid\nflowchart LR\n  A[start] -->|go| B{ok?}\n"
         "  B -->|yes| C[done]\n  style C stroke:#080\n```\n\n"

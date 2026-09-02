@@ -539,7 +539,7 @@ code.math-source { color: var(--muted); }
 .dataview-inline { color: var(--fg); }
 
 /* Kanban boards */
-.note:has(> .kanban) { max-width: none; }
+.note:has(.kanban) { max-width: none; }
 .kanban { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto; padding: 4px 0 12px; }
 .kanban-column {
   flex: 0 0 260px;
@@ -565,6 +565,46 @@ code.math-source { color: var(--muted); }
 .note.excalidraw-note { max-width: none; }
 .excalidraw { overflow: auto; }
 .excalidraw svg { color: var(--fg); max-width: none; }
+
+/* Book pages: the chapter alone, and a default dress for books without one. */
+main.note.book-page { padding-top: 3rem; padding-bottom: 6rem; }
+.book-header .inline-title { text-align: center; }
+.book-header .inline-title::after { margin-left: auto; margin-right: auto; }
+.book-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1.5rem;
+  margin-top: 4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.book-nav a { color: var(--muted); border: none; }
+.book-nav a:hover { color: var(--accent); text-decoration: none; }
+.book-place {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.book-default .markdown-preview-section {
+  font-size: 1.16rem;
+  line-height: 1.85;
+  text-align: justify;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+.book-default .inline-title { font-size: 2.5rem; }
+.book-default .markdown-preview-section > div:first-child > p:first-child::first-letter {
+  font-family: var(--display-face);
+  font-size: 3.4em;
+  float: left;
+  line-height: 0.82;
+  padding: 0.04em 0.09em 0 0;
+}
+.book-default hr::after { content: "\2042"; letter-spacing: 0.4em; }
 
 /* Mermaid diagrams, drawn in pure Python as static SVG. */
 .mermaid-diagram { overflow-x: auto; margin: 1.1em 0; }

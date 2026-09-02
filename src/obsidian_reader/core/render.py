@@ -163,13 +163,20 @@ class NoteRenderer:
     """Renders notes from one vault, resolving links and embeds as it goes."""
 
     def __init__(
-        self, vault: Vault, typography=None, graph_provider=None, snippets=None, options=None
+        self,
+        vault: Vault,
+        typography=None,
+        graph_provider=None,
+        snippets=None,
+        options=None,
+        book=None,
     ):
         self.vault = vault
         self.typography = typography
         self.graph_provider = graph_provider
         self.snippets = snippets
         self.options = options
+        self.book = book
         self.md = build_parser()
         self.md.core.ruler.before("inline", "obsidian_callouts", callouts_rule)
         self._install_render_rules()
@@ -180,6 +187,10 @@ class NoteRenderer:
     def _opts(self) -> dict:
         """Which note-context elements the person wants shown; everything by default."""
         return self.options() if callable(self.options) else {}
+
+    def _book_context(self, rel: str) -> dict | None:
+        """Book placement for a note when a book is being read; None otherwise."""
+        return self.book(rel) if callable(self.book) else None
 
     def _snips(self) -> str:
         return self.snippets() if callable(self.snippets) else ""
@@ -224,27 +235,47 @@ class NoteRenderer:
                 # filename would print it twice; the body's copy yields.
                 body_md = _strip_leading_duplicate_title(body_md, title)
             body_html = self._render_markdown(body_md, env)
-        properties_html = _properties_block(split.properties)
-        body = sanitize(properties_html + body_html)
-        header = note_header(
-            rel,
-            title,
-            split.properties,
-            split.body,
-            self._mtime(rel),
-            show_title=opts.get("breadcrumb", True),
-            show_meta=opts.get("meta", True),
-        )
-        footer = self._backlinks_footer(rel) if opts.get("backlinks", True) else ""
+        book = self._book_context(rel)
+        if book:
+            # A book page is the chapter alone: title, prose, and the way to
+            # the next chapter — no vault machinery around it.
+            display = split.properties.get("title") if isinstance(split.properties, dict) else None
+            title_text = display.strip() if isinstance(display, str) and display.strip() else title
+            header = (
+                '<header class="note-header book-header">'
+                f'<h1 class="inline-title">{html.escape(title_text)}</h1></header>'
+            )
+            body = sanitize(body_html)
+            footer = _book_nav(book)
+        else:
+            body = sanitize(_properties_block(split.properties) + body_html)
+            header = note_header(
+                rel,
+                title,
+                split.properties,
+                split.body,
+                self._mtime(rel),
+                show_title=opts.get("breadcrumb", True),
+                show_meta=opts.get("meta", True),
+            )
+            footer = self._backlinks_footer(rel) if opts.get("backlinks", True) else ""
+        # Obsidian's preview DOM, so cssclasses snippets written against
+        # .markdown-preview-section keep working here.
+        section = f'<div class="markdown-preview-section"><div>{body}</div></div>'
+        classes = _css_classes(split.properties)
+        if book:
+            if not classes:
+                classes = " ".join(book.get("default_classes", []))
+            classes = f"book-page {classes}".strip()
         return RenderedNote(
             page=build_page(
-                header + body + footer,
+                header + section + footer,
                 title,
                 theme,
                 lossy=note.lossy,
                 typography=typo,
                 extra_css=self._snips(),
-                note_classes=_css_classes(split.properties),
+                note_classes=classes,
             ),
             body=body,
             title=title,
@@ -713,6 +744,25 @@ def _header_tags(properties: dict) -> list[str]:
     return list(dict.fromkeys(v for v in cleaned if v))
 
 
+def _book_nav(book: dict) -> str:
+    """The chapter footer: the way back, the place in the book, the way on."""
+    prev_title = book.get("prev_title")
+    next_title = book.get("next_title")
+    prev_html = (
+        f'<a class="book-prev" href="reader:///action/book-prev">← {html.escape(prev_title)}</a>'
+        if prev_title else '<span class="book-prev"></span>'
+    )
+    next_html = (
+        f'<a class="book-next" href="reader:///action/book-next">{html.escape(next_title)} →</a>'
+        if next_title else '<span class="book-next"></span>'
+    )
+    place = html.escape(book.get("place", ""))
+    return (
+        f'<nav class="book-nav">{prev_html}'
+        f'<span class="book-place">{place}</span>{next_html}</nav>'
+    )
+
+
 def _preview_slice(body: str) -> tuple[str, bool]:
     """Cuts a body to the preview budget at a line boundary, reporting the cut."""
     if len(body) <= PREVIEW_MAX_CHARS:
@@ -885,7 +935,7 @@ def build_page(
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; "
-        "img-src vault:; media-src vault:; style-src 'unsafe-inline';\">"
+        "img-src vault:; media-src vault:; font-src vault:; style-src 'unsafe-inline';\">"
         f"<title>{html.escape(title)}</title><style>{_page_css()}</style>"
         f"{_typography_css(typography)}{_snippet_style(extra_css)}</head>"
         f"<body class='{theme_class}' dir='auto'>{notice}"

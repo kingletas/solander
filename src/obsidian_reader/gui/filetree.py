@@ -32,14 +32,14 @@ class TreeNode(GObject.Object):
 class VaultTree:
     """Builds the ListView over a TreeListModel and reports row activation."""
 
-    def __init__(self, on_activate, on_open_new_tab=None, on_hide_folder=None):
+    def __init__(self, on_activate, on_open_new_tab=None, on_folder_menu=None):
         self.root: Path | None = None
         self.show_hidden = False
         self.markdown_only = True
         self.hidden_folders: set[str] = set()
         self._on_activate = on_activate
         self._on_open_new_tab = on_open_new_tab
-        self._on_hide_folder = on_hide_folder
+        self._on_folder_menu = on_folder_menu
         self._root_store = Gio.ListStore(item_type=TreeNode)
         tree_model = Gtk.TreeListModel.new(
             self._root_store, passthrough=False, autoexpand=False, create_func=self._children
@@ -136,9 +136,9 @@ class VaultTree:
         def secondary_pressed(gesture, *_):
             row = item.get_item()
             node = row.get_item() if row is not None else None
-            if node is not None and node.is_dir and self._on_hide_folder is not None:
+            if node is not None and node.is_dir and self._on_folder_menu is not None:
                 gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-                self._on_hide_folder(node)
+                self._on_folder_menu(node, expander)
 
         secondary.connect("pressed", secondary_pressed)
         expander.add_controller(secondary)

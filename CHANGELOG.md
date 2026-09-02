@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.10.0 — 2026-09-02
+
+Book mode: the reader as a lectern for the manuscripts themselves.
+
+- **Read as Book** (right-click a folder of chapters): reading mode opens on your last-read chapter, every page is the chapter alone — title, prose, and the way onward — and each chapter ends with its neighbors by name plus your place in the book. `N`/`P` turn chapters; progress is remembered per book; `Esc` closes the book.
+- **Pages turn like pages.** Changing chapters slides the old page away over the incoming one — a GTK-side animation on a snapshot of the outgoing page, so the no-JavaScript rule is untouched.
+- **The book wears its own design.** Chapters with `cssclasses` take their vault snippet in full: `@font-face` now survives the snippet sanitizer when (and only when) its src is a font in the vault's own `.obsidian/fonts`, served over the vault scheme with `font-src` opened to exactly that. Rendered pages also carry Obsidian's `.markdown-preview-section` structure, so snippets written against Obsidian's preview DOM — drop caps included — apply verbatim. The desk behind the page is tinted from the book's declared paper color.
+- Books without a stylesheet get a built-in treatment: justified serif at reading size, a drop cap, centered chapter titles, asterism scene breaks.
+
 ## 1.9.0 — 2026-09-02
 
 Mermaid diagrams render — and note content still never executes.

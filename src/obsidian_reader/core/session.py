@@ -37,6 +37,7 @@ class SessionState:
     css_snippets: bool = True
     hidden_folders: dict[str, list[str]] = field(default_factory=dict)
     pinned_notes: dict[str, list[str]] = field(default_factory=dict)
+    book_progress: dict[str, str] = field(default_factory=dict)
     reader_font: str = "default"
     line_width: str = "normal"
     line_spacing: str = "normal"

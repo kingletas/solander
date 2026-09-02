@@ -26,6 +26,13 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.10.0" date="2026-09-02">
+      <description>
+        <p>Book mode: read a folder of chapters as a book — page-turn
+        transitions, chapter navigation, remembered progress, and the book's
+        own vault stylesheet and fonts.</p>
+      </description>
+    </release>
     <release version="1.9.0" date="2026-09-02">
       <description>
         <p>Mermaid flowcharts, sequence diagrams, and pies render as static
