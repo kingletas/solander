@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.1 — 2026-09-02
+
+The window had never carried its own icon, and the rename made it visible.
+
+- **The process now identifies itself as the app id.** Wayland takes a toplevel's app id from the program name, and the desktop matches a window to its `.desktop` file — and therefore to its icon — by exactly that. Launched as `python -m solander.cli`, the program name was `cli.py`, which matches nothing, so the window and its dock entry drew a placeholder. `GLib.set_prgname(APP_ID)` fixes it, and a smoke check asserts it. **This was true under the old name too; the rename only made it noticeable.**
+- **The installer refreshes the icon theme cache.** A stale `icon-theme.cache` takes precedence over the directory it sits in, so an icon installed after the cache was written is invisible — which is exactly what happened: the cache still listed `com.kingletas.ObsidianReader` and did not list `com.kingletas.Solander`. `install.sh` and `uninstall.sh` now rebuild the cache, or delete it when the theme has no index file.
+- A unit test asserts the desktop entry, the metainfo and the icon filename all agree with `APP_ID`, so a future rename cannot half-land.
+
 ## 2.0.0 — 2026-09-02
 
 **Obsidian Reader is now Solander.**

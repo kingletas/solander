@@ -176,6 +176,12 @@ def run_checks(app):
             check("author stroke styling reaches the diagram", 'style="stroke:#080"' in flow)
             labeled = "gantt diagrams are not supported" in flow
             check("unsupported mermaid kinds name themselves", labeled)
+            from solander import APP_ID
+
+            # Wayland names a toplevel by the program name, and the desktop matches
+            # a window to its .desktop file — and its icon — by exactly that.
+            check("the process identifies itself as the app id",
+                  GLib.get_prgname() == APP_ID)
             railed = "reader-rail" in window.sidebar_widget.get_css_classes()
             check("the sidebar is the rail surface", railed)
             theme_action = window.lookup_action("theme")

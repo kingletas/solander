@@ -40,3 +40,18 @@ def test_the_mark_can_wear_any_theme():
     )
     for part in ("mark-board", "mark-face", "mark-seal"):
         assert f".{part} {{ fill:" in blood
+
+
+def test_the_desktop_entry_and_metainfo_agree_with_the_app_id():
+    """A rename that misses one of these leaves the window without its icon."""
+    from solander import APP_ID
+
+    data = Path(__file__).resolve().parents[1] / "data"
+    if not data.is_dir():
+        pytest.skip("repo data/ layout not present in this installation")
+    desktop = data / f"{APP_ID}.desktop"
+    metainfo = data / f"{APP_ID}.metainfo.xml"
+    icon = data / f"{APP_ID}.svg"
+    assert desktop.is_file() and metainfo.is_file() and icon.is_file()
+    assert f"Icon={APP_ID}" in desktop.read_text("utf-8")
+    assert f"<id>{APP_ID}</id>" in metainfo.read_text("utf-8")

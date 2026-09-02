@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.0.1" date="2026-09-02">
+      <description>
+        <p>The window carries its own icon: the process now identifies itself by
+        app id, and the installer refreshes the icon theme cache.</p>
+      </description>
+    </release>
     <release version="2.0.0" date="2026-09-02">
       <description>
         <p>Obsidian Reader is now Solander. Same application, same Obsidian
