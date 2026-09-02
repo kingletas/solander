@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 2.2.3 — 2026-09-02
 
-- **Frontmatter works in notes with Windows line endings.** A leading YAML block delimited with CRLF is now recognized like the same block with Unix line endings, so its title, tags, CSS classes and plugin metadata no longer appear as Markdown body text.
+- **Frontmatter works in notes with Windows line endings.** A leading YAML block delimited with CRLF is now recognized like the same block with Unix line endings, so its title, tags, CSS classes and plugin metadata no longer appear as Markdown body text. Contributed by Mark Hodge.
+- **Every continuous-integration action moved to its current major version**, each still pinned to a commit. The artifact actions are used only when publishing a release, so this is the first release to exercise them.
 
 ## 2.2.2 — 2026-09-02
 

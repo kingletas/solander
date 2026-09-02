@@ -59,6 +59,13 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.2.3" date="2026-09-02">
+      <description>
+        <p>Frontmatter in notes saved with Windows line endings is recognized
+        again, so a note's title, tags and CSS classes no longer appear as body
+        text.</p>
+      </description>
+    </release>
     <release version="2.2.2" date="2026-09-02">
       <description>
         <p>Fixes a Flatpak that would not start. The check deciding whether the
