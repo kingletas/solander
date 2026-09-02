@@ -8,24 +8,12 @@ It is a fallback reader, not an Obsidian replacement: something dependable to re
 
 ## What it does
 
-- Opens a folder as a vault, or a single `.md` file, straight from disk — nothing is imported, copied, or indexed into the vault.
-- Renders CommonMark and GFM (tables, task lists, strikethrough, autolinks) plus the Obsidian layer: `[[wikilinks]]`, aliases, heading and block links, `![[embeds]]` with cycle detection, callouts (foldable and nested), `==highlights==`, `%%comments%%` (hidden), inline `#tags`, footnotes (inline included), frontmatter as a collapsible Properties panel, syntax-highlighted code blocks, TeX math as native MathML (`$...$` and `$$...$$` — no JavaScript involved), and `.canvas` files as static positioned pages with linked cards and arrows.
-- Resolves links the way Obsidian does: exact relative path first, then vault-root path, then filename match — and when a name is ambiguous it asks instead of guessing.
-- Vault-wide search that works like a launcher: fuzzy quick-open (`scnt` finds "Second Note"; empty shows recent notes), relevance-ranked full-text search with `path:`, `file:`, and `tag:` operators and highlighted hits, plus in-note find, back/forward history, outline navigation, session restore, light/dark/system appearance.
-- Stays current: the vault is watched, so a note created or edited by anything else (Obsidian, a sync client, a script) shows up in the tree, the search index, and the link graph within seconds — no reload step.
-- Remembers the index between launches: a per-vault cache under `~/.cache/obsidian-reader/` means a warm start indexes in about a second even for a 10,000-note vault (the cache costs disk roughly proportional to the vault's text; "Clear Index Cache" in the menu removes and rebuilds it).
-- A link graph built at open: a Links pane showing every note that links to the current one (with the line of context) and its outgoing links, a Tags pane listing every inline and frontmatter tag with counts, a Bookmarks pane reading the vault's own `.obsidian/bookmarks.json`, and a local-graph pane drawing the current note's neighborhood — all read-only, like everything else.
-- Hover previews: rest the pointer on a wikilink and a popover shows the opening of the target note.
-- A reading (zen) mode — `F11` strips every piece of chrome, `Esc` brings it back — and PDF export (`Ctrl+Shift+E`) of the current rendered note, which refuses to write inside the vault.
-- Tabs: middle-click or `Ctrl+click` a note or wikilink to open it in a new tab (`Ctrl+T`/`Ctrl+W` to open and close); a plain click opens in the current tab. The sidebar drags to any width, and both survive a restart.
-- **Dataview, evaluated in pure Python** — no JavaScript: `TABLE`/`LIST`/`TASK` queries with `FROM`/`WHERE`/`SORT`/`GROUP BY`/`FLATTEN`, inline `= expression` spans, and `.base` table views, all live against the watched index. Unsupported syntax degrades to labeled source with the reason; `dataviewjs` stays inert by design.
-- Kanban board notes render as read-only boards (columns, cards, archive lane), and Excalidraw drawings render as static SVG — the LZ-String decoding is pure Python.
-- The vault's enabled CSS snippets apply, reduced by a strict sanitizer (no `url()`, no `@import`, no escapes), with the note's `cssclasses` honored — toggleable in the View menu.
-- Hide folders: right-click one to remove it from the tree, quick-open, and search (undoable; Obsidian's own excluded-files setting is honored on top, and the reader's list is stored outside the vault).
-- View any note as a mind map (`Ctrl+M`) — its headings and bullets laid out as a static SVG tree, heading nodes linking back into the note.
-- Typography controls — font, line width, line spacing — persisted and applied everywhere.
-- PDFs preview in-app through system Poppler (zoom, fit-to-width, open-externally), when the optional `gir1.2-poppler-0.18` package is installed.
-- Reads `.obsidian/app.json` (read-only) to honor the vault's attachment-folder setting.
+The full walkthrough is the **[user guide](docs/user-guide.md)**; installation is **[getting started](docs/getting-started.md)**. In summary:
+
+- **Renders the whole vault, not just the markdown.** CommonMark/GFM plus the Obsidian layer — wikilinks with Obsidian's own resolution order, embeds, callouts, highlights, comments, tags, footnotes, frontmatter properties, syntax-highlighted code — and TeX math as native MathML, `.canvas` pages, kanban boards as boards, Excalidraw drawings as SVG, `.base` table views, and **Dataview queries and inline expressions evaluated in pure Python**, live against the index. Anything unsupported degrades to labeled source with the reason.
+- **Finds things like a launcher.** Fuzzy quick-open, relevance-ranked full-text search with `path:`/`file:`/`tag:` operators and highlighted hits, backlinks with context, a tag browser, the vault's bookmarks, a local graph, and hover previews.
+- **Stays current and starts warm.** The vault is watched — outside edits appear in seconds — and the index persists per vault, so a 10,000-note vault opens in about a second after its first build.
+- **Reads comfortably.** Tabs, a mind-map view of any note, reading (zen) mode, typography controls, light/dark, the vault's own CSS snippets (sanitized), folder hiding, and PDF export through a proper print stylesheet — plus an in-app PDF viewer when Poppler's bindings are present.
 
 ## What it will never do
 
@@ -64,6 +52,13 @@ obsidian-reader                      # reopen the last session
 ```
 
 A second launch hands its path to the running instance instead of racing it for state.
+
+## Documentation
+
+- **[Getting started](docs/getting-started.md)** — install, the one-time sandbox step, first vault.
+- **[User guide](docs/user-guide.md)** — every feature, the Dataview surface, shortcuts, configuration, troubleshooting.
+- **[SECURITY.md](SECURITY.md)** — the threat model and reporting route.
+- **[CHANGELOG.md](CHANGELOG.md)** — release history.
 
 ## The sandbox and Ubuntu's user-namespace policy
 
