@@ -2366,11 +2366,19 @@ class ReaderWindow(Adw.ApplicationWindow):
             version=__version__,
             developer_name="Luis Tineo",
             license_type=Gtk.License.MIT_X11,
+            website="https://github.com/kingletas/solander",
+            issue_url="https://github.com/kingletas/solander/issues",
+            # Short enough to stay on the dialog's front page, where the name is
+            # the first question anyone has.
             comments=(
-                "A read-only reader for Obsidian vaults. Opens notes in place, "
-                "executes nothing, and never writes into the vault."
+                "A solander is the clamshell box an archive keeps its documents "
+                "in: open it to look at something, close it, and nothing has "
+                "changed. This does the same for a folder of Markdown — it reads "
+                "your vault in place, executes nothing the vault contains, never "
+                "touches the network, and never writes a byte back."
             ),
         )
+        about.add_link("User guide", "https://github.com/kingletas/solander#readme")
         about.present(self)
 
     def _toast(self, message: str) -> None:

@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.1.1" date="2026-09-02">
+      <description>
+        <p>Documentation pass: the name explained, screenshots, and a
+        contributing guide.</p>
+      </description>
+    </release>
     <release version="2.1.0" date="2026-09-02">
       <description>
         <p>--sandbox prints the AppArmor profile this installation needs;

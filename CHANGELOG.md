@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.1 — 2026-09-02
+
+Documentation pass before the first public push.
+
+- **The name is explained**, in the README and in the About dialog: a solander is the clamshell box an archive keeps its documents in — open it to look at something, close it, and nothing has changed.
+- **Screenshots**, of both the default theme and the Archive family.
+- **CONTRIBUTING.md**: the three promises a change is measured against, how the virtualenv has to be built for the GI bindings to be visible, what the smoke run covers, and where code belongs.
+- The About dialog links the project and its issue tracker.
+- Fixed the rename's one grammar slip — *"puts an `solander` launcher"* — in the README and getting started.
+
 ## 2.1.0 — 2026-09-02
 
 Two flags for the sandbox, the same two in every app here.

@@ -26,7 +26,7 @@ From a clone of this repository:
 make install
 ```
 
-This creates a virtualenv against the system Python (so the GI bindings are visible), installs the Python dependencies, and puts an `solander` launcher on your `PATH`, along with a desktop entry and icon. `make uninstall` removes all of it.
+This creates a virtualenv against the system Python (so the GI bindings are visible), installs the Python dependencies, and puts a `solander` launcher on your `PATH`, along with a desktop entry and icon. `make uninstall` removes all of it.
 
 ## 3. First launch — the one-time sandbox step
 

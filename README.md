@@ -1,10 +1,23 @@
 # Solander
 
+[![CI](https://github.com/kingletas/solander/actions/workflows/ci.yml/badge.svg)](https://github.com/kingletas/solander/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A reading application for Ubuntu that opens a folder of Markdown **in place** and never writes into it — no caches, no plugins, no scripts, no network. It is fluent in [Obsidian](https://obsidian.md)'s dialect: wikilinks, embeds, callouts, frontmatter, tags, canvases, kanban boards, `.base` views and Dataview queries all render as themselves.
 
 A solander is the clamshell box an archive keeps its documents in. That is the job: present the record, and leave it exactly as it was found — whether Obsidian is closed, not installed, or simply not something you want pointed at a vault you only mean to inspect.
 
 > This project is not affiliated with or endorsed by Obsidian.md / Dynalist Inc. "Obsidian" here names the vault format the reader understands.
+
+![Solander in the Atelier theme](docs/images/atelier.png)
+
+## The name
+
+A **solander** is the clamshell box an archive keeps its documents in — a hinged case, made to the size of what it holds, that you open to look at a thing and close to leave it as it was. Named for Daniel Solander, the botanist who devised it for Joseph Banks's specimens so they could be examined without being handled.
+
+That is the whole design brief of this application, in one object. It presents the record and changes nothing: it never writes into your vault, never runs anything the vault contains, and never opens a network connection. A reader, not an editor — a case, not a workshop.
+
+It is also deliberately **not** named after the format it reads. The app understands Obsidian's dialect fluently, but that is a property of the reader rather than its identity, and borrowing another project's name for your own is a bad habit whichever way the trademark points.
 
 ## What it does
 
@@ -41,7 +54,7 @@ Then, with [uv](https://docs.astral.sh/uv/) installed:
 make install
 ```
 
-That creates the virtualenv against the system Python (so the GI bindings are visible), installs the dependencies, and puts an `solander` launcher on your `PATH`. `make help` lists everything else.
+That creates the virtualenv against the system Python (so the GI bindings are visible), installs the dependencies, and puts a `solander` launcher on your `PATH`. `make help` lists everything else.
 
 ## Run
 
@@ -63,6 +76,13 @@ A second launch hands its path to the running instance instead of racing it for 
 - **[User guide](docs/user-guide.md)** — every feature, the Dataview surface, shortcuts, configuration, troubleshooting.
 - **[SECURITY.md](SECURITY.md)** — the threat model and reporting route.
 - **[CHANGELOG.md](CHANGELOG.md)** — release history.
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to build, test and send a change.
+
+## Themes
+
+Fourteen, and the theme is remembered. **Atelier** is the default — parchment and sepia ink by day, a candlelit nocturne by night. The **Archive** family is thirteen dark themes over one design language: a dark ground, bone text, an accent for what is important, and one hot colour held back for what actually matters. The semantics hold across all of them, so danger, warning, verified and information mean the same thing in every one, and every colour that carries text is checked against WCAG AA on the ground it sits on.
+
+![The Archive theme family](docs/images/themes.png)
 
 ## The sandbox and Ubuntu's user-namespace policy
 
