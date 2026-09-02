@@ -26,6 +26,13 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.5.0" date="2026-09-02">
+      <description>
+        <p>The outline becomes a real panel with a visible toggle and close
+        button, the header bar is simplified, and every surface in the app
+        has an obvious control.</p>
+      </description>
+    </release>
     <release version="1.4.0" date="2026-09-02">
       <description>
         <p>The atelier redesign: a manuscript identity across the whole app —

@@ -46,3 +46,10 @@ def test_pinned_notes_persist_per_vault(tmp_path):
     store.save()
     reloaded = SessionStore(tmp_path / "conf")
     assert reloaded.state.pinned_notes == {"/vault": ["Projects/Alpha.md"]}
+
+
+def test_outline_visibility_persists(tmp_path):
+    store = SessionStore(tmp_path / "conf")
+    store.state.outline_visible = True
+    store.save()
+    assert SessionStore(tmp_path / "conf").state.outline_visible is True

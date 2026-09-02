@@ -265,19 +265,6 @@ def test_meta_line_counts_words_and_links_tags(vault):
     assert "Updated " in page
 
 
-def test_toc_rail_needs_three_headings(vault):
-    with_toc = NoteRenderer(vault).render("Projects/Alpha.md").page
-    assert 'class="page-toc"' in with_toc
-    without = NoteRenderer(vault).render("Index.md").page
-    assert 'class="page-toc"' not in without
-
-
-def test_toc_rail_yields_to_full_width_reading(vault):
-    typography = {"font": "default", "width": "full", "spacing": "normal"}
-    page = NoteRenderer(vault, typography=lambda: typography).render("Projects/Alpha.md").page
-    assert 'class="page-toc"' not in page
-
-
 def test_backlinks_footer_lists_linked_mentions(vault):
     from obsidian_reader.core.graph import VaultGraph
 
@@ -294,17 +281,15 @@ def test_note_context_elements_honor_their_toggles(vault):
     from obsidian_reader.core.graph import VaultGraph
 
     graph = VaultGraph.build(vault)
-    options = {"breadcrumb": False, "meta": False, "toc": False, "backlinks": False}
+    options = {"breadcrumb": False, "meta": False, "backlinks": False}
     renderer = NoteRenderer(vault, graph_provider=lambda: graph, options=lambda: options)
     page = renderer.render("Projects/Alpha.md").page
     assert 'class="crumbs"' not in page
     assert '<h1 class="inline-title">' not in page
     assert 'class="note-meta"' not in page
-    assert 'class="page-toc"' not in page
     assert 'class="backlinks"' not in page
-    options.update({"breadcrumb": True, "meta": True, "toc": True, "backlinks": True})
+    options.update({"breadcrumb": True, "meta": True, "backlinks": True})
     page = renderer.render("Projects/Alpha.md").page
     assert 'class="crumbs"' in page
     assert 'class="note-meta"' in page
-    assert 'class="page-toc"' in page
     assert 'class="backlinks"' in page

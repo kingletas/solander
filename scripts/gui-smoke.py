@@ -134,14 +134,23 @@ def run_checks(app):
             check("metadata line reports the update date", "Updated " in second)
             mentions_shown = 'class="backlinks"' in second and "reader:///note/A.md" in second
             check("linked mentions follow the content", mentions_shown)
-            long_page = window._provide_page("/note/Long.md", window.reader.webview)
-            has_rail = 'class="page-toc"' in long_page
-            check("on-this-page rail renders for a structured note", has_rail)
-            toc_action = window.lookup_action("show-page-toc")
-            toc_action.change_state(GLib.Variant.new_boolean(False))
-            bare = window._provide_page("/note/Long.md", window.reader.webview)
-            check("the rail can be hidden from the View menu", 'class="page-toc"' not in bare)
-            toc_action.change_state(GLib.Variant.new_boolean(True))
+            structured = window.renderer.render("Long.md")
+            window._fill_outline(structured.outline)
+            rows = 0
+            row = window.outline_list.get_first_child()
+            while row is not None:
+                rows += 1 if getattr(row, "anchor", "") else 0
+                row = row.get_next_sibling()
+            check("outline panel lists the note's headings", rows == 4)
+            window._set_outline_visible(True)
+            opened = window.outline_split.get_show_sidebar() and window.outline_toggle.get_active()
+            check("outline opens as a native panel", opened)
+            window._set_outline_visible(False)
+            closed = (
+                not window.outline_split.get_show_sidebar()
+                and not window.outline_toggle.get_active()
+            )
+            check("outline hides from its own controls", closed)
             crumb_action = window.lookup_action("show-breadcrumb")
             crumb_action.change_state(GLib.Variant.new_boolean(False))
             plain = window._provide_page("/note/Second Note.md", window.reader.webview)

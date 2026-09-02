@@ -42,8 +42,8 @@ class SessionState:
     line_spacing: str = "normal"
     show_breadcrumb: bool = True
     show_note_meta: bool = True
-    show_page_toc: bool = True
     show_backlinks_footer: bool = True
+    outline_visible: bool = False
 
 
 class SessionStore:

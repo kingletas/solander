@@ -97,38 +97,6 @@ h1.inline-title::after {
 .note-meta > a.tag:not(:first-child)::before { content: "·"; margin: 0 0.55em; color: var(--muted); }
 .note-meta a.tag:hover { text-decoration: none; }
 
-/* The wide-window "On this page" rail; hidden until the margin can hold it. */
-.page-toc { display: none; }
-@media (min-width: 1180px) {
-  .page-toc {
-    display: block;
-    position: fixed;
-    top: 4.5rem;
-    right: 1.25rem;
-    width: 13.5rem;
-    max-height: 72vh;
-    overflow-y: auto;
-    padding: 0.25rem 0.9rem;
-    border-left: 1px solid var(--border-strong);
-    background: var(--bg);
-    font-size: 0.78rem;
-    line-height: 1.5;
-  }
-  .page-toc-title {
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    font-size: 0.65rem;
-    color: var(--gold);
-    margin-bottom: 0.6em;
-  }
-  .page-toc ul { list-style: none; padding: 0; margin: 0; }
-  .page-toc li { margin: 0.35em 0; }
-  .page-toc a { color: var(--muted); display: block; }
-  .page-toc a:hover { color: var(--accent); text-decoration: none; }
-  .toc-l2 { padding-left: 0.85em; }
-  .toc-l3 { padding-left: 1.7em; }
-}
-
 /* Linked mentions after the content: present, quiet, collapsed. */
 .backlinks {
   margin-top: 3.5rem;
@@ -543,7 +511,7 @@ code.math-source { color: var(--muted); }
     --accent-soft: #ddf4ff; --gold: #8a6d23; --missing: #cf222e; --mark-bg: #fff8c5;
   }
   main.note { max-width: none; padding: 0.5rem 0.75rem; }
-  .page-toc, .backlinks { display: none; }
+  .backlinks { display: none; }
   /* The dark theme's syntax palette is light-on-dark; on paper the panel is
      light, so those tokens print in plain ink instead of near-white. */
   body.theme-dark .highlight, body.theme-dark .highlight span { color: var(--fg) !important; }

@@ -48,6 +48,7 @@ SHORTCUTS = [
     ("Alt+Left / Alt+Right", "Back / Forward"),
     ("Ctrl+T / Ctrl+W", "New tab / Close tab"),
     ("Middle-click or Ctrl+click", "Open note or link in a new tab"),
+    ("F8", "Toggle the outline panel"),
     ("F9", "Toggle sidebar"),
     ("F11", "Reading mode (Esc leaves)"),
     ("Ctrl+M", "View the note as a mind map"),
@@ -149,6 +150,14 @@ class ReaderWindow(Adw.ApplicationWindow):
         open_menu.append("Open Vault Folder…", "win.open-vault")
         self.recents_section = Gio.Menu()
         open_menu.append_section("Recent vaults", self.recents_section)
+        self.sidebar_toggle = Gtk.ToggleButton(
+            icon_name="sidebar-show-symbolic", active=self.store.state.sidebar_visible
+        )
+        self.sidebar_toggle.set_tooltip_text("Sidebar (F9)")
+        self.sidebar_toggle.connect(
+            "toggled", lambda button: self.sidebar_widget.set_visible(button.get_active())
+        )
+        header.pack_start(self.sidebar_toggle)
         open_button = Gtk.MenuButton(icon_name="document-open-symbolic", menu_model=open_menu)
         open_button.set_tooltip_text("Open a file or vault")
         header.pack_start(open_button)
@@ -163,13 +172,19 @@ class ReaderWindow(Adw.ApplicationWindow):
         header.pack_start(self.forward_button)
 
         header.pack_end(self._main_menu_button())
-        header.pack_end(self._readonly_badge())
-        self.outline_button = self._outline_button()
-        header.pack_end(self.outline_button)
+        self.outline_toggle = Gtk.ToggleButton(
+            icon_name="view-list-symbolic", active=self.store.state.outline_visible
+        )
+        self.outline_toggle.set_tooltip_text("Outline (F8)")
+        self.outline_toggle.connect(
+            "toggled", lambda button: self._set_outline_visible(button.get_active())
+        )
+        header.pack_end(self.outline_toggle)
         search_button = Gtk.Button(icon_name="system-search-symbolic")
         search_button.set_tooltip_text("Search the vault (Ctrl+Shift+F)")
         search_button.connect("clicked", lambda *_: self._show_search())
         header.pack_end(search_button)
+        header.pack_end(self._readonly_badge())
 
         self.sidebar_widget = self._build_sidebar()
         self.sidebar_widget.set_visible(self.store.state.sidebar_visible)
@@ -180,7 +195,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             resize_start_child=False,
         )
         self.paned.set_start_child(self.sidebar_widget)
-        self.paned.set_end_child(self._build_content())
+        self.paned.set_end_child(self._build_reading_area())
 
         self.toolbar_view = Adw.ToolbarView()
         self.toolbar_view.add_top_bar(header)
@@ -552,7 +567,6 @@ class ReaderWindow(Adw.ApplicationWindow):
         context = Gio.Menu()
         context.append("Title & Breadcrumb", "win.show-breadcrumb")
         context.append("Metadata Line", "win.show-note-meta")
-        context.append("On This Page Rail", "win.show-page-toc")
         context.append("Linked Mentions", "win.show-backlinks")
         view = Gio.Menu()
         view.append("New Tab", "win.new-tab")
@@ -587,21 +601,20 @@ class ReaderWindow(Adw.ApplicationWindow):
         return button
 
     def _readonly_badge(self) -> Gtk.MenuButton:
-        """The read-only state, with its reason and a next action — not a lock icon alone."""
-        face = Gtk.Box(spacing=4)
-        face.append(Gtk.Image(icon_name="changes-prevent-symbolic"))
-        face.append(Gtk.Label(label="Read-only"))
-
+        """The read-only state as a quiet lock: the reason and next actions one click away."""
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         content.set_margin_top(12)
         content.set_margin_bottom(12)
         content.set_margin_start(12)
         content.set_margin_end(12)
+        heading = Gtk.Label(label="Read-only, by design", xalign=0.0)
+        heading.add_css_class("heading")
+        content.append(heading)
         explanation = Gtk.Label(
             label=(
-                "This app reads your vault in place and never writes into it — "
-                "by design, not by permission. To change a note, open it in "
-                "Obsidian or any editor; edits show up here within seconds."
+                "This app reads your vault in place and never writes into it. "
+                "To change a note, open it in Obsidian or any editor; edits "
+                "show up here within seconds."
             ),
             wrap=True,
             xalign=0.0,
@@ -617,24 +630,56 @@ class ReaderWindow(Adw.ApplicationWindow):
             button.set_has_frame(False)
             button.get_child().set_xalign(0.0)
             content.append(button)
-        badge = Gtk.MenuButton(child=face, popover=Gtk.Popover(child=content))
-        badge.add_css_class("readonly-pill")
+        badge = Gtk.MenuButton(
+            icon_name="changes-prevent-symbolic", popover=Gtk.Popover(child=content)
+        )
         badge.add_css_class("flat")
-        badge.set_tooltip_text("Why this app cannot edit — and what to do instead")
+        badge.set_tooltip_text("Read-only — why, and what to do instead")
         return badge
 
-    def _outline_button(self) -> Gtk.MenuButton:
+    def _build_reading_area(self) -> Gtk.Widget:
+        """The reading pane with the outline as a real, closable panel on its right."""
+        self.outline_split = Adw.OverlaySplitView(
+            sidebar_position=Gtk.PackType.END,
+            show_sidebar=self.store.state.outline_visible,
+            min_sidebar_width=200,
+            max_sidebar_width=300,
+            sidebar_width_fraction=0.22,
+        )
+        self.outline_split.set_content(self._build_content())
+        self.outline_split.set_sidebar(self._build_outline_panel())
+        return self.outline_split
+
+    def _build_outline_panel(self) -> Gtk.Widget:
+        head = Gtk.Box(spacing=6)
+        title = Gtk.Label(label="OUTLINE", xalign=0.0, hexpand=True)
+        title.add_css_class("panel-heading")
+        close = Gtk.Button(icon_name="window-close-symbolic")
+        close.add_css_class("flat")
+        close.set_tooltip_text("Hide the outline (F8)")
+        close.connect("clicked", lambda *_: self._set_outline_visible(False))
+        head.append(title)
+        head.append(close)
+        head.set_margin_start(12)
+        head.set_margin_end(6)
+        head.set_margin_top(8)
+
         self.outline_list = Gtk.ListBox()
         self.outline_list.add_css_class("navigation-sidebar")
         self.outline_list.connect("row-activated", self._on_outline_row)
-        scroll = Gtk.ScrolledWindow(
-            child=self.outline_list, propagate_natural_height=True, max_content_height=500,
-            propagate_natural_width=True, max_content_width=420,
-        )
-        popover = Gtk.Popover(child=scroll)
-        button = Gtk.MenuButton(icon_name="view-list-symbolic", popover=popover, sensitive=False)
-        button.set_tooltip_text("Outline")
-        return button
+
+        panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        panel.append(head)
+        panel.append(Gtk.ScrolledWindow(child=self.outline_list, vexpand=True))
+        return panel
+
+    def _set_outline_visible(self, on: bool) -> None:
+        """One switch for the outline panel: split view, header toggle, and session."""
+        if self.outline_split.get_show_sidebar() != on:
+            self.outline_split.set_show_sidebar(on)
+        if self.outline_toggle.get_active() != on:
+            self.outline_toggle.set_active(on)
+        self.store.state.outline_visible = on
 
     def _install_drop_target(self) -> None:
         from gi.repository import Gdk
@@ -686,8 +731,6 @@ class ReaderWindow(Adw.ApplicationWindow):
         font-family: "Noto Serif", "Liberation Serif", Georgia, serif;
         font-weight: 700;
     }
-    .readonly-pill { background: alpha(currentColor, 0.1); border-radius: 999px;
-                     padding: 2px 10px; font-size: 0.85em; min-height: 0; }
     .hover-status { background: alpha(@window_bg_color, 0.9); border-radius: 6px;
                     padding: 2px 8px; margin: 6px; font-size: 0.85em; }
     .navigation-sidebar row:selected {
@@ -698,6 +741,8 @@ class ReaderWindow(Adw.ApplicationWindow):
     listview.navigation-sidebar > row { padding-top: 3px; padding-bottom: 3px; }
     .quick-heading { font-size: 0.72em; font-weight: bold; letter-spacing: 0.12em;
                      color: alpha(currentColor, 0.55); margin: 10px 12px 2px; }
+    .panel-heading { font-size: 0.72em; font-weight: bold; letter-spacing: 0.12em;
+                     color: alpha(currentColor, 0.55); }
     """
 
     def _load_css(self) -> None:
@@ -746,6 +791,11 @@ class ReaderWindow(Adw.ApplicationWindow):
         add("back", lambda *_: self.reader.webview.go_back(), ["<Alt>Left"])
         add("forward", lambda *_: self.reader.webview.go_forward(), ["<Alt>Right"])
         add("toggle-sidebar", lambda *_: self._toggle_sidebar(), ["F9"])
+        add(
+            "toggle-outline",
+            lambda *_: self._set_outline_visible(not self.outline_split.get_show_sidebar()),
+            ["F8"],
+        )
         add("new-tab", lambda *_: self._new_tab(), ["<Control>t"])
         add("close-tab", lambda *_: self._close_current_tab(), ["<Control>w"])
         add(
@@ -802,7 +852,6 @@ class ReaderWindow(Adw.ApplicationWindow):
         for name, key in (
             ("show-breadcrumb", "show_breadcrumb"),
             ("show-note-meta", "show_note_meta"),
-            ("show-page-toc", "show_page_toc"),
             ("show-backlinks", "show_backlinks_footer"),
         ):
             add(
@@ -1077,7 +1126,6 @@ class ReaderWindow(Adw.ApplicationWindow):
         return {
             "breadcrumb": state.show_breadcrumb,
             "meta": state.show_note_meta,
-            "toc": state.show_page_toc,
             "backlinks": state.show_backlinks_footer,
         }
 
@@ -1338,7 +1386,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             if self.vault is not None:
                 self._watch_current_note(self.vault.root / reader.current_note)
         else:
-            self.outline_button.set_sensitive(False)
+            self._fill_outline([])
             self.title_widget.set_title(APP_NAME)
             self._watch_current_note(None)
         self._cancel_preview()
@@ -1372,17 +1420,23 @@ class ReaderWindow(Adw.ApplicationWindow):
         while (row := self.outline_list.get_first_child()) is not None:
             self.outline_list.remove(row)
         for heading in outline:
-            label = Gtk.Label(label=heading.text, xalign=0.0, ellipsize=3)
+            label = Gtk.Label(label=heading.text, xalign=0.0, wrap=True)
             label.set_margin_start((heading.level - 1) * 12)
+            label.set_margin_top(2)
+            label.set_margin_bottom(2)
             row = Gtk.ListBoxRow(child=label)
             row.anchor = heading.anchor
             self.outline_list.append(row)
-        self.outline_button.set_sensitive(bool(outline))
+        if not outline:
+            placeholder = Gtk.Label(label="No headings in this note", xalign=0.0, wrap=True)
+            placeholder.add_css_class("dim-label")
+            row = Gtk.ListBoxRow(child=placeholder, activatable=False, selectable=False)
+            self.outline_list.append(row)
 
     def _on_outline_row(self, _list, row) -> None:
-        self.outline_button.get_popover().popdown()
-        if self.current_note:
-            self.reader.load_note(self.current_note, row.anchor)
+        anchor = getattr(row, "anchor", "")
+        if self.current_note and anchor:
+            self.reader.load_note(self.current_note, anchor)
 
     def _on_tree_activate(self, node) -> None:
         if node.is_note or file_kind(node.rel) in ("canvas", "base"):
@@ -1700,7 +1754,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         manager.set_color_scheme(scheme)
 
     def _toggle_sidebar(self) -> None:
-        self.sidebar_widget.set_visible(not self.sidebar_widget.get_visible())
+        self.sidebar_toggle.set_active(not self.sidebar_widget.get_visible())
 
     def _new_tab(self) -> None:
         reader = self._create_tab()
@@ -1729,7 +1783,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.leave_zen_action.set_enabled(on)
         if on:
             self._pre_zen_sidebar = self.sidebar_widget.get_visible()
+            self._pre_zen_outline = self.outline_split.get_show_sidebar()
             self.sidebar_widget.set_visible(False)
+            self.outline_split.set_show_sidebar(False)
             self.tab_bar.set_visible(False)
             self.toolbar_view.set_reveal_top_bars(False)
             self.fullscreen()
@@ -1738,7 +1794,11 @@ class ReaderWindow(Adw.ApplicationWindow):
             self.unfullscreen()
             self.toolbar_view.set_reveal_top_bars(True)
             self.tab_bar.set_visible(True)
-            self.sidebar_widget.set_visible(getattr(self, "_pre_zen_sidebar", True))
+            restored = getattr(self, "_pre_zen_sidebar", True)
+            self.sidebar_widget.set_visible(restored)
+            self.sidebar_toggle.set_active(restored)
+            self.outline_split.set_show_sidebar(getattr(self, "_pre_zen_outline", False))
+            self.outline_toggle.set_active(getattr(self, "_pre_zen_outline", False))
 
     def _export_pdf_dialog(self) -> None:
         if not self.current_note:

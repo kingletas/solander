@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.0 — 2026-09-02
+
+The UX pass: every surface gets an obvious control, and the one element without one is gone.
+
+- **The outline is a real panel now.** The floating "On this page" rail — which overlapped content and had no way to close it — is removed. In its place: a native outline panel docked on the right, with a visible toggle in the header (`F8`), its own close button, animated reveal, heading hierarchy, an empty state, and a memory of whether you keep it open. It replaces the cramped header popover too.
+- **The header bar says what it does.** A sidebar toggle now sits at the far left (`F9` still works); the right side is search, outline, menu. The wide Read-only pill shrinks to a quiet lock icon — the explanation and its next actions (view source, open in editor, reveal in Files) are still one click away.
+- Reading mode hides the outline panel with everything else and restores it on exit; the outline state, like every other panel, persists across sessions.
+- View → Note Context now lists exactly the three elements that live in the page: Title & Breadcrumb, Metadata Line, Linked Mentions.
+
 ## 1.4.0 — 2026-09-02
 
 The atelier redesign: one visual identity across the whole app, and every piece of it under the reader's control.

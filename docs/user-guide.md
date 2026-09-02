@@ -17,7 +17,7 @@ A resizable sidebar on the left (drag the divider; the width persists), the read
 | **Bookmarks** | The vault's own `.obsidian/bookmarks.json`, read-only, groups flattened. |
 | **Graph** | The current note's neighborhood: bidirectional links in accent color, backlinks solid, outgoing dimmed. Click a node to open it. |
 
-`F9` toggles the sidebar. The header bar has back/forward (WebKit's real history), the outline popover for the current note's headings, and the **read-only badge** — click it for the reason (the app cannot write by design, not by permission) and the next action: view raw source, open the note in your default editor, or reveal it in Files.
+Every panel has a visible switch: the sidebar toggles from the button at the far left of the header (or `F9`), and the **outline panel** — the current note's headings, docked on the right with its own close button — from the list button on the right (or `F8`). Both remember their state. The header also carries back/forward (WebKit's real history), search, and a quiet lock icon: click it for the read-only reason (the app cannot write by design, not by permission) and the next action — view raw source, open the note in your default editor, or reveal it in Files.
 
 ## Opening things
 
@@ -30,7 +30,7 @@ A resizable sidebar on the left (drag the divider; the width persists), the read
 - **Wikilinks** resolve the way Obsidian resolves them: exact relative path, then vault-root path, then filename match. An ambiguous name opens a chooser rather than guessing; a missing target renders as a labeled dead link.
 - **Hover previews**: rest the pointer on a wikilink for a moment and a popover shows the opening of the target, rendered through the same pipeline. The popover takes no input — clicks always land on the page.
 - **Tabs**: `Ctrl+T` new, `Ctrl+W` close (the last tab shows the welcome page instead of closing the window). Middle-click or `Ctrl+click` on tree notes and in-page wikilinks opens tabs; each tab keeps its own history and outline; open tabs restore with the session.
-- **Outline**: the header-bar list icon jumps to any heading.
+- **Outline**: the panel on the right (`F8`) jumps to any heading of the current note.
 
 ## Search
 
@@ -54,10 +54,9 @@ Every note opens with its context before its content:
 - **Breadcrumb** — the note's folder path above the title; clicking an ancestor reveals that folder in the file tree.
 - **Inline title** — the filename as a large title, skipped when the note already opens with an identical `#` heading.
 - **Metadata line** — updated date, word count, an approximate read time on longer notes, and the note's frontmatter tags as clickable chips (a chip runs a `tag:` search).
-- **On this page** — on windows wide enough to hold it, a fixed rail beside the text lists the note's headings (three or more, levels 1–3). It never prints, and it steps aside when the line width is set to Wide or Full — the outline popover in the header bar always works regardless.
 - **Linked mentions** — notes that link to the current one are listed after the content, collapsed, each with the line of context around the mention. The Links panel carries the full list either way.
 
-**Every one of these is a choice, not a fixture.** View → Note Context toggles Title & Breadcrumb, the Metadata Line, the On This Page rail, and Linked Mentions individually — persisted across sessions, applied to every open tab at once.
+**Every one of these is a choice, not a fixture.** View → Note Context toggles Title & Breadcrumb, the Metadata Line, and Linked Mentions individually — persisted across sessions, applied to every open tab at once. The note's headings live in the outline panel (`F8`), which is a real panel with a real close button, not something printed into the page.
 
 ## What renders
 
@@ -123,6 +122,7 @@ The vault is watched while open: creations, edits, deletions, and renames re-ind
 | Middle-click or `Ctrl+click` | Open note or link in a new tab |
 | `Ctrl+M` | Toggle the mind map |
 | `F11` / `Esc` | Reading mode in / out |
+| `F8` | Toggle the outline panel |
 | `F9` | Toggle the sidebar |
 | `Ctrl+R` | Reload |
 | `Ctrl+U` | Raw source view |

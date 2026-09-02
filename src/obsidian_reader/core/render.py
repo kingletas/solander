@@ -46,9 +46,8 @@ INERT_FENCES = {"dataviewjs", "templater", "tasks", "query", "meta-bind"}
 # TeX past this length is not a formula, and the converter's cost grows with it.
 MAX_MATH_CHARS = int(os.environ.get("READER_MAX_MATH_CHARS", "5000"))
 
-# The in-page "On this page" rail and the linked-mentions footer stay readable
-# by staying bounded; the sidebar panels carry the full lists.
-MAX_TOC_ENTRIES = 40
+# The linked-mentions footer stays readable by staying bounded; the Links
+# panel carries the full list.
 MAX_FOOTER_BACKLINKS = 50
 MAX_HEADER_TAGS = 8
 READING_WORDS_PER_MINUTE = 220
@@ -231,12 +230,10 @@ class NoteRenderer:
             show_title=opts.get("breadcrumb", True),
             show_meta=opts.get("meta", True),
         )
-        wide = (typo or {}).get("width") in ("wide", "full")
-        toc = page_toc(env["outline"]) if opts.get("toc", True) and not wide else ""
         footer = self._backlinks_footer(rel) if opts.get("backlinks", True) else ""
         return RenderedNote(
             page=build_page(
-                header + toc + body + footer,
+                header + body + footer,
                 title,
                 theme,
                 lossy=note.lossy,
@@ -707,21 +704,6 @@ def _header_tags(properties: dict) -> list[str]:
             values.extend(str(item) for item in value if item is not None)
     cleaned = [v.strip().lstrip("#") for v in values]
     return list(dict.fromkeys(v for v in cleaned if v))
-
-
-def page_toc(outline: list) -> str:
-    """The wide-window "On this page" rail; CSS hides it below the width it needs."""
-    entries = [h for h in outline if h.level <= 3][:MAX_TOC_ENTRIES]
-    if len(entries) < 3:
-        return ""
-    items = "".join(
-        f'<li class="toc-l{h.level}"><a href="#{quote(h.anchor)}">{html.escape(h.text)}</a></li>'
-        for h in entries
-    )
-    return (
-        '<nav class="page-toc" aria-label="On this page">'
-        f'<div class="page-toc-title">On this page</div><ul>{items}</ul></nav>'
-    )
 
 
 def _preview_slice(body: str) -> tuple[str, bool]:
