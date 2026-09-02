@@ -244,7 +244,12 @@ class NoteRenderer:
         if note.error:
             return build_message_page("Cannot open note", note.error, theme)
         body = strip_html_comments(strip_block_comments(split_frontmatter(note.text).body))
-        page_body = mindmap_body(title, body, rel)
+        back = (
+            f'<div class="mindmap-bar"><a class="wikilink" href="{note_uri(rel)}">'
+            f"\u25c0 Back to {html.escape(title)}</a> "
+            '<span class="dataview-note">(or press Ctrl+M)</span></div>'
+        )
+        page_body = back + mindmap_body(title, body, rel)
         return build_page(
             page_body, f"{title} (mind map)", theme,
             typography=self._typo(), note_classes="mindmap-note",

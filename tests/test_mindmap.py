@@ -46,3 +46,10 @@ def test_svg_output_links_headings_and_escapes():
 
 def test_empty_note_gets_a_message():
     assert "Nothing to map" in mindmap_body("X", "just prose\n", "X.md")
+
+
+def test_mindmap_page_carries_a_back_link(vault):
+    from obsidian_reader.core.render import NoteRenderer
+
+    page = NoteRenderer(vault).render_mindmap("Index.md")
+    assert 'href="reader:///note/Index.md">\u25c0 Back to Index</a>' in page

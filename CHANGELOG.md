@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 — 2026-09-01
+
+- **The mind map now has an obvious way back.** The map page carries a "Back to <note>" link, `Ctrl+M` toggles — note to map, map back to note — and the map keeps counting as its note, so the window title, tree selection, and the toggle itself all keep working while it is shown. (Back always worked; nothing said so.)
+
 ## 1.1.0 — 2026-09-01
 
 - **Folders can be hidden.** Right-click a folder in the tree to hide it — it leaves the tree, quick-open, and search results (link panels, graph, and Dataview stay complete, since those answer explicit questions). The toast offers Unhide, and View → Unhide All Folders clears the reader's list. Obsidian's own excluded-files setting (`userIgnoreFilters` in `.obsidian/app.json`) is honored read-only on top, and stays in force when the reader's list is cleared. The reader's list lives in its own config, never in the vault.

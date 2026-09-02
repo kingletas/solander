@@ -863,6 +863,11 @@ class ReaderWindow(Adw.ApplicationWindow):
         return [hit for hit in hits if not hidden_under(hit.path, hidden)]
 
     def _show_mindmap(self) -> None:
+        """Toggles between a note and its mind map."""
+        uri = self.reader.webview.get_uri() or ""
+        if uri.startswith("reader:///mindmap/") and self.current_note:
+            self.reader.load_note(self.current_note)
+            return
         if not self.current_note or not self.current_note.casefold().endswith((".md", ".markdown")):
             self._toast("Open a note first")
             return
@@ -1017,7 +1022,9 @@ class ReaderWindow(Adw.ApplicationWindow):
             return
         parsed = urlparse(webview.get_uri() or "")
         segments = [unquote(part) for part in parsed.path.split("/") if part]
-        if parsed.scheme == "reader" and segments and segments[0] == "note":
+        if parsed.scheme == "reader" and segments and segments[0] in ("note", "mindmap"):
+            # A mind map is still "being on" its note: the title, tree selection,
+            # and the Ctrl+M toggle all keep working while the map is shown.
             reader.current_note = "/".join(segments[1:])
         else:
             reader.current_note = ""

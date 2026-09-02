@@ -126,6 +126,8 @@ def run_checks(app):
             check("vault css snippet is applied sanitized", "teal" in page and "url(" not in page)
             mindmap = window._provide_page("/mindmap/A.md", window.reader.webview)
             check("mind map renders the note structure", "<svg" in mindmap and ">A<" in mindmap)
+            back = "reader:///note/A.md" in mindmap and "Back to A" in mindmap
+            check("mind map offers the way back", back)
             from obsidian_reader.core.search import search_filenames
 
             names = [node.rel for node in window.tree._list_directory("")]
@@ -160,6 +162,21 @@ def run_checks(app):
             controller = window.reader.webview.get_find_controller()
             check("search hit highlighting ran", controller.get_search_text() == "note")
             check("highlight consumed after one load", window._pending_highlight == "")
+            window._show_mindmap()
+            GLib.timeout_add(1000, check_map_toggle_on)
+            return False
+
+        def check_map_toggle_on():
+            uri = window.reader.webview.get_uri() or ""
+            check("Ctrl+M switches to the mind map", uri.startswith("reader:///mindmap/"))
+            check("the map still counts as the note", window.current_note == "A.md")
+            window._show_mindmap()
+            GLib.timeout_add(1000, check_map_toggle_off)
+            return False
+
+        def check_map_toggle_off():
+            uri = window.reader.webview.get_uri() or ""
+            check("Ctrl+M toggles back to the note", uri.startswith("reader:///note/A.md"))
             check_fidelity()
             return False
 

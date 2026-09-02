@@ -363,3 +363,5 @@ code.math-source { color: var(--muted); }
 .mindmap { overflow: auto; }
 .mindmap svg text { fill: var(--fg); }
 .mindmap svg a { border-bottom: none; }
+
+.mindmap-bar { margin-bottom: 0.6em; }

@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.1.1" date="2026-09-01">
+      <description>
+        <p>The mind map carries a visible way back, and Ctrl+M toggles
+        between a note and its map.</p>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-09-01">
       <description>
         <p>Hide folders from the tree and search, and view any note as a
