@@ -82,6 +82,10 @@ A second launch hands its path to the running instance instead of racing it for 
 
 Fourteen, and the theme is remembered. **Atelier** is the default — parchment and sepia ink by day, a candlelit nocturne by night. The **Archive** family is thirteen dark themes over one design language: a dark ground, bone text, an accent for what is important, and one hot colour held back for what actually matters. The semantics hold across all of them, so danger, warning, verified and information mean the same thing in every one, and every colour that carries text is checked against WCAG AA on the ground it sits on.
 
+![Solander in the Blood Record theme](docs/images/blood-record.png)
+
+All thirteen, on the same note:
+
 ![The Archive theme family](docs/images/themes.png)
 
 ## The sandbox and Ubuntu's user-namespace policy
