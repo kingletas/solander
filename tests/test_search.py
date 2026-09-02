@@ -1,8 +1,8 @@
 """Filename and content search over the fixture vault, through the persistent index."""
 
-from obsidian_reader.core.indexing import sync_indexes
-from obsidian_reader.core.search import VaultSearch, parse_query, search_filenames
-from obsidian_reader.core.store import IndexStore
+from solander.core.indexing import sync_indexes
+from solander.core.search import VaultSearch, parse_query, search_filenames
+from solander.core.store import IndexStore
 
 
 def make_search(vault, tmp_path):

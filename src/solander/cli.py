@@ -8,7 +8,7 @@ import sys
 from . import __version__
 
 USAGE = """\
-obsidian-reader [PATH]
+solander [PATH]
 
 Opens PATH as a vault (directory) or a note (.md file) in a read-only reader.
 With no PATH, reopens the last session.
@@ -19,7 +19,7 @@ Options:
 """
 
 SANDBOX_HELP = """\
-obsidian-reader: WebKit's sandbox cannot start under this system's security policy.
+solander: WebKit's sandbox cannot start under this system's security policy.
 
 Ubuntu restricts unprivileged user namespaces, and the sandbox WebKitGTK wraps
 around its rendering processes needs one. Without it the app aborts with
@@ -30,31 +30,31 @@ interpreter that permission. The profile, rendered for this installation:
 
 {profile}
 
-Install it as /etc/apparmor.d/obsidian-reader and reload AppArmor — the exact
+Install it as /etc/apparmor.d/solander and reload AppArmor — the exact
 steps are in the README under "The sandbox and Ubuntu's user-namespace policy".
 
-To bypass this check and try anyway, set OBSIDIAN_READER_SKIP_SANDBOX_CHECK=1.
+To bypass this check and try anyway, set SOLANDER_SKIP_SANDBOX_CHECK=1.
 """
 
 SHEBANG_HELP = """\
-obsidian-reader: WebKit's sandbox cannot start, but the AppArmor profile for it
+solander: WebKit's sandbox cannot start, but the AppArmor profile for it
 is already installed — it just did not attach to this process.
 
 That happens when the app is started through the venv console script or another
 `#!` shebang: AppArmor attaches the profile by interpreter path, and a shebang
-launch bypasses that. Start the app through the `obsidian-reader` launcher
+launch bypasses that. Start the app through the `solander` launcher
 (installed by `make install`), which executes the interpreter directly.
 
-To bypass this check and try anyway, set OBSIDIAN_READER_SKIP_SANDBOX_CHECK=1.
+To bypass this check and try anyway, set SOLANDER_SKIP_SANDBOX_CHECK=1.
 """
 
-PROFILE_PATH = "/etc/apparmor.d/obsidian-reader"
+PROFILE_PATH = "/etc/apparmor.d/solander"
 
 PROFILE_TEMPLATE = """\
 abi <abi/4.0>,
 include <tunables/global>
 
-profile obsidian-reader {interpreter} flags=(unconfined) {{
+profile solander {interpreter} flags=(unconfined) {{
   userns,
 }}
 """
@@ -94,11 +94,11 @@ def current_label() -> str:
 
 def check_sandbox() -> str:
     """Returns the remediation text when the sandbox cannot start, empty when it can."""
-    if os.environ.get("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", "") == "1":
+    if os.environ.get("SOLANDER_SKIP_SANDBOX_CHECK", "") == "1":
         return ""
-    if sandbox_ready() and os.environ.get("OBSIDIAN_READER_FORCE_SETUP", "") != "1":
+    if sandbox_ready() and os.environ.get("SOLANDER_FORCE_SETUP", "") != "1":
         return ""
-    if os.path.exists(PROFILE_PATH) and not current_label().startswith("obsidian-reader"):
+    if os.path.exists(PROFILE_PATH) and not current_label().startswith("solander"):
         return SHEBANG_HELP
     interpreter = os.path.realpath(sys.executable)
     help_text = SANDBOX_HELP.format(profile=rendered_profile())
@@ -115,7 +115,7 @@ def main() -> int:
     """Parses the trivial flags, then hands the real arguments to the GTK application."""
     arguments = sys.argv[1:]
     if "--version" in arguments:
-        print(f"obsidian-reader {__version__}")
+        print(f"solander {__version__}")
         return 0
     if "-h" in arguments or "--help" in arguments:
         print(USAGE, end="")
@@ -133,7 +133,7 @@ def main() -> int:
 
             def recheck() -> bool:
                 return sandbox_ready() and os.environ.get(
-                    "OBSIDIAN_READER_FORCE_SETUP", ""
+                    "SOLANDER_FORCE_SETUP", ""
                 ) != "1"
 
             return run_setup(command, shebang, recheck)
@@ -146,7 +146,7 @@ def main() -> int:
         gi.require_version("WebKit", "6.0")
     except (ImportError, ValueError) as error:
         print(
-            "obsidian-reader needs the system GTK bindings:\n"
+            "solander needs the system GTK bindings:\n"
             "  sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0\n"
             f"({error})",
             file=sys.stderr,

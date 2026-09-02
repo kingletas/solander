@@ -2,7 +2,7 @@
 
 import json
 
-from obsidian_reader.core.csssnippets import load_snippets, sanitize_css
+from solander.core.csssnippets import load_snippets, sanitize_css
 
 
 def test_plain_rules_and_media_blocks_survive():

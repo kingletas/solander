@@ -1,6 +1,6 @@
 """The sanitizer is the trust boundary; both directions get tested."""
 
-from obsidian_reader.core.sanitize import sanitize
+from solander.core.sanitize import sanitize
 
 
 def test_allowed_markup_passes_through():

@@ -15,7 +15,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk
 
-SETUP_APP_ID = "com.kingletas.ObsidianReader.Setup"
+SETUP_APP_ID = "com.kingletas.Solander.Setup"
 
 INTRO = (
     "Ubuntu's security policy blocks the sandbox this app uses to render your "
@@ -28,14 +28,14 @@ INTRO = (
 SHEBANG_INTRO = (
     "The security profile for this app is already installed, but it did not "
     "attach to this process because the app was started around its launcher. "
-    "Start it from your applications grid, or run `obsidian-reader` in a "
+    "Start it from your applications grid, or run `solander` in a "
     "terminal — the launcher starts the app in the way the profile covers."
 )
 
 
 def setup_command(profile: str, profile_path: str) -> str:
     """One paste-able command: write the profile, then reload AppArmor."""
-    marker = "OBSIDIAN_READER_PROFILE"
+    marker = "SOLANDER_PROFILE"
     return (
         f"sudo tee {profile_path} > /dev/null << '{marker}'\n"
         f"{profile}\n"
@@ -48,13 +48,13 @@ class SetupWindow(Adw.ApplicationWindow):
     """Explains the sandbox situation and walks the user through the fix."""
 
     def __init__(self, application, command: str, shebang: bool, recheck, relaunch):
-        super().__init__(application=application, title="Obsidian Reader — Setup")
+        super().__init__(application=application, title="Solander — Setup")
         self.set_default_size(680, 560)
         self._recheck = recheck
         self._relaunch = relaunch
 
         page = Adw.StatusPage(
-            icon_name="com.kingletas.ObsidianReader",
+            icon_name="com.kingletas.Solander",
             title="One-time setup needed",
             description=SHEBANG_INTRO if shebang else INTRO,
         )
@@ -124,7 +124,7 @@ def run_setup(command: str, shebang: bool, recheck) -> int:
         # A fresh exec of our own interpreter, no shell involved: the AppArmor
         # profile attaches at exec time, which is the entire point of restarting.
         os.execv(  # noqa: S606 — fixed argv, own interpreter, no shell
-            sys.executable, [sys.executable, "-m", "obsidian_reader.cli", *sys.argv[1:]]
+            sys.executable, [sys.executable, "-m", "solander.cli", *sys.argv[1:]]
         )
         return False
 

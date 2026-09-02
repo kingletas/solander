@@ -2,7 +2,7 @@
 
 import json
 
-from obsidian_reader.core.canvas import canvas_body, parse_canvas
+from solander.core.canvas import canvas_body, parse_canvas
 
 SIMPLE = {
     "nodes": [

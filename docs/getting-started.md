@@ -26,11 +26,11 @@ From a clone of this repository:
 make install
 ```
 
-This creates a virtualenv against the system Python (so the GI bindings are visible), installs the Python dependencies, and puts an `obsidian-reader` launcher on your `PATH`, along with a desktop entry and icon. `make uninstall` removes all of it.
+This creates a virtualenv against the system Python (so the GI bindings are visible), installs the Python dependencies, and puts an `solander` launcher on your `PATH`, along with a desktop entry and icon. `make uninstall` removes all of it.
 
 ## 3. First launch — the one-time sandbox step
 
-Launch **Obsidian Reader** from your applications grid. On stock Ubuntu 24.04+ the first launch shows a **setup window** instead of the reader. That is expected: WebKit sandboxes its rendering processes, Ubuntu restricts the user namespaces that sandbox needs, and the fix is a one-time security profile granting the permission to this app alone — the same mechanism Ubuntu ships for browsers.
+Launch **Solander** from your applications grid. On stock Ubuntu 24.04+ the first launch shows a **setup window** instead of the reader. That is expected: WebKit sandboxes its rendering processes, Ubuntu restricts the user namespaces that sandbox needs, and the fix is a one-time security profile granting the permission to this app alone — the same mechanism Ubuntu ships for browsers.
 
 The window hands you a single command. **Copy it, paste it into a Terminal, enter your password, then press “I ran it — check again”** — the reader starts on its own. That is the only time a terminal is involved.
 
@@ -38,9 +38,9 @@ The window hands you a single command. **Copy it, paste it into a Terminal, ente
 
 ## 4. Open your vault
 
-Use **Open a vault folder…** on the welcome page, drag a folder onto the window, or right-click a folder or `.md` file in your file manager and choose *Open With → Obsidian Reader*. From a terminal, `obsidian-reader ~/path/to/vault` does the same. The reader opens the vault **in place** — nothing is imported, and nothing is ever written into it.
+Use **Open a vault folder…** on the welcome page, drag a folder onto the window, or right-click a folder or `.md` file in your file manager and choose *Open With → Solander*. From a terminal, `solander ~/path/to/vault` does the same. The reader opens the vault **in place** — nothing is imported, and nothing is ever written into it.
 
-The first open of a large vault builds the search and link index in the background — expect roughly 20 seconds for a 10,000-note vault, with progress in the sidebar's status line. The index persists under `~/.cache/obsidian-reader/`, so every later launch is warm: about a second, re-reading only notes that changed. While the reader is open it watches the vault, so anything Obsidian or a sync client writes shows up in the tree, search, and link panels within a few seconds.
+The first open of a large vault builds the search and link index in the background — expect roughly 20 seconds for a 10,000-note vault, with progress in the sidebar's status line. The index persists under `~/.cache/solander/`, so every later launch is warm: about a second, re-reading only notes that changed. While the reader is open it watches the vault, so anything Obsidian or a sync client writes shows up in the tree, search, and link panels within a few seconds.
 
 ## 5. Five things to try first
 
@@ -56,6 +56,6 @@ The first open of a large vault builds the search and link index in the backgrou
 
 | What | Where |
 |---|---|
-| Session, preferences, hidden folders | `~/.config/obsidian-reader/` |
-| The per-vault search/link index | `~/.cache/obsidian-reader/` (safe to delete; rebuilt on demand) |
+| Session, preferences, hidden folders | `~/.config/solander/` |
+| The per-vault search/link index | `~/.cache/solander/` (safe to delete; rebuilt on demand) |
 | Your vault | untouched, always |

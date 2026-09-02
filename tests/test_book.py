@@ -1,9 +1,9 @@
 """Book ordering and the book page treatment."""
 
-from obsidian_reader.core.book import chapter_title, chapters_in, natural_key
-from obsidian_reader.core.csssnippets import sanitize_css
-from obsidian_reader.core.render import NoteRenderer
-from obsidian_reader.core.vault import Vault
+from solander.core.book import chapter_title, chapters_in, natural_key
+from solander.core.csssnippets import sanitize_css
+from solander.core.render import NoteRenderer
+from solander.core.vault import Vault
 
 
 def test_natural_order_shelves_two_before_ten():

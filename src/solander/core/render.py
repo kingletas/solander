@@ -858,7 +858,7 @@ def _message_body(title: str, message: str) -> str:
 @cache
 def _asset_css(name: str) -> str:
     """Reads one bundled stylesheet; each is read once per process."""
-    return resources.files("obsidian_reader.assets").joinpath(name).read_text("utf-8")
+    return resources.files("solander.assets").joinpath(name).read_text("utf-8")
 
 
 @cache

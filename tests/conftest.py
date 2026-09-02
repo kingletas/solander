@@ -2,7 +2,7 @@
 
 import pytest
 
-from obsidian_reader.core.vault import Vault
+from solander.core.vault import Vault
 
 PNG_BYTES = bytes.fromhex(
     "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"

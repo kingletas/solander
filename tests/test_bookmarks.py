@@ -2,7 +2,7 @@
 
 import json
 
-from obsidian_reader.core.bookmarks import read_bookmarks
+from solander.core.bookmarks import read_bookmarks
 
 
 def _write(vault_dir, payload) -> None:
@@ -63,7 +63,7 @@ def test_deep_nesting_is_bounded(vault, vault_dir):
 
 
 def test_bookmark_count_is_capped(vault, vault_dir, monkeypatch):
-    import obsidian_reader.core.bookmarks as bookmarks_module
+    import solander.core.bookmarks as bookmarks_module
 
     monkeypatch.setattr(bookmarks_module, "MAX_BOOKMARKS", 3)
     _write(vault_dir, {"items": [{"type": "file", "path": "Index.md"}] * 10})

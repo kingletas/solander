@@ -2,8 +2,8 @@
 
 import json
 
-from obsidian_reader.core.excalidraw import excalidraw_body
-from obsidian_reader.core.lzstring import decompress_base64
+from solander.core.excalidraw import excalidraw_body
+from solander.core.lzstring import decompress_base64
 
 
 def wrap(elements) -> str:

@@ -1,8 +1,8 @@
 """The kanban renderer: columns, cards, archive, and wikilinks inside cards."""
 
-from obsidian_reader.core.graph import VaultGraph
-from obsidian_reader.core.kanban import parse_kanban
-from obsidian_reader.core.render import NoteRenderer
+from solander.core.graph import VaultGraph
+from solander.core.kanban import parse_kanban
+from solander.core.render import NoteRenderer
 
 BOARD = (
     "---\nkanban-plugin: board\n---\n\n"

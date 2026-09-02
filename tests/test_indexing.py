@@ -3,8 +3,8 @@
 import hashlib
 import os
 
-from obsidian_reader.core.indexing import sync_indexes
-from obsidian_reader.core.store import IndexStore
+from solander.core.indexing import sync_indexes
+from solander.core.store import IndexStore
 
 
 def tree_hash(root) -> str:

@@ -2,8 +2,8 @@
 
 import sqlite3
 
-from obsidian_reader.core.graph import NoteScan, RawLink
-from obsidian_reader.core.store import IndexStore, open_index_store
+from solander.core.graph import NoteScan, RawLink
+from solander.core.store import IndexStore, open_index_store
 
 
 def make_store(tmp_path) -> IndexStore:

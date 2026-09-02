@@ -4,9 +4,9 @@ import datetime
 
 import pytest
 
-from obsidian_reader.core.dataview import DataviewEngine, Evaluator, Row
-from obsidian_reader.core.dql import DqlError, parse_expression
-from obsidian_reader.core.graph import VaultGraph
+from solander.core.dataview import DataviewEngine, Evaluator, Row
+from solander.core.dql import DqlError, parse_expression
+from solander.core.graph import VaultGraph
 
 
 def evaluate(text: str, props: dict | None = None, this: dict | None = None):

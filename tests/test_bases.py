@@ -1,7 +1,7 @@
 """The Bases renderer: table views, filters, sorts, and plugin-view refusals."""
 
-from obsidian_reader.core.bases import render_base
-from obsidian_reader.core.graph import VaultGraph
+from solander.core.bases import render_base
+from solander.core.graph import VaultGraph
 
 BASE = """
 properties:

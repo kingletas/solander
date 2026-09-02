@@ -21,7 +21,7 @@ Every panel has a visible switch: the sidebar toggles from the button at the far
 
 ## Opening things
 
-- `obsidian-reader ~/vault` opens a folder; `obsidian-reader note.md` opens a single file via its parent folder; bare `obsidian-reader` restores the last session (toggleable in the menu).
+- `solander ~/vault` opens a folder; `solander note.md` opens a single file via its parent folder; bare `solander` restores the last session (toggleable in the menu).
 - A second launch hands its path to the running instance rather than racing it.
 - Drag a folder or file onto the window; recent vaults live under the folder button.
 
@@ -116,7 +116,7 @@ The hidden list is stored in the reader's config, never in the vault.
 
 ## The live index
 
-The vault is watched while open: creations, edits, deletions, and renames re-index in the background after a two-second quiet period, refreshing the tree, search, link panels, and any visible Dataview results. The index persists per vault under `~/.cache/obsidian-reader/` — cold builds are tens of seconds on a very large vault, warm launches about a second. The cache is derived data: corruption rebuilds it silently, and Clear Index Cache in the menu does so on demand. Expect it to cost disk roughly proportional to the vault's text.
+The vault is watched while open: creations, edits, deletions, and renames re-index in the background after a two-second quiet period, refreshing the tree, search, link panels, and any visible Dataview results. The index persists per vault under `~/.cache/solander/` — cold builds are tens of seconds on a very large vault, warm launches about a second. The cache is derived data: corruption rebuilds it silently, and Clear Index Cache in the menu does so on demand. Expect it to cost disk roughly proportional to the vault's text.
 
 ## Keyboard shortcuts
 
@@ -142,7 +142,7 @@ The vault is watched while open: creations, edits, deletions, and renames re-ind
 
 ## Configuration reference
 
-State lives outside every vault: `~/.config/obsidian-reader/` (session, preferences, hidden folders) and `~/.cache/obsidian-reader/` (the per-vault index). The resource bounds are environment-overridable — the defaults are generous, and each exists so hostile input cannot grow without limit:
+State lives outside every vault: `~/.config/solander/` (session, preferences, hidden folders) and `~/.cache/solander/` (the per-vault index). The resource bounds are environment-overridable — the defaults are generous, and each exists so hostile input cannot grow without limit:
 
 | Variable | Bounds |
 |---|---|
@@ -158,11 +158,11 @@ State lives outside every vault: `~/.config/obsidian-reader/` (session, preferen
 | `READER_MAX_MINDMAP_NODES` | Mind-map nodes (500) |
 | `READER_MAX_DIAGRAM_NODES` | Mermaid flowchart nodes (400) |
 | `READER_MAX_SNIPPET_BYTES` / `READER_MAX_BASE_BYTES` | CSS snippets total (256 KB) and base file size (1 MB) |
-| `OBSIDIAN_READER_SKIP_SANDBOX_CHECK` | Skips the launch preflight (for environments that confine WebKit themselves) |
+| `SOLANDER_SKIP_SANDBOX_CHECK` | Skips the launch preflight (for environments that confine WebKit themselves) |
 
 ## Troubleshooting
 
-- **A setup window appears instead of the reader, or a terminal launch prints an AppArmor profile** — the one-time sandbox step; see [getting started](getting-started.md#3-first-launch--the-one-time-sandbox-step). If the profile is installed but the app still refuses, it was started around its launcher: a `#!` shebang launch bypasses AppArmor's attachment. Start it from the applications grid or via `obsidian-reader`.
+- **A setup window appears instead of the reader, or a terminal launch prints an AppArmor profile** — the one-time sandbox step; see [getting started](getting-started.md#3-first-launch--the-one-time-sandbox-step). If the profile is installed but the app still refuses, it was started around its launcher: a `#!` shebang launch bypasses AppArmor's attachment. Start it from the applications grid or via `solander`.
 - **Dataview blocks say "the index is still building"** — the first index of a large vault is running; they render on their own when it finishes.
 - **A Dataview block shows its source with a reason** — that query uses syntax outside the supported surface; the label says which part.
 - **A mermaid block shows its source with a reason** — the diagram kind is outside the supported three (flowchart, sequence, pie), or a line could not be read; the label says which.

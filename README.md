@@ -1,8 +1,8 @@
-# Obsidian Reader
+# Solander
 
-A read-only Markdown reader for Ubuntu that opens an existing [Obsidian](https://obsidian.md) vault **in place** and renders the Obsidian Markdown that matters for reading — wikilinks, embeds, callouts, frontmatter, tags — without ever writing into the vault, executing plugins or scripts, or touching the network.
+A reading application for Ubuntu that opens a folder of Markdown **in place** and never writes into it — no caches, no plugins, no scripts, no network. It is fluent in [Obsidian](https://obsidian.md)'s dialect: wikilinks, embeds, callouts, frontmatter, tags, canvases, kanban boards, `.base` views and Dataview queries all render as themselves.
 
-It is a fallback reader, not an Obsidian replacement: something dependable to reach for when Obsidian is closed, not installed, or not safe to run against a vault you only want to inspect.
+A solander is the clamshell box an archive keeps its documents in. That is the job: present the record, and leave it exactly as it was found — whether Obsidian is closed, not installed, or simply not something you want pointed at a vault you only mean to inspect.
 
 > This project is not affiliated with or endorsed by Obsidian.md / Dynalist Inc. "Obsidian" here names the vault format the reader understands.
 
@@ -17,7 +17,7 @@ The full walkthrough is the **[user guide](docs/user-guide.md)**; installation i
 
 ## What it will never do
 
-- **Write into the vault.** No caches, indexes, locks, conflict files, or thumbnails. All application state lives under `~/.config/obsidian-reader/` and `~/.cache/obsidian-reader/`.
+- **Write into the vault.** No caches, indexes, locks, conflict files, or thumbnails. All application state lives under `~/.config/solander/` and `~/.cache/solander/`.
 - **Execute anything from a note.** JavaScript is disabled in the rendering surface; raw HTML in notes is escaped, and the generated HTML passes through an allowlist sanitizer before display. Templater and `dataviewjs` render as labeled inert source.
 - **Touch the network.** Remote images, scripts, stylesheets, and fonts are blocked; `http`/`https` links open in your system browser, and every other URI scheme is refused.
 
@@ -41,18 +41,18 @@ Then, with [uv](https://docs.astral.sh/uv/) installed:
 make install
 ```
 
-That creates the virtualenv against the system Python (so the GI bindings are visible), installs the dependencies, and puts an `obsidian-reader` launcher on your `PATH`. `make help` lists everything else.
+That creates the virtualenv against the system Python (so the GI bindings are visible), installs the dependencies, and puts an `solander` launcher on your `PATH`. `make help` lists everything else.
 
 ## Run
 
-Launch **Obsidian Reader** from your applications grid — it restores your last session, and the welcome page opens a vault from there. Markdown files and folders also offer it under *Open With* in your file manager. On a stock Ubuntu the very first launch shows a **one-time setup window** (the sandbox step below) with a single copy-paste command; after that it just opens.
+Launch **Solander** from your applications grid — it restores your last session, and the welcome page opens a vault from there. Markdown files and folders also offer it under *Open With* in your file manager. On a stock Ubuntu the very first launch shows a **one-time setup window** (the sandbox step below) with a single copy-paste command; after that it just opens.
 
 The terminal works too:
 
 ```bash
-obsidian-reader ~/path/to/vault      # open a folder as a vault
-obsidian-reader note.md              # open a single note
-obsidian-reader                      # reopen the last session
+solander ~/path/to/vault      # open a folder as a vault
+solander note.md              # open a single note
+solander                      # reopen the last session
 ```
 
 A second launch hands its path to the running instance instead of racing it for state.
@@ -68,19 +68,19 @@ A second launch hands its path to the running instance instead of racing it for 
 
 WebKitGTK wraps its rendering processes in a bubblewrap sandbox, and that sandbox needs to create an unprivileged user namespace. Ubuntu 24.04+ restricts those by default (`kernel.apparmor_restrict_unprivileged_userns=1`), so on a stock system the app would abort with `bwrap: setting up uid map: Permission denied`. The launcher detects this before WebKit crashes: **started from the desktop, it opens a setup window with a single copy-paste command and a “check again” button that relaunches the app once the profile is in**; started from a terminal with no display, it prints the same fix.
 
-The fix is a one-time AppArmor profile that grants the permission to this app's interpreter alone (`make install` gives the venv a private interpreter copy so the profile names nothing else). Run `obsidian-reader` once — it prints the profile rendered for your installation — then install it:
+The fix is a one-time AppArmor profile that grants the permission to this app's interpreter alone (`make install` gives the venv a private interpreter copy so the profile names nothing else). Run `solander` once — it prints the profile rendered for your installation — then install it:
 
 ```bash
-obsidian-reader 2>&1 | sed -n '/^abi/,/^}/p' | sudo tee /etc/apparmor.d/obsidian-reader
+solander 2>&1 | sed -n '/^abi/,/^}/p' | sudo tee /etc/apparmor.d/solander
 ```
 
 ```bash
-sudo apparmor_parser -r /etc/apparmor.d/obsidian-reader
+sudo apparmor_parser -r /etc/apparmor.d/solander
 ```
 
 Then start the app again. This is the same mechanism Ubuntu itself ships for browsers: the profile is `flags=(unconfined)` — it confines nothing — plus a single `userns,` grant, and it keeps WebKit's sandbox *on*, which is strictly better than the workaround of disabling user-namespace restrictions system-wide.
 
-One subtlety the launcher handles for you: AppArmor attaches the profile by interpreter path, and a `#!` shebang launch (such as running the venv's console script directly) bypasses attachment. The `obsidian-reader` launcher execs the interpreter directly for exactly this reason — start the app through it.
+One subtlety the launcher handles for you: AppArmor attaches the profile by interpreter path, and a `#!` shebang launch (such as running the venv's console script directly) bypasses attachment. The `solander` launcher execs the interpreter directly for exactly this reason — start the app through it.
 
 ## Development
 

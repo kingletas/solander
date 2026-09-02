@@ -3,7 +3,7 @@
 import os
 import stat
 
-from obsidian_reader import cli
+from solander import cli
 
 
 def fake_bwrap(tmp_path, exit_code: int, monkeypatch) -> None:
@@ -23,20 +23,20 @@ def test_ready_when_bwrap_succeeds(tmp_path, monkeypatch):
 
 def test_refuses_with_guidance_when_bwrap_is_blocked(tmp_path, monkeypatch):
     fake_bwrap(tmp_path, 1, monkeypatch)
-    monkeypatch.delenv("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", raising=False)
+    monkeypatch.delenv("SOLANDER_SKIP_SANDBOX_CHECK", raising=False)
     monkeypatch.setattr(cli, "PROFILE_PATH", str(tmp_path / "absent-profile"))
     assert not cli.sandbox_ready()
     message = cli.check_sandbox()
     assert "user namespaces" in message
-    assert "profile obsidian-reader" in message
-    assert "/etc/apparmor.d/obsidian-reader" in message
+    assert "profile solander" in message
+    assert "/etc/apparmor.d/solander" in message
 
 
 def test_installed_but_unattached_profile_names_the_shebang_trap(tmp_path, monkeypatch):
     fake_bwrap(tmp_path, 1, monkeypatch)
-    monkeypatch.delenv("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", raising=False)
-    profile = tmp_path / "obsidian-reader-profile"
-    profile.write_text("profile obsidian-reader ...")
+    monkeypatch.delenv("SOLANDER_SKIP_SANDBOX_CHECK", raising=False)
+    profile = tmp_path / "solander-profile"
+    profile.write_text("profile solander ...")
     monkeypatch.setattr(cli, "PROFILE_PATH", str(profile))
     monkeypatch.setattr(cli, "current_label", lambda: "unconfined")
     message = cli.check_sandbox()
@@ -46,17 +46,17 @@ def test_installed_but_unattached_profile_names_the_shebang_trap(tmp_path, monke
 
 def test_attached_profile_with_blocked_bwrap_gets_the_full_help(tmp_path, monkeypatch):
     fake_bwrap(tmp_path, 1, monkeypatch)
-    monkeypatch.delenv("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", raising=False)
-    profile = tmp_path / "obsidian-reader-profile"
-    profile.write_text("profile obsidian-reader ...")
+    monkeypatch.delenv("SOLANDER_SKIP_SANDBOX_CHECK", raising=False)
+    profile = tmp_path / "solander-profile"
+    profile.write_text("profile solander ...")
     monkeypatch.setattr(cli, "PROFILE_PATH", str(profile))
-    monkeypatch.setattr(cli, "current_label", lambda: "obsidian-reader (unconfined)")
+    monkeypatch.setattr(cli, "current_label", lambda: "solander (unconfined)")
     assert "user namespaces" in cli.check_sandbox()
 
 
 def test_skip_variable_bypasses_the_check(tmp_path, monkeypatch):
     fake_bwrap(tmp_path, 1, monkeypatch)
-    monkeypatch.setenv("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", "1")
+    monkeypatch.setenv("SOLANDER_SKIP_SANDBOX_CHECK", "1")
     assert cli.check_sandbox() == ""
 
 
@@ -73,8 +73,8 @@ def test_profile_names_the_running_interpreter():
 
 
 def test_setup_command_is_one_pasteable_block():
-    from obsidian_reader.cli import PROFILE_PATH, rendered_profile
-    from obsidian_reader.gui.setup import setup_command
+    from solander.cli import PROFILE_PATH, rendered_profile
+    from solander.gui.setup import setup_command
 
     command = setup_command(rendered_profile(), PROFILE_PATH)
     assert command.startswith(f"sudo tee {PROFILE_PATH}")
@@ -83,8 +83,8 @@ def test_setup_command_is_one_pasteable_block():
 
 
 def test_force_setup_variable_trips_the_preflight(monkeypatch):
-    from obsidian_reader import cli
+    from solander import cli
 
-    monkeypatch.setenv("OBSIDIAN_READER_FORCE_SETUP", "1")
-    monkeypatch.delenv("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", raising=False)
+    monkeypatch.setenv("SOLANDER_FORCE_SETUP", "1")
+    monkeypatch.delenv("SOLANDER_SKIP_SANDBOX_CHECK", raising=False)
     assert cli.check_sandbox() != ""

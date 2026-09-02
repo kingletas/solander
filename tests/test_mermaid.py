@@ -2,8 +2,8 @@
 
 import pytest
 
-from obsidian_reader.core.mermaid import MermaidError, MermaidUnsupported, render_mermaid
-from obsidian_reader.core.sanitize import sanitize
+from solander.core.mermaid import MermaidError, MermaidUnsupported, render_mermaid
+from solander.core.sanitize import sanitize
 
 FLOW = """flowchart LR
     A[Claude Write / Edit] --> B[file lands on disk]

@@ -3,10 +3,10 @@
 import hashlib
 from pathlib import Path
 
-from obsidian_reader.core.indexing import sync_indexes
-from obsidian_reader.core.render import NoteRenderer
-from obsidian_reader.core.store import IndexStore
-from obsidian_reader.core.vault import Vault
+from solander.core.indexing import sync_indexes
+from solander.core.render import NoteRenderer
+from solander.core.store import IndexStore
+from solander.core.vault import Vault
 
 
 def tree_digest(root: Path) -> dict[str, str]:

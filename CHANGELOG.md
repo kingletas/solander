@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0 — 2026-09-02
+
+**Obsidian Reader is now Solander.**
+
+A solander is the clamshell box an archive keeps its documents in — which is the job: present the record, and leave it exactly as it was found. The old name described the first version of the app and had stopped describing this one, and it borrowed a trademark it has no claim to. Obsidian compatibility is unchanged and total; it is now a property rather than the product's name.
+
+- **New identity**: the app is `Solander`, the command is `solander`, the app id is `com.kingletas.Solander`, and the Python package is `solander`. The desktop entry keeps `GenericName=Markdown Reader` and `Keywords=…obsidian…`, so searching your applications for "obsidian" or "reader" still finds it.
+- **Your state comes with you.** The first launch adopts `~/.config/obsidian-reader` and `~/.cache/obsidian-reader` under the new names — recent vaults, theme, pinned notes, book progress and every vault's index — so the rename is not a reset. Adoption only happens when the new directory does not exist yet, so it can never overwrite live state.
+- **Environment overrides renamed** to match: `SOLANDER_HOME`, `SOLANDER_SKIP_SANDBOX_CHECK`, `SOLANDER_FORCE_SETUP`. The `READER_MAX_*` bounds keep their names.
+- **The AppArmor profile is now `/etc/apparmor.d/solander`.** It names the interpreter by path, so moving the checkout requires reinstalling it — `solander` prints the profile rendered for your installation, and the old `/etc/apparmor.d/obsidian-reader` can be deleted.
+- Nothing about the reading surface changed: same fourteen themes, same mark, same renderers.
+
 ## 1.14.0 — 2026-09-02
 
 Blood Record became a family of thirteen.
@@ -224,7 +236,7 @@ The live layer: the reader now tracks the vault while it is open, and remembers 
 
 ## 0.2.1 — 2026-09-01
 
-- On stock Ubuntu 24.04+ the app could not start from a normal terminal: the kernel's unprivileged-user-namespace restriction blocks WebKit's bubblewrap sandbox (`bwrap: setting up uid map: Permission denied`). The launcher now preflights this before WebKit crashes and prints the fix — a rendered AppArmor profile granting `userns` to this app's interpreter alone, kept narrow by `make install` giving the venv a private interpreter copy. `OBSIDIAN_READER_SKIP_SANDBOX_CHECK=1` bypasses the check.
+- On stock Ubuntu 24.04+ the app could not start from a normal terminal: the kernel's unprivileged-user-namespace restriction blocks WebKit's bubblewrap sandbox (`bwrap: setting up uid map: Permission denied`). The launcher now preflights this before WebKit crashes and prints the fix — a rendered AppArmor profile granting `userns` to this app's interpreter alone, kept narrow by `make install` giving the venv a private interpreter copy. `SOLANDER_SKIP_SANDBOX_CHECK=1` bypasses the check.
 - The sandbox stays on: WebKitGTK 2.52 ignores the old sandbox-disable variables, so the profile is the supported path, and it is the same mechanism Ubuntu ships for browsers.
 
 ## 0.2.0 — 2026-09-01

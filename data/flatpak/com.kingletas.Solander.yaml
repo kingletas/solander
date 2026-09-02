@@ -1,12 +1,12 @@
 # Flatpak manifest -- a starting point, not yet built or verified.
-# Build with: flatpak-builder --user --install build data/flatpak/com.kingletas.ObsidianReader.yaml
+# Build with: flatpak-builder --user --install build data/flatpak/com.kingletas.Solander.yaml
 # The python module sources need pinned sha256 hashes before a real build;
 # generate them with flatpak-pip-generator markdown-it-py mdit-py-plugins linkify-it-py pygments pyyaml latex2mathml
-app-id: com.kingletas.ObsidianReader
+app-id: com.kingletas.Solander
 runtime: org.gnome.Platform
 runtime-version: "46"
 sdk: org.gnome.Sdk
-command: obsidian-reader
+command: solander
 finish-args:
   # Read-only access to the host filesystem so vaults open in place; no network at all.
   - --filesystem=host:ro
@@ -14,14 +14,14 @@ finish-args:
   - --socket=fallback-x11
   - --device=dri
 modules:
-  - name: obsidian-reader
+  - name: solander
     buildsystem: simple
     build-commands:
       - pip3 install --no-index --find-links=deps --prefix=/app markdown-it-py mdit-py-plugins linkify-it-py pygments pyyaml latex2mathml
       - pip3 install --no-index --no-deps --prefix=/app .
-      - install -Dm644 data/com.kingletas.ObsidianReader.desktop /app/share/applications/com.kingletas.ObsidianReader.desktop
-      - install -Dm644 data/com.kingletas.ObsidianReader.metainfo.xml /app/share/metainfo/com.kingletas.ObsidianReader.metainfo.xml
-      - install -Dm644 data/com.kingletas.ObsidianReader.svg /app/share/icons/hicolor/scalable/apps/com.kingletas.ObsidianReader.svg
+      - install -Dm644 data/com.kingletas.Solander.desktop /app/share/applications/com.kingletas.Solander.desktop
+      - install -Dm644 data/com.kingletas.Solander.metainfo.xml /app/share/metainfo/com.kingletas.Solander.metainfo.xml
+      - install -Dm644 data/com.kingletas.Solander.svg /app/share/icons/hicolor/scalable/apps/com.kingletas.Solander.svg
     sources:
       - type: dir
         path: ../..

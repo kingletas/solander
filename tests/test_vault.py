@@ -1,6 +1,6 @@
 """The vault model: indexing, containment, encoding fallback, config reading."""
 
-from obsidian_reader.core.vault import Vault, file_kind
+from solander.core.vault import Vault, file_kind
 
 
 def test_indexes_notes_and_skips_dot_directories(vault):
@@ -52,7 +52,7 @@ def test_invalid_utf8_degrades_to_lossy_text(vault):
 
 
 def test_oversized_note_is_refused_with_a_named_error(vault, monkeypatch):
-    monkeypatch.setattr("obsidian_reader.core.vault.MAX_NOTE_BYTES", 10)
+    monkeypatch.setattr("solander.core.vault.MAX_NOTE_BYTES", 10)
     note = vault.read_note("Index.md")
     assert "too large" in note.error
 
@@ -69,7 +69,7 @@ def test_file_kind_classification():
 def test_ignore_filters_read_from_app_json(vault_dir):
     import json
 
-    from obsidian_reader.core.vault import Vault, hidden_under
+    from solander.core.vault import Vault, hidden_under
 
     config = {"userIgnoreFilters": ["Projects/", "99 Archive/", ".hidden/", "", 42]}
     (vault_dir / ".obsidian" / "app.json").write_text(json.dumps(config))

@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Name=Obsidian Reader
+Name=Solander
 GenericName=Markdown Reader
-Comment=Read Obsidian vaults in place, without ever writing into them
+Comment=Read your Markdown vault in place, without ever writing into it
 Exec=@LAUNCHER@ %f
-Icon=com.kingletas.ObsidianReader
+Icon=com.kingletas.Solander
 Terminal=false
 Categories=Office;Viewer;GNOME;GTK;
 MimeType=text/markdown;inode/directory;

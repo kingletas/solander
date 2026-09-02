@@ -10,7 +10,7 @@ gi.require_version("Adw", "1")
 gi.require_version("WebKit", "6.0")
 from gi.repository import Gio, GLib
 
-from obsidian_reader.gui.app import ReaderApplication
+from solander.gui.app import ReaderApplication
 
 failures: list[str] = []
 checks_run: list[str] = []
@@ -37,7 +37,7 @@ def run_checks(app):
         check("wikilink rendered", "reader:///note/" in rendered.body)
     hits = []
     if window.vault is not None:
-        from obsidian_reader.core.search import search_filenames
+        from solander.core.search import search_filenames
 
         hits = search_filenames(window.vault, "second")
     check("filename search finds the note", any("Second" in h.path for h in hits))
@@ -207,7 +207,7 @@ def run_checks(app):
             check("mind map renders the note structure", "<svg" in mindmap and ">A<" in mindmap)
             back = "reader:///note/A.md" in mindmap and "Back to A" in mindmap
             check("mind map offers the way back", back)
-            from obsidian_reader.core.search import search_filenames
+            from solander.core.search import search_filenames
 
             names = [node.rel for node in window.tree._list_directory("")]
             check("tree lists the soon-hidden folder", "Sub" in names)
@@ -240,7 +240,7 @@ def run_checks(app):
         GLib.timeout_add(5200, check_live)
 
     def check_retrieval():
-        from obsidian_reader.core.search import search_filenames
+        from solander.core.search import search_filenames
 
         fuzzy_hits = search_filenames(window.vault, "scnt")
         check("fuzzy quick-open matches a subsequence", fuzzy_hits[0].path == "Second Note.md")
@@ -411,7 +411,7 @@ def run_checks(app):
     def check_pdf_preview():
         import cairo
 
-        from obsidian_reader.gui.pdfview import PdfWindow, poppler_available
+        from solander.gui.pdfview import PdfWindow, poppler_available
 
         check("poppler bindings are available", poppler_available())
         pdf_path = vault_path / "doc.pdf"
@@ -602,9 +602,9 @@ def check_setup_window() -> None:
     import subprocess
     import time
 
-    env = dict(os.environ, OBSIDIAN_READER_FORCE_SETUP="1")
+    env = dict(os.environ, SOLANDER_FORCE_SETUP="1")
     process = subprocess.Popen(
-        [sys.executable, "-m", "obsidian_reader.cli"],
+        [sys.executable, "-m", "solander.cli"],
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

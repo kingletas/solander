@@ -1,6 +1,6 @@
 """The fuzzy quick-open matcher: subsequences, ranking, and non-matches."""
 
-from obsidian_reader.core.fuzzy import fuzzy_filenames, fuzzy_match
+from solander.core.fuzzy import fuzzy_filenames, fuzzy_match
 
 PATHS = [
     "Projects/Alpha.md",

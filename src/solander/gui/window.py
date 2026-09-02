@@ -27,7 +27,7 @@ from ..core.indexing import sync_indexes
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
 from ..core.resolver import resolve_note
 from ..core.search import VaultSearch, parse_query, search_filenames
-from ..core.session import SessionStore
+from ..core.session import SessionStore, adopt_former_state
 from ..core.store import open_index_store
 from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
 from ..core.vault import Vault, file_kind, hidden_under
@@ -352,7 +352,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         display = Gdk.Display.get_default()
         if display is None:
             return
-        icon_dir = resources.files("obsidian_reader.assets").joinpath("icons")
+        icon_dir = resources.files("solander.assets").joinpath("icons")
         Gtk.IconTheme.get_for_display(display).add_search_path(str(icon_dir))
 
     # -- sidebar panels ----------------------------------------------------
@@ -1083,7 +1083,7 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _cache_path(self, root: Path) -> Path:
         """One index file per vault, in the app's own cache dir — never the vault."""
         base = os.environ.get("XDG_CACHE_HOME", "") or str(Path.home() / ".cache")
-        directory = Path(base) / "obsidian-reader"
+        directory = adopt_former_state(Path(base) / "solander")
         directory.mkdir(parents=True, exist_ok=True)
         digest = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:16]
         return directory / f"index-{digest}.db"
@@ -1650,7 +1650,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         """The shipped documentation folder: packaged copy first, repo layout second."""
         from importlib import resources
 
-        packaged = resources.files("obsidian_reader").joinpath("docs")
+        packaged = resources.files("solander").joinpath("docs")
         try:
             if packaged.joinpath("user-guide.md").is_file():
                 return Path(str(packaged))
@@ -1702,7 +1702,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         from importlib import resources
 
         try:
-            svg = resources.files("obsidian_reader.assets").joinpath("icons/mark.svg")
+            svg = resources.files("solander.assets").joinpath("icons/mark.svg")
             markup = svg.read_text("utf-8")
         except OSError:
             return ""

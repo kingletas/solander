@@ -2,10 +2,10 @@
 
 import re
 
-from obsidian_reader.core.palettes import PALETTES, contrast_ratio, mix, readable
-from obsidian_reader.core.render import _asset_css, build_page
-from obsidian_reader.core.session import SessionState
-from obsidian_reader.core.themes import (
+from solander.core.palettes import PALETTES, contrast_ratio, mix, readable
+from solander.core.render import _asset_css, build_page
+from solander.core.session import SessionState
+from solander.core.themes import (
     DEFAULT_THEME,
     THEMES,
     page_id,

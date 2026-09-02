@@ -1,6 +1,6 @@
 """The link graph: backlinks with context, outgoing links, and the tag map."""
 
-from obsidian_reader.core.graph import VaultGraph, local_neighbors, scan_note
+from solander.core.graph import VaultGraph, local_neighbors, scan_note
 
 
 def test_backlinks_point_at_the_linking_note(vault):
@@ -71,7 +71,7 @@ def test_media_embeds_stay_out_of_the_graph(vault):
 
 
 def test_mentions_per_target_are_capped(vault, vault_dir, monkeypatch):
-    import obsidian_reader.core.graph as graph_module
+    import solander.core.graph as graph_module
 
     monkeypatch.setattr(graph_module, "MAX_MENTIONS_PER_TARGET", 5)
     (vault_dir / "Spam.md").write_text("[[Projects/Alpha]] " * 50)

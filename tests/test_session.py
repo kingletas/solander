@@ -1,6 +1,6 @@
 """Session persistence lives outside the vault and survives corruption."""
 
-from obsidian_reader.core.session import SessionStore
+from solander.core.session import SessionStore
 
 
 def test_state_round_trips(tmp_path):
@@ -61,3 +61,25 @@ def test_quick_section_expansion_persists(tmp_path):
     store.save()
     assert SessionStore(tmp_path / "conf").state.quick_expanded is False
 
+
+
+def test_state_from_the_former_name_is_adopted_rather_than_left_behind(tmp_path):
+    """A rename that abandons the old directory is indistinguishable from a reset."""
+    former = tmp_path / "obsidian-reader"
+    former.mkdir()
+    (former / "session.json").write_text('{"last_vault": "/kept"}')
+    store = SessionStore(tmp_path / "solander")
+    assert store.state.last_vault == "/kept"
+    assert not former.exists()
+
+
+def test_adoption_never_overwrites_state_that_already_exists(tmp_path):
+    former = tmp_path / "obsidian-reader"
+    former.mkdir()
+    (former / "session.json").write_text('{"last_vault": "/old"}')
+    current = tmp_path / "solander"
+    current.mkdir()
+    (current / "session.json").write_text('{"last_vault": "/current"}')
+    store = SessionStore(current)
+    assert store.state.last_vault == "/current"
+    assert former.is_dir()

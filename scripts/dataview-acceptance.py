@@ -11,12 +11,12 @@ import time
 from collections import Counter
 from pathlib import Path
 
-from obsidian_reader.core.dataview import DataviewEngine
-from obsidian_reader.core.dql import DqlError
-from obsidian_reader.core.graph import VaultGraph
-from obsidian_reader.core.indexing import sync_indexes
-from obsidian_reader.core.store import IndexStore
-from obsidian_reader.core.vault import Vault
+from solander.core.dataview import DataviewEngine
+from solander.core.dql import DqlError
+from solander.core.graph import VaultGraph
+from solander.core.indexing import sync_indexes
+from solander.core.store import IndexStore
+from solander.core.vault import Vault
 
 FENCE = re.compile(r"```dataview\n(.*?)```", re.DOTALL)
 INLINE = re.compile(r"`= ([^`]+)`")

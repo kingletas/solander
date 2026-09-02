@@ -1,6 +1,6 @@
 """The full rendering pipeline against the fixture vault."""
 
-from obsidian_reader.core.render import NoteRenderer, build_message_page, build_source_page
+from solander.core.render import NoteRenderer, build_message_page, build_source_page
 
 
 def rendered(vault, rel="Index.md"):
@@ -87,7 +87,7 @@ def test_cyclic_embed_is_stopped(vault):
 
 
 def test_embed_amplification_is_capped(vault, monkeypatch):
-    monkeypatch.setattr("obsidian_reader.core.render.MAX_EMBEDS_PER_PAGE", 10)
+    monkeypatch.setattr("solander.core.render.MAX_EMBEDS_PER_PAGE", 10)
     (vault.root / "Leaf.md").write_text("leaf text\n")
     (vault.root / "Mid.md").write_text("![[Leaf]]\n\n" * 8)
     (vault.root / "Top.md").write_text("![[Mid]]\n\n" * 8)
@@ -109,7 +109,7 @@ def test_dataview_without_a_graph_degrades_to_inert_source(vault):
 
 
 def test_dataview_with_a_graph_renders_a_table(vault):
-    from obsidian_reader.core.graph import VaultGraph
+    from solander.core.graph import VaultGraph
 
     graph = VaultGraph.build(vault)
     renderer = NoteRenderer(vault, graph_provider=lambda: graph)
@@ -270,7 +270,7 @@ def test_meta_line_counts_words_and_links_tags(vault):
 
 
 def test_backlinks_footer_lists_linked_mentions(vault):
-    from obsidian_reader.core.graph import VaultGraph
+    from solander.core.graph import VaultGraph
 
     graph = VaultGraph.build(vault)
     renderer = NoteRenderer(vault, graph_provider=lambda: graph)
@@ -282,7 +282,7 @@ def test_backlinks_footer_lists_linked_mentions(vault):
 
 
 def test_note_context_elements_honor_their_toggles(vault):
-    from obsidian_reader.core.graph import VaultGraph
+    from solander.core.graph import VaultGraph
 
     graph = VaultGraph.build(vault)
     options = {"breadcrumb": False, "meta": False, "backlinks": False}

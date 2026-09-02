@@ -7,15 +7,15 @@ import pytest
 
 
 def test_packaged_mark_matches_the_desktop_icon():
-    packaged = resources.files("obsidian_reader.assets").joinpath("icons/mark.svg")
-    repo_icon = Path(__file__).resolve().parents[1] / "data/com.kingletas.ObsidianReader.svg"
+    packaged = resources.files("solander.assets").joinpath("icons/mark.svg")
+    repo_icon = Path(__file__).resolve().parents[1] / "data/com.kingletas.Solander.svg"
     if not repo_icon.is_file():
         pytest.skip("repo data/ layout not present in this installation")
     assert packaged.read_text("utf-8") == repo_icon.read_text("utf-8")
 
 
 def mark_markup() -> str:
-    return resources.files("obsidian_reader.assets").joinpath("icons/mark.svg").read_text("utf-8")
+    return resources.files("solander.assets").joinpath("icons/mark.svg").read_text("utf-8")
 
 
 def test_the_mark_is_one_self_contained_symbol():
@@ -34,7 +34,7 @@ def test_the_mark_can_wear_any_theme():
     for part in ("mark-board", "mark-face", "mark-seal"):
         assert f'class="{part}"' in markup
     blood = (
-        resources.files("obsidian_reader.assets")
+        resources.files("solander.assets")
         .joinpath("theme-archive.css")
         .read_text("utf-8")
     )

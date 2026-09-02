@@ -1,6 +1,6 @@
 """Wikilink parsing, slugs, and name normalization."""
 
-from obsidian_reader.core.links import normalize_name, parse_embed, parse_wikilink, slugify
+from solander.core.links import normalize_name, parse_embed, parse_wikilink, slugify
 
 
 def test_parses_a_plain_target():

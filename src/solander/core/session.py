@@ -2,17 +2,37 @@
 
 import json
 import os
+from contextlib import suppress
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 MAX_RECENTS = 10
 MAX_RECENT_NOTES = 20
 
+FORMER_NAME = "obsidian-reader"
+"""The app was released under this name; its state directories are still adopted."""
+
+
+def adopt_former_state(directory: Path) -> Path:
+    """Takes over the directory the app used under its former name, once.
+
+    A rename that leaves the old state behind is indistinguishable from a reset:
+    the recent vaults, the theme, pinned notes, book progress and every vault's
+    index all appear to have been lost. The move happens only when the new
+    directory does not exist yet, so it can never overwrite live state.
+    """
+    former = directory.parent / FORMER_NAME
+    if directory.exists() or not former.is_dir():
+        return directory
+    with suppress(OSError):
+        former.rename(directory)
+    return directory
+
 
 def default_state_dir() -> Path:
     """Returns the XDG config directory the reader owns; never a path inside a vault."""
     base = os.environ.get("XDG_CONFIG_HOME", "") or str(Path.home() / ".config")
-    return Path(base) / "obsidian-reader"
+    return Path(base) / "solander"
 
 
 @dataclass
@@ -53,7 +73,7 @@ class SessionStore:
     """Loads and saves session state as one JSON file in the app's own directory."""
 
     def __init__(self, directory: Path | None = None):
-        self.directory = directory or default_state_dir()
+        self.directory = adopt_former_state(directory or default_state_dir())
         self.path = self.directory / "session.json"
         self.state = self._load()
 

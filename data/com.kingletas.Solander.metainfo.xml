@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.kingletas.ObsidianReader</id>
+  <id>com.kingletas.Solander</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
-  <name>Obsidian Reader</name>
-  <summary>Read Obsidian vaults in place, without ever writing into them</summary>
+  <name>Solander</name>
+  <summary>Read your Markdown vault in place, without ever writing into it</summary>
   <description>
     <p>
-      A read-only Markdown reader that opens an existing Obsidian vault straight from
-      disk and renders the Obsidian Markdown that matters for reading: wikilinks,
-      embeds, callouts, frontmatter, tags, highlights, and more.
+      A reading application that opens a folder of Markdown straight from disk and
+      renders it as itself, fluent in Obsidian's dialect: wikilinks, embeds, callouts,
+      frontmatter, tags, highlights, canvases, kanban boards and Dataview queries.
     </p>
     <p>
       Nothing is ever written into the vault, no plugin or script ever executes, and
-      the network is never touched. It is a dependable fallback reader for when
-      Obsidian is closed, not installed, or not safe to run against a vault you only
-      want to inspect.
+      the network is never touched. A solander is the clamshell box an archive keeps
+      its documents in: the job is to present the record and leave it exactly as it
+      was found.
     </p>
   </description>
-  <launchable type="desktop-id">com.kingletas.ObsidianReader.desktop</launchable>
+  <launchable type="desktop-id">com.kingletas.Solander.desktop</launchable>
   <developer_name>Luis Tineo</developer_name>
   <content_rating type="oars-1.1"/>
   <supports>
@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.0.0" date="2026-09-02">
+      <description>
+        <p>Obsidian Reader is now Solander. Same application, same Obsidian
+        compatibility; your session and indexes are adopted automatically.</p>
+      </description>
+    </release>
     <release version="1.14.0" date="2026-09-02">
       <description>
         <p>Thirteen dark themes in the Archive family, sharing one design language,

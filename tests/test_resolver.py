@@ -1,6 +1,6 @@
 """Link resolution order, ambiguity refusal, and path-escape handling."""
 
-from obsidian_reader.core.resolver import resolve_attachment, resolve_embed, resolve_note
+from solander.core.resolver import resolve_attachment, resolve_embed, resolve_note
 
 
 def test_relative_path_wins_over_name_match(vault):

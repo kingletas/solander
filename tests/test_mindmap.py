@@ -1,6 +1,6 @@
 """The mind-map builder: tree shape, labels, anchors, and the SVG output."""
 
-from obsidian_reader.core.mindmap import build_tree, mindmap_body
+from solander.core.mindmap import build_tree, mindmap_body
 
 BODY = (
     "# Top\n\n"
@@ -49,7 +49,7 @@ def test_empty_note_gets_a_message():
 
 
 def test_mindmap_page_carries_a_back_link(vault):
-    from obsidian_reader.core.render import NoteRenderer
+    from solander.core.render import NoteRenderer
 
     page = NoteRenderer(vault).render_mindmap("Index.md")
     assert 'href="reader:///note/Index.md">\u25c0 Back to Index</a>' in page

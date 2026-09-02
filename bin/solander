@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#
+# solander -- launch the Solander desktop app from its source tree.
+#
+# Usage:
+#   solander [PATH]        open PATH as a vault or note; no PATH resumes
+#   solander --help        the app's own usage text
+#
+# Environment overrides:
+#   SOLANDER_HOME   source checkout (default: ~/Development/solander)
+#
+# The interpreter is exec'd directly, not through uv or the venv console
+# script: AppArmor attaches the app's sandbox profile by interpreter path,
+# and a #! (shebang) launch does not attach it.
+
+set -euo pipefail
+
+READER_HOME="${SOLANDER_HOME:-$HOME/Development/solander}"
+PYTHON="$READER_HOME/.venv/bin/python3"
+
+if [[ ! -x "$PYTHON" ]]; then
+  echo "solander: no virtualenv at $READER_HOME/.venv -- run 'make install' in $READER_HOME" >&2
+  exit 1
+fi
+
+exec "$PYTHON" -m solander.cli "$@"
