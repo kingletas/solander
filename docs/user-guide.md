@@ -11,14 +11,14 @@ A full-height rail on the left — a deep sepia surface against the reading canv
 | Page | What it holds |
 |---|---|
 | **Files** | A collapsible Pinned & recent section (Note menu → Pin/Unpin Note), then the folder tree under its own label. Single click opens a note or expands a folder; middle-click or `Ctrl+click` opens a note in a new tab; right-click a folder hides it. |
-| **Outline** | The current note's headings as a rail page — the same outline the right panel shows, for when you'd rather have it on the left. |
+| **Outline** | The current note's headings as a rail page. The outline shows on one side at a time: View → Outline Position chooses left or right, `F8` toggles it there, and opening one side closes the other. |
 | **Search** | Quick-open and full-text search (below). |
 | **Links** | For the current note: every note that links to it, each with the line of context around the mention, then its outgoing links with missing and ambiguous targets named. |
 | **Tags** | Every tag in the vault — inline and frontmatter — with counts and a filter box. Activating a tag runs a `tag:` search. |
 | **Bookmarks** | The vault's own `.obsidian/bookmarks.json`, read-only, groups flattened. |
 | **Graph** | The current note's neighborhood: bidirectional links in accent color, backlinks solid, outgoing dimmed. Click a node to open it. |
 
-Every panel has a visible switch: the sidebar toggles from the button at the far left of the header (or `F9`), and the **outline panel** — the current note's headings, docked on the right with its own close button — from the list button on the right (or `F8`). Both remember their state. The header also carries back/forward (WebKit's real history), search, and a quiet lock icon: click it for the read-only reason (the app cannot write by design, not by permission) and the next action — view raw source, open the note in your default editor, or reveal it in Files.
+Every panel has a visible switch: the sidebar toggles from the button at the far left of the header (or `F9`), and the **outline** — the current note's headings — from the list button on the right (or `F8`). It lives on one side at a time: a docked right panel with its own close button, or a rail page on the left, chosen under View → Outline Position. Both toggles remember their state. The header also carries back/forward (WebKit's real history), search, and a quiet lock icon: click it for the read-only reason (the app cannot write by design, not by permission) and the next action — view raw source, open the note in your default editor, or reveal it in Files.
 
 ## Opening things
 

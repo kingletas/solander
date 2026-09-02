@@ -164,6 +164,26 @@ def run_checks(app):
             panel = window.outline_split.get_sidebar()
             dressed = "outline-panel" in panel.get_css_classes()
             check("outline panel wears the canvas dress", dressed)
+            side = window.lookup_action("outline-side")
+            side.change_state(GLib.Variant.new_string("left"))
+            window._set_outline_visible(True)
+            on_left = (
+                window.sidebar_stack.get_visible_child_name() == "outline"
+                and not window.outline_split.get_show_sidebar()
+            )
+            check("outline opens on the left when chosen", on_left)
+            side.change_state(GLib.Variant.new_string("right"))
+            moved = (
+                window.outline_split.get_show_sidebar()
+                and window.sidebar_stack.get_visible_child_name() != "outline"
+            )
+            check("changing the side moves the open outline", moved)
+            window.sidebar_stack.set_visible_child_name("outline")
+            exclusive = not window.outline_split.get_show_sidebar()
+            check("picking the rail page collapses the panel", exclusive)
+            window._set_outline_visible(False)
+            back_home = window.sidebar_stack.get_visible_child_name() == "files"
+            check("closing the outline returns the rail to files", back_home)
             crumb_action = window.lookup_action("show-breadcrumb")
             crumb_action.change_state(GLib.Variant.new_boolean(False))
             plain = window._provide_page("/note/Second Note.md", window.reader.webview)

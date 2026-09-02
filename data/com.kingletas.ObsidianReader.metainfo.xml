@@ -26,6 +26,13 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.8.0" date="2026-09-02">
+      <description>
+        <p>The outline shows on one side at a time — left rail page or right
+        panel, chosen in the View menu — and the rail version gets its own
+        treatment with a heading hierarchy.</p>
+      </description>
+    </release>
     <release version="1.7.0" date="2026-09-02">
       <description>
         <p>Sidebar structure: a collapsible pinned-and-recent section, a

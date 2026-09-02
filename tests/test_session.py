@@ -60,3 +60,10 @@ def test_quick_section_expansion_persists(tmp_path):
     store.state.quick_expanded = False
     store.save()
     assert SessionStore(tmp_path / "conf").state.quick_expanded is False
+
+
+def test_outline_side_persists(tmp_path):
+    store = SessionStore(tmp_path / "conf")
+    store.state.outline_side = "left"
+    store.save()
+    assert SessionStore(tmp_path / "conf").state.outline_side == "left"

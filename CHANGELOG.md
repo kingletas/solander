@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.0 — 2026-09-02
+
+One outline, on the side you choose.
+
+- **The outline never shows in two places.** Opening the right panel switches the rail off its Outline page; picking the rail's Outline page collapses the panel. View → Outline Position chooses which side `F8` and the header button open — Left Sidebar or Right Panel — and changing it moves an open outline across immediately.
+- **The rail outline dresses for the rail.** A gold OUTLINE heading, muted entries with a visible hierarchy — top-level headings bright and semibold, deeper levels dimmer and smaller — and gold on hover, instead of the plain text dump it launched as. The right panel picks up the same level hierarchy in its serif.
+
 ## 1.7.0 — 2026-09-02
 
 Sidebar structure, on request.
