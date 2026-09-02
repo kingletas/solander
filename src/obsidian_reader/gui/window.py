@@ -30,6 +30,7 @@ from ..core.search import VaultSearch, parse_query, search_filenames
 from ..core.session import SessionStore
 from ..core.store import open_index_store
 from ..core.vault import Vault, file_kind, hidden_under
+from .bookpaged import BookPagedView
 from .filetree import VaultTree
 from .localgraph import LocalGraphView
 from .monitor import VaultMonitor
@@ -88,6 +89,11 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._pointer = (0.0, 0.0)
         self.book: dict | None = None
         self._book_css = ""
+        self.paged_view: BookPagedView | None = None
+        self._book_pdfs: dict[str, Path] = {}
+        self._book_tmp: str = ""
+        self._print_after_load: tuple | None = None
+        self._print_operation = None
         self.set_default_size(self.store.state.window_width, self.store.state.window_height)
         self._apply_appearance(self.store.state.appearance)
         self._build_ui()
@@ -1287,14 +1293,29 @@ class ReaderWindow(Adw.ApplicationWindow):
         resume = self.store.state.book_progress.get(folder_rel, "")
         target = resume if resume in self.book["index_of"] else chapters[0]
         self._set_zen(True)
+        if poppler_available():
+            self._enter_paged()
+            self._queue_pagination(target, direction=1, at_end=False)
+            self._toast(f"Reading “{name}” — N and P turn pages, Esc closes the book")
+        else:
+            self._toast(f"Reading “{name}” — N and P turn chapters, Esc closes the book")
         self.reader.load_note(target)
-        self._toast(f"Reading “{name}” — N and P turn chapters, Esc closes the book")
 
     def _end_book(self) -> None:
         if self.book is None:
             return
         self.book = None
         self._book_css = ""
+        self._print_after_load = None
+        if self.paged_view is not None:
+            self.paged_view.set_visible(False)
+            self.paged_view.document = None
+        self._book_pdfs.clear()
+        if self._book_tmp:
+            import shutil
+
+            shutil.rmtree(self._book_tmp, ignore_errors=True)
+            self._book_tmp = ""
         self._reload_all_tabs()
 
     def _compose_book_css(self, first_chapter: str) -> str:
@@ -1327,6 +1348,120 @@ class ReaderWindow(Adw.ApplicationWindow):
             "main.note.book-page { margin: 2.2rem auto 3rem; border-radius: 3px; }"
         )
 
+    def _enter_paged(self) -> None:
+        if self.paged_view is None:
+            self.paged_view = BookPagedView()
+            self.paged_view.connect("turn-chapter", self._on_turn_chapter)
+            self.content_overlay.add_overlay(self.paged_view)
+        desk = "#e8dcc0"
+        match = re.search(r"background:\s*(#[0-9a-fA-F]{3,8})", self._book_css)
+        if match:
+            desk = match.group(1)
+        self.paged_view.set_desk(desk)
+        self.paged_view.set_visible(True)
+        self.paged_view.show_binding(True)
+        self.paged_view.grab_focus()
+
+    def _queue_pagination(self, rel: str, direction: int, at_end: bool) -> None:
+        """Shows a chapter as pages: from cache, or printed once the note loads."""
+        cached = self._book_pdfs.get(rel)
+        if cached is not None and cached.is_file():
+            self._show_paged(rel, cached, direction, at_end)
+            return
+        if self.paged_view is not None:
+            self.paged_view.show_binding(True)
+        self._print_after_load = (rel, direction, at_end)
+
+    def _maybe_print_loaded_chapter(self) -> None:
+        """Called when a page finishes loading; prints it if pagination waits on it."""
+        pending = self._print_after_load
+        if not pending or not self.book:
+            return
+        rel, direction, at_end = pending
+        if self.current_note != rel:
+            return
+        self._print_after_load = None
+        self._print_chapter(rel, direction, at_end)
+
+    def _print_chapter(self, rel: str, direction: int, at_end: bool) -> None:
+        import tempfile
+
+        if not self._book_tmp:
+            self._book_tmp = tempfile.mkdtemp(prefix="reader-book-")
+        target = Path(self._book_tmp) / f"{len(self._book_pdfs):03d}.pdf"
+        area = self.paged_view or self.content_overlay
+        width = max(area.get_width(), 400)
+        height = max(area.get_height(), 300)
+        paper = Gtk.PaperSize.new_custom(
+            "book-page", "Book Page", width * 72 / 96, height * 72 / 96, Gtk.Unit.POINTS
+        )
+        setup = Gtk.PageSetup()
+        setup.set_paper_size(paper)
+        for side in ("top", "bottom", "left", "right"):
+            getattr(setup, f"set_{side}_margin")(0, Gtk.Unit.POINTS)
+        settings = Gtk.PrintSettings()
+        settings.set(Gtk.PRINT_SETTINGS_OUTPUT_URI, Gio.File.new_for_path(str(target)).get_uri())
+        settings.set(Gtk.PRINT_SETTINGS_OUTPUT_FILE_FORMAT, "pdf")
+        settings.set_printer("Print to File")
+        settings.set_paper_size(paper)
+        operation = WebKit.PrintOperation.new(self.reader.webview)
+        operation.set_print_settings(settings)
+        operation.set_page_setup(setup)
+        outcome = {"failed": False}
+
+        def on_failed(_operation, error):
+            outcome["failed"] = True
+            self._toast(f"Could not lay out pages: {error.message}")
+            if self.paged_view is not None:
+                self.paged_view.set_visible(False)
+
+        def on_finished(_operation):
+            self._print_operation = None
+            if outcome["failed"] or not self.book:
+                return
+            self._book_pdfs[rel] = target
+            self._show_paged(rel, target, direction, at_end)
+
+        operation.connect("failed", on_failed)
+        operation.connect("finished", on_finished)
+        self._print_operation = operation
+        operation.print_()
+
+    def _show_paged(self, rel: str, pdf_path: Path, direction: int, at_end: bool) -> None:
+        if self.paged_view is None or not self.book:
+            return
+        index = self.book["index_of"].get(rel, 0)
+        self.paged_view.set_place(f"chapter {index + 1} of {len(self.book['chapters'])}")
+        if not self.paged_view.load(pdf_path, direction=direction, at_end=at_end):
+            self.paged_view.set_visible(False)
+            self._toast("Could not open the printed pages")
+            return
+        self.paged_view.set_visible(True)
+        self.paged_view.grab_focus()
+
+    def _on_turn_chapter(self, _view, delta: int) -> None:
+        """Past a chapter's cover: on to the neighbor, backward landing on its last page."""
+        if not self.book or self.current_note not in self.book["index_of"]:
+            return
+        chapters = self.book["chapters"]
+        index = self.book["index_of"][self.current_note] + delta
+        if index < 0:
+            self._toast("This is the beginning of the book")
+            return
+        if index >= len(chapters):
+            self._toast("This is the end of the book")
+            return
+        rel = chapters[index]
+        self._queue_pagination(rel, direction=delta, at_end=delta < 0)
+        self.reader.load_note(rel)
+
+    def _paged_active(self) -> bool:
+        return (
+            self.paged_view is not None
+            and self.paged_view.get_visible()
+            and self.paged_view.document is not None
+        )
+
     def _open_chapter(self, delta: int) -> None:
         if not self.book or self.current_note not in self.book["index_of"]:
             return
@@ -1337,6 +1472,10 @@ class ReaderWindow(Adw.ApplicationWindow):
             return
         if index >= len(chapters):
             self._toast("This is the last chapter")
+            return
+        if self.paged_view is not None and self.paged_view.get_visible():
+            self._queue_pagination(chapters[index], delta, at_end=False)
+            self.reader.load_note(chapters[index])
             return
         self._turn_page(delta)
         self.reader.load_note(chapters[index])
@@ -1386,6 +1525,21 @@ class ReaderWindow(Adw.ApplicationWindow):
             return False
         from gi.repository import Gdk
 
+        if self._paged_active():
+            forward = (
+                Gdk.KEY_n, Gdk.KEY_N, Gdk.KEY_Right, Gdk.KEY_space,
+                Gdk.KEY_Page_Down, Gdk.KEY_Down,
+            )
+            backward = (
+                Gdk.KEY_p, Gdk.KEY_P, Gdk.KEY_Left, Gdk.KEY_Page_Up, Gdk.KEY_Up,
+            )
+            if keyval in forward:
+                self.paged_view.turn(1)
+                return True
+            if keyval in backward:
+                self.paged_view.turn(-1)
+                return True
+            return False
         if keyval in (Gdk.KEY_n, Gdk.KEY_N):
             self._open_chapter(1)
             return True
@@ -1630,6 +1784,8 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     def _on_load_changed(self, webview, event) -> None:
         if event == WebKit.LoadEvent.FINISHED:
+            if self._print_after_load and self.reader.webview is webview:
+                GLib.timeout_add(120, lambda: (self._maybe_print_loaded_chapter(), False)[1])
             # A note opened from a search result gets its matches highlighted.
             if self._pending_highlight and self.reader.webview is webview:
                 options = WebKit.FindOptions.CASE_INSENSITIVE | WebKit.FindOptions.WRAP_AROUND

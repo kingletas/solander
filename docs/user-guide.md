@@ -84,7 +84,7 @@ Anything outside that surface renders as the original source with a label saying
 
 Right-click a folder of chapters — a manuscript's `Chapters/`, say — and choose **Read as Book**. The reader becomes a lectern: reading mode opens on your last-read chapter, each page is the chapter alone (title, prose, and the way onward — no vault machinery), and turning a chapter slides the old page away like a leaf.
 
-- **Turning pages**: `N` and `P` turn to the next and previous chapter, and every chapter ends with its neighbors by name — *← Chapter Two · 4 of 37 · Chapter Four →*.
+- **Real pages, no scrolling.** Each chapter is laid out into screen-sized pages by WebKit's own print pipeline — exact line breaks, nothing to scroll. `N`/`P`, the arrow keys, Space, and PageUp/Down turn pages; clicking the right side of the page turns forward, the left third turns back. The last page turns into the next chapter, and turning back past a first page lands on the previous chapter's last. A quiet line at the page's foot keeps your place: *chapter 4 of 37 · page 3 of 12*. (Without the Poppler bindings, book mode falls back to chapter-at-a-time with vertical reading.)
 - **The book's own dress**: chapters carrying `cssclasses` take their vault snippet's design — including its `@font-face` fonts, which load from the vault's own `.obsidian/fonts` and nowhere else — and the desk behind the page is tinted from the book's declared paper color. Books without a stylesheet get a built-in book treatment: justified serif, a drop cap, centered chapter titles.
 - **Progress is remembered** per book, in the reader's config. `Esc` closes the book and the vault comes back.
 
@@ -131,7 +131,7 @@ The vault is watched while open: creations, edits, deletions, and renames re-ind
 | Middle-click or `Ctrl+click` | Open note or link in a new tab |
 | `Ctrl+M` | Toggle the mind map |
 | `F11` / `Esc` | Reading mode in / out |
-| `N` / `P` | Next / previous chapter (book mode) |
+| `N` / `P`, arrows, Space | Turn the page (book mode) |
 | `F8` | Toggle the outline panel |
 | `F9` | Toggle the sidebar |
 | `Ctrl+R` | Reload |

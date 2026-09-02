@@ -283,39 +283,88 @@ def run_checks(app):
 
     def start_book():
         window._start_book("Book")
+        wait_paged(0, check_book_open, "book pages are printed and shown")
 
-        def check_book_open():
-            check("book mode enters reading mode", getattr(window, "_zen", False))
-            check("book opens at the first chapter", window.current_note == "Book/01 One.md")
-            page = window._provide_page("/note/Book/01 One.md", window.reader.webview)
-            navigated = 'class="book-nav"' in page and "1 of 3" in page
-            check("chapter page carries the book nav", navigated)
-            check("book page drops the vault machinery", 'class="crumbs"' not in page)
-            titled = window._provide_page("/note/Book/02 Two.md", window.reader.webview)
-            check("frontmatter title names the chapter", ">The Middle Way</h1>" in titled)
-            window._open_chapter(1)
-            GLib.timeout_add(1400, check_book_turn)
+    def wait_paged(tries, then, label):
+        if window._paged_active():
+            then()
             return False
+        if tries > 18:
+            check(label, False)
+            finish_book()
+            return False
+        GLib.timeout_add(700, wait_paged, tries + 1, then, label)
+        return False
 
-        def check_book_turn():
-            check("N turns to the next chapter", window.current_note == "Book/02 Two.md")
+    book_state = {}
+
+    def check_book_open():
+        check("book pages are printed and shown", True)
+        check("book mode enters reading mode", getattr(window, "_zen", False))
+        check("book opens at the first chapter", window.current_note == "Book/01 One.md")
+        check("the chapter prints to multiple pages", window.paged_view.count > 1)
+        book_state["one_pages"] = window.paged_view.count
+        page = window._provide_page("/note/Book/01 One.md", window.reader.webview)
+        navigated = 'class="book-nav"' in page and "1 of 3" in page
+        check("chapter page carries the book nav", navigated)
+        check("book page drops the vault machinery", 'class="crumbs"' not in page)
+        titled = window._provide_page("/note/Book/02 Two.md", window.reader.webview)
+        check("frontmatter title names the chapter", ">The Middle Way</h1>" in titled)
+        window.paged_view.turn(1)
+        page_turned = window.paged_view.index == 1 and window.current_note == "Book/01 One.md"
+        check("a turn moves one page, not one chapter", page_turned)
+        window.paged_view.index = window.paged_view.count - 1
+        window.paged_view.turn(1)
+        wait_paged_chapter(0)
+        return False
+
+    def wait_paged_chapter(tries):
+        arrived = (
+            window.current_note == "Book/02 Two.md"
+            and window._paged_active()
+            and window.paged_view.index == 0
+        )
+        if arrived:
+            check("the last page turns into the next chapter", True)
             saved = window.store.state.book_progress.get("Book") == "Book/02 Two.md"
             check("reading progress is remembered", saved)
-            window._on_page_action(None, "book-prev", "")
-            GLib.timeout_add(1400, check_book_back)
+            window.paged_view.turn(-1)
+            wait_paged_back(0)
             return False
-
-        def check_book_back():
-            check("the footer link turns back", window.current_note == "Book/01 One.md")
-            window._set_zen(False)
-            check("closing the book leaves book mode", window.book is None)
-            page = window._provide_page("/note/Book/01 One.md", window.reader.webview)
-            check("outside the book the page is a note again", 'class="book-nav"' not in page)
-            window.reader.load_note("A.md")
-            GLib.timeout_add(1200, lambda: (check_fidelity(), False)[1])
+        if tries > 18:
+            check("the last page turns into the next chapter", False)
+            finish_book()
             return False
+        GLib.timeout_add(700, wait_paged_chapter, tries + 1)
+        return False
 
-        GLib.timeout_add(1600, check_book_open)
+    def wait_paged_back(tries):
+        landed = (
+            window.current_note == "Book/01 One.md"
+            and window._paged_active()
+            and window.paged_view.index == window.paged_view.count - 1
+        )
+        if landed:
+            check("turning back lands on the previous chapter's last page", True)
+            finish_book()
+            return False
+        if tries > 18:
+            check("turning back lands on the previous chapter's last page", False)
+            finish_book()
+            return False
+        GLib.timeout_add(700, wait_paged_back, tries + 1)
+        return False
+
+    def finish_book():
+        window._set_zen(False)
+        check("closing the book leaves book mode", window.book is None)
+        hidden = window.paged_view is None or not window.paged_view.get_visible()
+        check("closing the book puts the pages away", hidden)
+        page = window._provide_page("/note/Book/01 One.md", window.reader.webview)
+        check("outside the book the page is a note again", 'class="book-nav"' not in page)
+        window.reader.load_note("A.md")
+        GLib.timeout_add(1200, lambda: (check_fidelity(), False)[1])
+        return False
 
     def check_fidelity():
         rendered = window.reader.last_render
@@ -486,7 +535,10 @@ def write_extra_fixtures() -> None:
         "# Long\n\n## First\n\ntext\n\n## Second\n\ntext\n\n## Third\n\ntext\n"
     )
     (vault_path / "Book").mkdir(exist_ok=True)
-    (vault_path / "Book" / "01 One.md").write_text("First prose here.\n")
+    (vault_path / "Book" / "01 One.md").write_text(
+        "First prose here.\n\n" + ("A long paragraph of book prose, made to fill "
+        "many printed pages so the paged reader has something to turn. " * 4 + "\n\n") * 120
+    )
     (vault_path / "Book" / "02 Two.md").write_text(
         "---\ntitle: The Middle Way\n---\nSecond prose here.\n"
     )

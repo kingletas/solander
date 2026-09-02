@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.11.0" date="2026-09-02">
+      <description>
+        <p>Book mode turns real pages: chapters are paginated by WebKit's
+        print pipeline and turned page by page — no scrolling at all.</p>
+      </description>
+    </release>
     <release version="1.10.0" date="2026-09-02">
       <description>
         <p>Book mode: read a folder of chapters as a book — page-turn

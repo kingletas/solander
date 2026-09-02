@@ -532,6 +532,16 @@ code.math-source { color: var(--muted); }
   details[open] > summary { list-style: none; }
 }
 
+/* Book pages printed for the paged reader: the page IS the page. */
+@media print {
+  main.note.book-page { max-width: none; margin: 0; padding: 1.6rem 2.4rem; }
+  main.note.book-page .book-nav { display: none; }
+  main.note.book-page, main.note.book-page * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
 /* Dataview results */
 .dataview table { display: table; width: 100%; }
 .dataview-note { color: var(--muted); font-size: 0.85em; margin: 0.4em 0; }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.11.0 — 2026-09-02
+
+Book mode turns pages now, not chapters.
+
+- **Real pagination, no scrolling.** Opening a book prints each chapter through WebKit's own print pipeline at exactly the reading area's size — true page breaks with line integrity, no JavaScript anywhere — and Poppler draws the pages one at a time. `N`/`P`, arrows, Space and PageUp/Down turn pages with the slide animation; clicking the right side of a page turns forward, the left third back.
+- **Chapters roll over at their covers.** The last page turns into the next chapter; turning back past a first page lands on the previous chapter's *last* page. A quiet indicator at the page's foot reads *chapter 4 of 37 · page 3 of 12*.
+- Book pages print their own colors: the chapter's stylesheet background (a manuscript's parchment included) survives into the printed page via print-color-adjust, and the book-nav footer stays out of print — navigation is keys and clicks.
+- Printed chapters are cached for the session, so returning to a chapter is instant; without Poppler, book mode falls back to 1.10.0's chapter-at-a-time behavior.
+
 ## 1.10.0 — 2026-09-02
 
 Book mode: the reader as a lectern for the manuscripts themselves.
