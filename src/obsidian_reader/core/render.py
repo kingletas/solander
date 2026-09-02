@@ -24,6 +24,7 @@ from .frontmatter import split_frontmatter
 from .kanban import kanban_body, parse_kanban
 from .links import WikiLink, slugify
 from .markdown import build_parser, strip_block_comments, strip_html_comments
+from .mermaid import MermaidError, MermaidUnsupported, render_mermaid
 from .mindmap import mindmap_body
 from .resolver import Resolution, resolve_attachment, resolve_embed, resolve_note
 from .sanitize import sanitize
@@ -612,11 +613,13 @@ class NoteRenderer:
                 f"<pre><code>{html.escape(code)}</code></pre></div>"
             )
         if info == "mermaid":
-            return (
-                f'<div class="inert-block"><div class="inert-label">'
-                f"mermaid — diagram not rendered</div>"
-                f"<pre><code>{html.escape(code)}</code></pre></div>"
-            )
+            try:
+                svg = render_mermaid(code)
+            except MermaidUnsupported as error:
+                return _inert_dataview(code, f"mermaid — {error}; shown as source")
+            except MermaidError as error:
+                return _inert_dataview(code, f"mermaid — not drawn: {error}")
+            return f'<div class="mermaid-diagram">{svg}</div>'
         if info:
             try:
                 lexer = get_lexer_by_name(info)

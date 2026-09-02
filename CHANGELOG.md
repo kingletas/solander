@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.0 — 2026-09-02
+
+Mermaid diagrams render — and note content still never executes.
+
+- **Flowcharts, sequence diagrams, and pies draw as static SVG**, laid out by a pure-Python engine: node shapes (rectangles, rounded, stadium, circle, diamond, hexagon, cylinder, subroutine, flag), dotted/thick/bidirectional edges with labels, chained statements, subgraphs with titles, `style`/`classDef`/`:::class` stroke styling, quoted labels spanning lines, `<br/>` line breaks; lifelines, dashed replies, self-messages, notes and loop/alt bands; pie slices with a legend. Measured against this vault: **815 of 833 real blocks render (97.8%)** — the other 18 are gantt/state/timeline/xychart/er, which show as labeled source naming the kind.
+- Layout does the unglamorous work: ranks ignore cycle-closing edges, gaps widen for the labels that cross them, co-located labels stagger, reverse edge pairs bow apart, and labels layer above every line.
+- The sanitizer gained a scoped SVG allowlist (geometry and presentation attributes only, colors and paths pattern-checked); mermaid source is parsed as data and mermaid.js is never involved, so the no-JavaScript promise holds unchanged.
+- `READER_MAX_DIAGRAM_NODES` (400) bounds hostile input like every other renderer.
+
 ## 1.8.1 — 2026-09-02
 
 - **The outline lives in the right panel only.** The sidebar's Outline page shipped with a serious defect, and rather than patching around it the page is removed — along with the Outline Position option and the side-switching it required. `F8` and the header button toggle the right panel, which keeps its close button, its styling, and its memory. A smoke check now asserts the rail carries no outline page.

@@ -170,6 +170,12 @@ def run_checks(app):
             hero = 'class="welcome-name"' in welcome and 'class="action-card"' in welcome
             check("welcome page carries the frontispiece", hero)
             check("welcome hero inlines the app mark", "<svg" in welcome)
+            flow = window._provide_page("/note/Flow.md", window.reader.webview)
+            drew = 'class="mermaid-diagram"' in flow and "start" in flow and "ok?" in flow
+            check("mermaid flowchart renders as static SVG", drew)
+            check("author stroke styling reaches the diagram", 'style="stroke:#080"' in flow)
+            labeled = "gantt diagrams are not supported" in flow
+            check("unsupported mermaid kinds name themselves", labeled)
             railed = "atelier-rail" in window.sidebar_widget.get_css_classes()
             check("the sidebar is the rail surface", railed)
             crowned = window.rail_title.get_label() == window.vault.root.name.upper()
@@ -442,6 +448,11 @@ def write_extra_fixtures() -> None:
     (vault_path / "Sub" / "Inside.md").write_text("# Inside\n")
     (vault_path / "Long.md").write_text(
         "# Long\n\n## First\n\ntext\n\n## Second\n\ntext\n\n## Third\n\ntext\n"
+    )
+    (vault_path / "Flow.md").write_text(
+        "# Flow\n\n```mermaid\nflowchart LR\n  A[start] -->|go| B{ok?}\n"
+        "  B -->|yes| C[done]\n  style C stroke:#080\n```\n\n"
+        "```mermaid\ngantt\n  title X\n```\n"
     )
     (vault_path / "Sprint.md").write_text(
         "---\nkanban-plugin: board\n---\n\n## Todo\n\n- [ ] [[A|card one]]\n\n"

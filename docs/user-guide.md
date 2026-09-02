@@ -66,6 +66,7 @@ CommonMark and GFM (tables, task lists, strikethrough, autolinks), plus the Obsi
 - **Kanban** board notes render as boards: headings become columns, task items become cards (their wikilinks work), done cards dim, and everything after `***` is the archive lane.
 - **Excalidraw** notes render as static SVG at their drawn positions, including the compressed format.
 - **Bases** (`.base`) files render their table views — filters, column order, sort, display names. Plugin view types (TaskNotes and similar) are named as not rendered rather than imitated.
+- **Mermaid diagrams** render as static SVG, drawn by a pure-Python layout engine — flowcharts (shapes, edge labels, subgraphs, `style`/`classDef` stroke styling), sequence diagrams, and pies, which is ~98% of a real vault's blocks. Other diagram kinds (gantt, state, timeline…) show as labeled source naming the kind. Mermaid's own JavaScript renderer is never involved.
 
 ### Dataview
 
@@ -146,6 +147,7 @@ State lives outside every vault: `~/.config/obsidian-reader/` (session, preferen
 | `READER_MAX_CANVAS_NODES` / `READER_MAX_CANVAS_BYTES` | Canvas bounds (1,000 / 5 MB) |
 | `READER_MAX_DRAWING_ELEMENTS` / `READER_MAX_DRAWING_BYTES` | Excalidraw bounds (3,000 / 10 MB) |
 | `READER_MAX_MINDMAP_NODES` | Mind-map nodes (500) |
+| `READER_MAX_DIAGRAM_NODES` | Mermaid flowchart nodes (400) |
 | `READER_MAX_SNIPPET_BYTES` / `READER_MAX_BASE_BYTES` | CSS snippets total (256 KB) and base file size (1 MB) |
 | `OBSIDIAN_READER_SKIP_SANDBOX_CHECK` | Skips the launch preflight (for environments that confine WebKit themselves) |
 
@@ -154,6 +156,7 @@ State lives outside every vault: `~/.config/obsidian-reader/` (session, preferen
 - **A setup window appears instead of the reader, or a terminal launch prints an AppArmor profile** — the one-time sandbox step; see [getting started](getting-started.md#3-first-launch--the-one-time-sandbox-step). If the profile is installed but the app still refuses, it was started around its launcher: a `#!` shebang launch bypasses AppArmor's attachment. Start it from the applications grid or via `obsidian-reader`.
 - **Dataview blocks say "the index is still building"** — the first index of a large vault is running; they render on their own when it finishes.
 - **A Dataview block shows its source with a reason** — that query uses syntax outside the supported surface; the label says which part.
+- **A mermaid block shows its source with a reason** — the diagram kind is outside the supported three (flowchart, sequence, pie), or a line could not be read; the label says which.
 - **A CSS snippet has no visible effect** — snippets written against Obsidian's own interface (sidebars, tabs, editor) target elements that do not exist here; note-content snippets (callouts, checkboxes, `cssclasses`-scoped styling) are the ones that carry over. Declarations using `url()` are removed by the sanitizer regardless.
 - **Search misses a brand-new note** — wait a moment; the debounce is two seconds plus the re-index. `Ctrl+R` forces it.
 - **The index seems wrong** — Clear Index Cache in the menu rebuilds from scratch.

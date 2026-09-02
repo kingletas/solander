@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.9.0" date="2026-09-02">
+      <description>
+        <p>Mermaid flowcharts, sequence diagrams, and pies render as static
+        SVG, drawn in pure Python — no JavaScript involved.</p>
+      </description>
+    </release>
     <release version="1.8.1" date="2026-09-02">
       <description>
         <p>The outline lives in the right panel only; the sidebar page is

@@ -38,6 +38,51 @@ _MATHML_ATTRIBUTES = {
     "mtext": {"mathvariant"},
 }
 
+# SVG as the diagram renderers emit it: geometry and presentation only. Raw HTML
+# in notes is escaped before this pass, so these tags only ever arrive from our
+# own generators; the attribute patterns below are defense in depth.
+SVG_TAGS = {
+    "svg", "g", "rect", "circle", "ellipse", "line", "path", "polygon", "polyline",
+    "text", "tspan", "defs", "marker",
+}
+ALLOWED_TAGS |= SVG_TAGS
+
+_SVG_COMMON = {
+    "class", "fill", "stroke", "stroke-width", "stroke-dasharray", "stroke-linecap",
+    "stroke-linejoin", "opacity", "style",
+}
+_SVG_ATTRIBUTES = {
+    "svg": _SVG_COMMON | {"xmlns", "viewbox", "width", "height", "role"},
+    "g": _SVG_COMMON | {"transform"},
+    "rect": _SVG_COMMON | {"x", "y", "width", "height", "rx", "ry"},
+    "circle": _SVG_COMMON | {"cx", "cy", "r"},
+    "ellipse": _SVG_COMMON | {"cx", "cy", "rx", "ry"},
+    "line": _SVG_COMMON | {"x1", "y1", "x2", "y2", "marker-end", "marker-start"},
+    "path": _SVG_COMMON | {"d", "marker-end", "marker-start"},
+    "polygon": _SVG_COMMON | {"points"},
+    "polyline": _SVG_COMMON | {"points", "marker-end"},
+    "text": _SVG_COMMON | {
+        "x", "y", "text-anchor", "font-size", "font-family", "font-weight",
+        "dominant-baseline",
+    },
+    "tspan": _SVG_COMMON | {"x", "y", "dx", "dy"},
+    "defs": set(),
+    "marker": {
+        "id", "viewbox", "refx", "refy", "markerwidth", "markerheight", "orient",
+        "markerunits",
+    },
+}
+
+_SVG_COLOR = re.compile(r"^(#[0-9a-fA-F]{3,8}|[a-zA-Z-]{1,24})$")
+_SVG_NUMBERS = re.compile(r"^[0-9eE .,\-]{1,4000}$")
+_SVG_PATH = re.compile(r"^[MmLlHhVvCcSsQqTtAaZz0-9eE .,\-]{1,8000}$")
+_SVG_STYLE = re.compile(
+    r"^(stroke|fill|stroke-width)\s*:\s*[#a-zA-Z0-9.]{1,24}"
+    r"(;\s*(stroke|fill|stroke-width)\s*:\s*[#a-zA-Z0-9.]{1,24})*;?$"
+)
+_SVG_MARKER_REF = re.compile(r"^url\(#[A-Za-z0-9_-]{1,64}\)$")
+_SVG_TRANSFORM = re.compile(r"^[a-z]+\([0-9eE .,\-]{1,200}\)( [a-z]+\([0-9eE .,\-]{1,200}\))*$")
+
 VOID_TAGS = {"br", "hr", "img", "input", "source"}
 
 # Content inside these is dangerous even as text-adjacent markup and is removed whole.
@@ -73,6 +118,7 @@ ALLOWED_ATTRIBUTES = {
     "aside": {"class"},
 }
 ALLOWED_ATTRIBUTES.update(_MATHML_ATTRIBUTES)
+ALLOWED_ATTRIBUTES.update(_SVG_ATTRIBUTES)
 
 # Internal pages, vault assets, and browser-bound links; nothing else survives.
 ALLOWED_LINK_SCHEMES = ("reader:", "vault:", "http:", "https:", "mailto:")
@@ -105,12 +151,18 @@ class _Sanitizer(HTMLParser):
 
     def _filter_attributes(self, tag: str, attrs: list) -> str:
         allowed = ALLOWED_ATTRIBUTES.get(tag, set())
+        svg = tag in SVG_TAGS
         pieces = []
         for name, value in attrs:
             name = name.casefold()
             if name not in allowed:
                 continue
             value = value or ""
+            if svg:
+                if not self._svg_value_ok(name, value):
+                    continue
+                pieces.append(f' {name}="{html.escape(value, quote=True)}"')
+                continue
             if name in ("href",):
                 value = _safe_url(value, ALLOWED_LINK_SCHEMES)
                 if not value:
@@ -134,6 +186,28 @@ class _Sanitizer(HTMLParser):
             else:
                 pieces.append(f' {name}="{html.escape(value, quote=True)}"')
         return "".join(pieces)
+
+    @staticmethod
+    def _svg_value_ok(name: str, value: str) -> bool:
+        """Per-attribute value patterns for the SVG the diagram renderers emit."""
+        if name in ("fill", "stroke"):
+            return bool(_SVG_COLOR.match(value))
+        if name == "style":
+            return bool(_SVG_STYLE.match(value))
+        if name == "d":
+            return bool(_SVG_PATH.match(value))
+        if name in ("marker-end", "marker-start"):
+            return bool(_SVG_MARKER_REF.match(value))
+        if name == "transform":
+            return bool(_SVG_TRANSFORM.match(value))
+        if name == "xmlns":
+            return value == "http://www.w3.org/2000/svg"
+        if name in (
+            "class", "id", "role", "text-anchor", "dominant-baseline", "font-family",
+            "font-weight", "stroke-linecap", "stroke-linejoin", "orient", "markerunits",
+        ):
+            return bool(re.match(r"^[A-Za-z0-9 _,#()/-]{1,120}$", value))
+        return bool(_SVG_NUMBERS.match(value))
 
     def handle_starttag(self, tag: str, attrs: list) -> None:
         if self.suppressed:
