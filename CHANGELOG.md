@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.1 — 2026-09-02
+
+- **The outline panel matches the interface now.** It sits on a warm card surface in the canvas family, its label in the identity's gold, its entries in muted serif that answer in lapis on hover — instead of the stock widget styling it launched with.
+
 ## 1.6.0 — 2026-09-02
 
 The two-surface release: depth instead of tint.

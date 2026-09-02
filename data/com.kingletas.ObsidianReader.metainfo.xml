@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.6.1" date="2026-09-02">
+      <description>
+        <p>The outline panel joins the visual identity: a warm card surface,
+        gold label, and serif entries.</p>
+      </description>
+    </release>
     <release version="1.6.0" date="2026-09-02">
       <description>
         <p>Two surfaces instead of one tint: a full-height sepia rail beside

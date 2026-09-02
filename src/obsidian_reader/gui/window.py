@@ -685,6 +685,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.outline_list.connect("row-activated", self._on_outline_row)
 
         panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        panel.add_css_class("outline-panel")
         panel.append(head)
         panel.append(Gtk.ScrolledWindow(child=self.outline_list, vexpand=True))
         return panel
@@ -726,6 +727,7 @@ class ReaderWindow(Adw.ApplicationWindow):
     @define-color rail_fg #d8d0c0;
     @define-color rail_muted #97907f;
     @define-color rail_accent #d0a44e;
+    @define-color canvas_muted #6f6455;
     """
 
     _CHROME_DARK = """
@@ -748,6 +750,7 @@ class ReaderWindow(Adw.ApplicationWindow):
     @define-color rail_fg #cfc7b6;
     @define-color rail_muted #857d6d;
     @define-color rail_accent #d0a44e;
+    @define-color canvas_muted #a29882;
     """
 
     _CHROME_STRUCTURE = """
@@ -803,6 +806,30 @@ class ReaderWindow(Adw.ApplicationWindow):
         color: @rail_accent;
         background: alpha(@rail_accent, 0.14);
     }
+
+    /* The outline panel dresses in the canvas family: a warm card surface,
+       the gold small-caps label, muted serif entries that answer in lapis. */
+    .outline-panel { background: @card_bg_color; }
+    .outline-panel .panel-heading { color: @rail_accent; letter-spacing: 0.14em; }
+    .outline-panel scrolledwindow, .outline-panel viewport,
+    .outline-panel list { background: transparent; }
+    .outline-panel row {
+        border-radius: 6px;
+        margin-left: 6px;
+        margin-right: 6px;
+        color: @canvas_muted;
+    }
+    .outline-panel row label {
+        font-family: "Noto Serif", "Liberation Serif", Georgia, serif;
+        font-size: 0.92em;
+    }
+    .outline-panel row:hover { background: alpha(currentColor, 0.06); color: @accent_color; }
+    .outline-panel row:selected {
+        background: alpha(@accent_bg_color, 0.12);
+        box-shadow: none;
+        color: @accent_color;
+    }
+    .outline-panel button.flat { color: @canvas_muted; }
     """
 
     def _load_css(self) -> None:
