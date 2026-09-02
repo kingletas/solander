@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.2.1 — 2026-09-02
 
 A documentation and metadata pass after the first release.
 
@@ -8,6 +8,7 @@ A documentation and metadata pass after the first release.
 - **Nothing validated either the desktop entry or the metainfo.** `make check` now runs both, and CI installs the validators so the check always runs there rather than degrading to a skip. That is how the metainfo came to be invalid without anyone knowing.
 - **Getting started only knew how to build from source.** It walked a new reader through installing `uv`, cloning the repository and the one-time sandbox step — while a released Flatpak skips all of it. It now leads with the two packaged installs and marks the sandbox step as source-only.
 - **The Flatpak instructions could not be followed.** The bundle is 3 MB and does not contain the GNOME 50 runtime it needs, so installing it requires a remote that provides the runtime. Neither document said so. Both now do, along with the note that a Flatpak install puts no `solander` on the `PATH`.
+- **Every GitHub Action is pinned to a commit SHA** rather than a moving major tag, so a compromised or rewritten tag cannot change what runs in CI. A pinned SHA never moves, which is also the risk — a Dependabot configuration now opens a pull request when a pinned action releases a new version, so the pins do not quietly freeze this repository on the day they were written.
 - **The documentation is checked the way the code is.** A new test resolves every relative link and heading anchor across the six documents, asserts that package filenames in the docs match the version in `pyproject.toml`, and asserts that the theme counts written in prose match the registry. It caught a link broken by renaming a heading in this same pass. The changelog is exempt from the last two: it records what was true at each release.
 
 

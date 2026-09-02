@@ -59,6 +59,15 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.2.1" date="2026-09-02">
+      <description>
+        <p>Corrects the application metadata a software centre reads: this
+        listing had no screenshots, links or keywords, and did not validate.
+        The install documentation now leads with the packaged installs and
+        says that the Flatpak bundle needs the GNOME runtime it does not
+        contain. Every continuous-integration action is pinned to a commit.</p>
+      </description>
+    </release>
     <release version="2.2.0" date="2026-09-02">
       <description>
         <p>Debian and Flatpak packages, built and published automatically when a

@@ -1,0 +1,15 @@
+# A pinned SHA never moves, which is the point and also the risk: without
+# something to bump it, the pin freezes this repository on whatever was current
+# the day it was written, security fixes included. Dependabot opens a pull
+# request when a pinned action releases a new version, so the pins stay honest.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]
