@@ -29,6 +29,7 @@ from ..core.resolver import resolve_note
 from ..core.search import VaultSearch, parse_query, search_filenames
 from ..core.session import SessionStore
 from ..core.store import open_index_store
+from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
 from ..core.vault import Vault, file_kind, hidden_under
 from .bookpaged import BookPagedView
 from .filetree import VaultTree
@@ -332,7 +333,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.index_status.set_margin_bottom(8)
 
         rail = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        rail.add_css_class("atelier-rail")
+        rail.add_css_class("reader-rail")
         rail.append(handle)
         rail.append(self.sidebar_stack)
         rail.append(self.index_status)
@@ -584,9 +585,15 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _main_menu_button(self) -> Gtk.MenuButton:
         menu = Gio.Menu()
         appearance = Gio.Menu()
-        appearance.append("Follow System", "win.appearance::system")
-        appearance.append("Light", "win.appearance::light")
-        appearance.append("Dark", "win.appearance::dark")
+        themes = Gio.Menu()
+        for theme in THEMES.values():
+            themes.append(theme.label, f"win.theme::{theme.key}")
+        appearance.append_section("Theme", themes)
+        modes = Gio.Menu()
+        modes.append("Follow System", "win.appearance::system")
+        modes.append("Light", "win.appearance::light")
+        modes.append("Dark", "win.appearance::dark")
+        appearance.append_section("Mode", modes)
         menu.append_submenu("Appearance", appearance)
         typography = Gio.Menu()
         fonts = Gio.Menu()
@@ -733,54 +740,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         drop.connect("drop", lambda _t, value, _x, _y: self._open_gfile(value) or True)
         self.add_controller(drop)
 
-    # Two surfaces, one identity: a deep sepia rail beside the parchment canvas,
-    # with the header flattened into the canvas rather than a third tint.
-    _CHROME_LIGHT = """
-    @define-color accent_bg_color #1c4e9c;
-    @define-color accent_fg_color #ffffff;
-    @define-color accent_color #1c4e9c;
-    @define-color window_bg_color #f9f4e7;
-    @define-color window_fg_color #2b2620;
-    @define-color headerbar_bg_color #f9f4e7;
-    @define-color headerbar_fg_color #2b2620;
-    @define-color view_bg_color #f9f4e7;
-    @define-color view_fg_color #2b2620;
-    @define-color popover_bg_color #f6f0df;
-    @define-color popover_fg_color #2b2620;
-    @define-color dialog_bg_color #f6f0df;
-    @define-color dialog_fg_color #2b2620;
-    @define-color card_bg_color #f4eeda;
-    @define-color card_fg_color #2b2620;
-    @define-color rail_bg #2a2420;
-    @define-color rail_fg #d8d0c0;
-    @define-color rail_muted #97907f;
-    @define-color rail_accent #d0a44e;
-    @define-color canvas_muted #6f6455;
-    """
-
-    _CHROME_DARK = """
-    @define-color accent_bg_color #5c84c4;
-    @define-color accent_fg_color #ffffff;
-    @define-color accent_color #8fb0e8;
-    @define-color window_bg_color #1c1a16;
-    @define-color window_fg_color #d9d2c2;
-    @define-color headerbar_bg_color #1c1a16;
-    @define-color headerbar_fg_color #d9d2c2;
-    @define-color view_bg_color #1c1a16;
-    @define-color view_fg_color #d9d2c2;
-    @define-color popover_bg_color #2a261e;
-    @define-color popover_fg_color #d9d2c2;
-    @define-color dialog_bg_color #2a261e;
-    @define-color dialog_fg_color #d9d2c2;
-    @define-color card_bg_color #262218;
-    @define-color card_fg_color #d9d2c2;
-    @define-color rail_bg #16130f;
-    @define-color rail_fg #cfc7b6;
-    @define-color rail_muted #857d6d;
-    @define-color rail_accent #d0a44e;
-    @define-color canvas_muted #a29882;
-    """
-
+    # The shape of the chrome, shared by every theme; the colors it names are
+    # defined per theme in the registry, so a new theme is a palette and nothing else.
     _CHROME_STRUCTURE = """
     headerbar windowtitle .title {
         font-family: "Noto Serif", "Liberation Serif", Georgia, serif;
@@ -803,44 +764,44 @@ class ReaderWindow(Adw.ApplicationWindow):
     .book-indicator { font-size: 0.72em; letter-spacing: 0.14em;
                       color: alpha(currentColor, 0.5); }
 
-    /* The rail: one deep surface, gold accents, everything on it made for it. */
-    .atelier-rail { background: @rail_bg; color: @rail_fg; }
-    .atelier-rail .rail-title {
+    /* The rail: one deep surface, its accent, everything on it made for it. */
+    .reader-rail { background: @rail_bg; color: @rail_fg; }
+    .reader-rail .rail-title {
         font-family: "Noto Serif", "Liberation Serif", Georgia, serif;
         font-size: 0.78em; font-weight: bold; letter-spacing: 0.18em;
         color: @rail_accent;
     }
-    .atelier-rail scrolledwindow, .atelier-rail viewport,
-    .atelier-rail listview, .atelier-rail list { background: transparent; color: @rail_fg; }
-    .atelier-rail row { color: @rail_fg; border-radius: 6px; margin-left: 4px; margin-right: 4px; }
-    .atelier-rail row:hover { background: alpha(#ffffff, 0.05); }
-    .atelier-rail row:selected {
+    .reader-rail scrolledwindow, .reader-rail viewport,
+    .reader-rail listview, .reader-rail list { background: transparent; color: @rail_fg; }
+    .reader-rail row { color: @rail_fg; border-radius: 6px; margin-left: 4px; margin-right: 4px; }
+    .reader-rail row:hover { background: alpha(#ffffff, 0.05); }
+    .reader-rail row:selected {
         background: alpha(@rail_accent, 0.16);
         box-shadow: inset 3px 0 0 @rail_accent;
         color: #f4ecd9;
     }
-    .atelier-rail image { color: @rail_muted; }
-    .atelier-rail row:selected image { color: @rail_accent; }
-    .atelier-rail .dim-label, .atelier-rail .caption { color: @rail_muted; }
-    .atelier-rail .quick-heading { color: alpha(@rail_accent, 0.75); }
-    .atelier-rail entry {
+    .reader-rail image { color: @rail_muted; }
+    .reader-rail row:selected image { color: @rail_accent; }
+    .reader-rail .dim-label, .reader-rail .caption { color: @rail_muted; }
+    .reader-rail .quick-heading { color: alpha(@rail_accent, 0.75); }
+    .reader-rail entry {
         background: alpha(#ffffff, 0.07);
         color: @rail_fg;
         border: 1px solid alpha(#ffffff, 0.08);
         caret-color: @rail_fg;
     }
-    .atelier-rail entry image { color: @rail_muted; }
-    .atelier-rail stackswitcher button { color: @rail_muted; min-width: 30px; }
-    .atelier-rail stackswitcher button:hover { color: @rail_fg; }
-    .atelier-rail expander { color: @rail_muted; }
-    .atelier-rail .rail-separator { background: alpha(#ffffff, 0.08); }
-    .atelier-rail stackswitcher button:checked {
+    .reader-rail entry image { color: @rail_muted; }
+    .reader-rail stackswitcher button { color: @rail_muted; min-width: 30px; }
+    .reader-rail stackswitcher button:hover { color: @rail_fg; }
+    .reader-rail expander { color: @rail_muted; }
+    .reader-rail .rail-separator { background: alpha(#ffffff, 0.08); }
+    .reader-rail stackswitcher button:checked {
         color: @rail_accent;
         background: alpha(@rail_accent, 0.14);
     }
 
-    /* The outline panel dresses in the canvas family: a warm card surface,
-       the gold small-caps label, muted serif entries that answer in lapis. */
+    /* The outline panel dresses in the canvas family: a card surface, a small-caps
+       label in the theme's accent, muted serif entries that answer in its link color. */
     .outline-panel { background: @card_bg_color; }
     .outline-panel .panel-heading { color: @rail_accent; letter-spacing: 0.14em; }
     .outline-panel scrolledwindow, .outline-panel viewport,
@@ -884,9 +845,15 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._reload_all_tabs()
 
     def _apply_chrome_css(self) -> None:
+        variant = self._variant()
+        self._chrome_provider.load_from_string(
+            variant.chrome + self._CHROME_STRUCTURE + variant.chrome_extra
+        )
+
+    def _variant(self):
+        """The active theme in the mode currently in force."""
         dark = Adw.StyleManager.get_default().get_dark()
-        palette = self._CHROME_DARK if dark else self._CHROME_LIGHT
-        self._chrome_provider.load_from_string(palette + self._CHROME_STRUCTURE)
+        return theme_by_key(self.store.state.theme).variant(dark)
 
     # -- actions -----------------------------------------------------------
 
@@ -986,6 +953,13 @@ class ReaderWindow(Adw.ApplicationWindow):
             parameter=GLib.VariantType.new("s"),
             state=GLib.Variant.new_string(self.store.state.appearance),
         )
+        add(
+            "theme",
+            self._on_theme,
+            parameter=GLib.VariantType.new("s"),
+            state=GLib.Variant.new_string(self.store.state.theme),
+        )
+        self._sync_mode_action()
         for name, key in (
             ("reader-font", "reader_font"),
             ("line-width", "line_width"),
@@ -1629,7 +1603,9 @@ class ReaderWindow(Adw.ApplicationWindow):
     # -- page and asset providers -----------------------------------------
 
     def _theme(self) -> str:
-        return "dark" if Adw.StyleManager.get_default().get_dark() else "light"
+        """The page style identifier: the active theme, in the mode currently in force."""
+        dark = Adw.StyleManager.get_default().get_dark()
+        return page_id(self.store.state.theme, dark)
 
     def _provide_page(self, path: str, webview=None) -> str:
         theme = self._theme()
@@ -2206,12 +2182,33 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._apply_appearance(self.store.state.appearance)
         self._reload_all_tabs()
 
+    def _on_theme(self, action, value) -> None:
+        """Switches theme: the chrome re-tints and every open page re-renders."""
+        action.set_state(value)
+        key = value.get_string()
+        self.store.state.theme = key if key in THEMES else DEFAULT_THEME
+        self._sync_mode_action()
+        self._apply_appearance(self.store.state.appearance)
+        self._apply_chrome_css()
+        self._reload_all_tabs()
+        self._toast(f"{theme_by_key(self.store.state.theme).label} theme")
+
+    def _sync_mode_action(self) -> None:
+        """A dark-only theme greys out the light/dark choice rather than ignoring it."""
+        action = self.lookup_action("appearance")
+        if action is not None:
+            action.set_enabled(not theme_by_key(self.store.state.theme).dark_only)
+
     def _reload_all_tabs(self) -> None:
         for reader in self._readers.values():
             reader.webview.reload()
 
     def _apply_appearance(self, appearance: str) -> None:
+        """Applies the mode, unless the theme has only one — then that one wins."""
         manager = Adw.StyleManager.get_default()
+        if theme_by_key(self.store.state.theme).dark_only:
+            manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
+            return
         scheme = {
             "light": Adw.ColorScheme.FORCE_LIGHT,
             "dark": Adw.ColorScheme.FORCE_DARK,

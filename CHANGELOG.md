@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.12.0 — 2026-09-02
+
+A second theme, and a place for the next one.
+
+- **Blood Record.** A dark archive rather than a notebook: charcoal and bone, oxidized copper for what is important, dried blood for the structure, and one hot red held back for what actually matters — a critical callout, a link that resolves to nothing, the document currently under your hand. It dresses the whole application, rail and menus included, and brings its own syntax palette. Appearance → Theme.
+- **The original theme is untouched.** Atelier keeps its parchment, its gold and its lapis links, byte for byte; the new theme is layered over the dark palette rather than replacing anything.
+- **A theme is a palette now, not a rewrite.** Page tokens, chrome colors and syntax colors live in one registry, and the chrome structure names those colors instead of hardcoding them — so a further theme is a palette and nothing else. The sidebar's CSS class stopped being named after one theme.
+- **A dark-only theme greys out the light/dark choice** rather than accepting it and ignoring it; the mode you had comes back when you return to Atelier.
+- Print is untouched: the theme is screen-only, so PDF export still renders on white through the same print stylesheet.
+
 ## 1.11.1 — 2026-09-02
 
 - **The place indicator can no longer overlap the page.** It sits in its own strip below the page instead of floating over the last line.

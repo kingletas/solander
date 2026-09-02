@@ -5,6 +5,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import cache
 from importlib import resources
 from urllib.parse import quote, unquote
 
@@ -28,6 +29,7 @@ from .mermaid import MermaidError, MermaidUnsupported, render_mermaid
 from .mindmap import mindmap_body
 from .resolver import Resolution, resolve_attachment, resolve_embed, resolve_note
 from .sanitize import sanitize
+from .themes import variant_for
 from .vault import Vault
 
 MAX_EMBED_DEPTH = int(os.environ.get("READER_MAX_EMBED_DEPTH", "5"))
@@ -853,26 +855,24 @@ def _message_body(title: str, message: str) -> str:
     )
 
 
-_PAGE_CSS = ""
-_PYGMENTS_CSS = ""
+@cache
+def _asset_css(name: str) -> str:
+    """Reads one bundled stylesheet; each is read once per process."""
+    return resources.files("obsidian_reader.assets").joinpath(name).read_text("utf-8")
 
 
-def _page_css() -> str:
-    """Loads the bundled reader stylesheet plus generated highlight palettes once."""
-    global _PAGE_CSS, _PYGMENTS_CSS
-    if not _PAGE_CSS:
-        _PAGE_CSS = (
-            resources.files("obsidian_reader.assets").joinpath("reader.css").read_text("utf-8")
-        )
-    if not _PYGMENTS_CSS:
-        light = HtmlFormatter(style="default").get_style_defs(".theme-light .highlight")
-        dark = HtmlFormatter(style="monokai").get_style_defs(".theme-dark .highlight")
-        # Pygments sets its own panel color; the page's surface stays the one truth.
-        override = (
-            ".theme-light .highlight, .theme-dark .highlight { background: var(--surface); }"
-        )
-        _PYGMENTS_CSS = f"{light}\n{dark}\n{override}"
-    return f"{_PAGE_CSS}\n{_PYGMENTS_CSS}"
+@cache
+def _page_css(page: str) -> str:
+    """Builds one theme's stylesheet: layout, the theme's own rules, then its syntax palette."""
+    variant = variant_for(page)
+    sheets = [_asset_css("reader.css")]
+    if variant.stylesheet:
+        sheets.append(_asset_css(variant.stylesheet))
+    scope = variant.highlight_scope
+    sheets.append(HtmlFormatter(style=variant.highlight).get_style_defs(f"{scope} .highlight"))
+    # Pygments sets its own panel color; the page's surface stays the one truth.
+    sheets.append(f"{scope} .highlight {{ background: var(--surface); }}")
+    return "\n".join(sheets)
 
 
 # Reading-comfort presets; unknown values fall back to the stylesheet's own defaults.
@@ -931,12 +931,12 @@ def build_page(
         if lossy
         else ""
     )
-    theme_class = "theme-dark" if theme == "dark" else "theme-light"
+    theme_class = variant_for(theme).body_classes
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; "
         "img-src vault:; media-src vault:; font-src vault:; style-src 'unsafe-inline';\">"
-        f"<title>{html.escape(title)}</title><style>{_page_css()}</style>"
+        f"<title>{html.escape(title)}</title><style>{_page_css(theme)}</style>"
         f"{_typography_css(typography)}{_snippet_style(extra_css)}</head>"
         f"<body class='{theme_class}' dir='auto'>{notice}"
         f"<main class='note markdown-preview-view {html.escape(note_classes, quote=True)}'>"

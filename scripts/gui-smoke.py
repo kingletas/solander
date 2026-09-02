@@ -176,8 +176,21 @@ def run_checks(app):
             check("author stroke styling reaches the diagram", 'style="stroke:#080"' in flow)
             labeled = "gantt diagrams are not supported" in flow
             check("unsupported mermaid kinds name themselves", labeled)
-            railed = "atelier-rail" in window.sidebar_widget.get_css_classes()
+            railed = "reader-rail" in window.sidebar_widget.get_css_classes()
             check("the sidebar is the rail surface", railed)
+            theme_action = window.lookup_action("theme")
+            mode_action = window.lookup_action("appearance")
+            theme_action.change_state(GLib.Variant.new_string("blood-record"))
+            bloodied = window._provide_page("/note/A.md", window.reader.webview)
+            check("theme switch re-renders the page in the new theme",
+                  "theme-blood-record" in bloodied)
+            check("a dark-only theme greys out the light/dark choice",
+                  not mode_action.get_enabled())
+            theme_action.change_state(GLib.Variant.new_string("atelier"))
+            restored = window._provide_page("/note/A.md", window.reader.webview)
+            check("switching back restores the original theme",
+                  "theme-blood-record" not in restored)
+            check("the light/dark choice comes back with it", mode_action.get_enabled())
             crowned = window.rail_title.get_label() == window.vault.root.name.upper()
             check("the vault name crowns the rail", crowned)
             guide = window._provide_page("/page/user-guide", window.reader.webview)

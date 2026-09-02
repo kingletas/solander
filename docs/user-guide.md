@@ -105,7 +105,7 @@ The hidden list is stored in the reader's config, never in the vault.
 
 - **Reading mode**: `F11` removes every piece of chrome; `Esc` or `F11` restores.
 - **Typography** (menu): font (the default is a book serif; sans and mono are one click away), line width (narrow to full), line spacing (compact to relaxed) — persisted, applied everywhere.
-- **Appearance**: follow system, light, or dark. **Zoom**: `Ctrl` `+`/`-`/`0`.
+- **Appearance** (menu): the **theme** first, then the **mode**. **Atelier** is the default — a parchment manuscript by day, a candlelit nocturne by night — and takes follow system, light, or dark. **Blood Record** is a dark archive: charcoal and bone, oxidized copper for what is important, dried blood for the structure, and one hot red kept for what actually matters — a critical callout, a broken link, the document under your hand. It has no light mode, so choosing it greys the mode choice out rather than ignoring it; the mode you had comes back with Atelier. Both are remembered. **Zoom**: `Ctrl` `+`/`-`/`0`.
 - **Vault CSS snippets**: the snippets your vault enables apply, reduced by a strict sanitizer (anything network-reaching or escaped is dropped). Pages carry the `markdown-preview-view` class and the note's `cssclasses`, so class-scoped snippets match. Toggle under View.
 
 ## Exports and PDFs

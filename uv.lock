@@ -73,7 +73,7 @@ wheels = [
 
 [[package]]
 name = "obsidian-reader"
-version = "1.11.1"
+version = "1.12.0"
 source = { editable = "." }
 dependencies = [
     { name = "latex2mathml" },

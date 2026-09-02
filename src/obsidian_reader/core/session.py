@@ -27,6 +27,7 @@ class SessionState:
     show_hidden: bool = False
     markdown_only: bool = True
     appearance: str = "system"
+    theme: str = "atelier"
     zoom: float = 1.0
     window_width: int = 1100
     window_height: int = 760
