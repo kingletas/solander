@@ -54,6 +54,7 @@ SHORTCUTS = [
     ("Right-click a folder", "Hide it (View menu unhides)"),
     ("Ctrl+Shift+E", "Export as PDF"),
     ("Ctrl++ / Ctrl+- / Ctrl+0", "Zoom in / out / reset"),
+    ("F1", "User guide"),
     ("Ctrl+?", "This window"),
 ]
 
@@ -510,6 +511,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         menu.append_section(None, note)
         meta = Gio.Menu()
         meta.append("Clear Index Cache", "win.clear-cache")
+        meta.append("Getting Started", "win.getting-started")
+        meta.append("User Guide", "win.user-guide")
         meta.append("Keyboard Shortcuts", "win.shortcuts")
         meta.append(f"About {APP_NAME}", "win.about")
         menu.append_section(None, meta)
@@ -593,6 +596,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         add("zoom-out", lambda *_: self._zoom(-0.1), ["<Control>minus"])
         add("zoom-reset", lambda *_: self._zoom(None), ["<Control>0"])
         add("clear-cache", lambda *_: self._clear_index_cache())
+        add("user-guide", lambda *_: self.reader.load_page("user-guide"), ["F1"])
+        add("getting-started", lambda *_: self.reader.load_page("getting-started"))
         add("shortcuts", lambda *_: self._show_shortcuts(), ["<Control>question"])
         add("about", lambda *_: self._show_about())
         add("reveal", lambda *_: self._reveal_current())
@@ -970,9 +975,49 @@ class ReaderWindow(Adw.ApplicationWindow):
             return self._app_page(segments[1] if len(segments) > 1 else "", theme)
         return ""
 
+    def _docs_dir(self) -> Path | None:
+        """The shipped documentation folder: packaged copy first, repo layout second."""
+        from importlib import resources
+
+        packaged = resources.files("obsidian_reader").joinpath("docs")
+        try:
+            if packaged.joinpath("user-guide.md").is_file():
+                return Path(str(packaged))
+        except (OSError, TypeError):
+            pass
+        repo_docs = Path(__file__).resolve().parents[3] / "docs"
+        return repo_docs if (repo_docs / "user-guide.md").is_file() else None
+
+    def _help_page(self, name: str, theme: str) -> str:
+        docs = self._docs_dir()
+        if docs is None:
+            return build_message_page(
+                "Documentation not found",
+                "The docs folder is missing from this installation.",
+                theme,
+            )
+        try:
+            text = (docs / f"{name}.md").read_text(encoding="utf-8")
+        except OSError:
+            return build_message_page("Documentation not found", f"No document {name}", theme)
+        for target in ("user-guide", "getting-started"):
+            text = text.replace(f"({target}.md#", f"(reader:///page/{target}#")
+            text = text.replace(f"({target}.md)", f"(reader:///page/{target})")
+        renderer = self.renderer or self._fallback_renderer(docs)
+        title = "User guide" if name == "user-guide" else "Getting started"
+        return renderer.render_text(text, title, theme)
+
+    def _fallback_renderer(self, docs: Path) -> NoteRenderer:
+        """A renderer that exists before any vault is open — the docs folder stands in."""
+        if getattr(self, "_docs_renderer", None) is None:
+            self._docs_renderer = NoteRenderer(Vault.open(docs), self._typography)
+        return self._docs_renderer
+
     def _app_page(self, name: str, theme: str) -> str:
         if name == "welcome":
             return self._welcome_page(theme)
+        if name in ("user-guide", "getting-started"):
+            return self._help_page(name, theme)
         if name == "empty-vault":
             return build_message_page(
                 "This vault has no Markdown notes",
@@ -994,6 +1039,8 @@ class ReaderWindow(Adw.ApplicationWindow):
             "Everything is read-only: nothing is ever written into your vault.</p>"
             '<p><a href="reader:///action/open-vault">Open a vault folder…</a> · '
             '<a href="reader:///action/open-file">Open a file…</a></p>'
+            '<p>New here? <a href="reader:///page/getting-started">Getting started</a> · '
+            '<a href="reader:///page/user-guide">User guide</a></p>'
             f"{recents_block}</div>"
         )
         return build_page(body, APP_NAME, theme)

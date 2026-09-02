@@ -70,3 +70,21 @@ def test_profile_names_the_running_interpreter():
     assert profile.startswith("abi <abi/4.0>,")
     assert "userns," in profile
     assert "python" in profile
+
+
+def test_setup_command_is_one_pasteable_block():
+    from obsidian_reader.cli import PROFILE_PATH, rendered_profile
+    from obsidian_reader.gui.setup import setup_command
+
+    command = setup_command(rendered_profile(), PROFILE_PATH)
+    assert command.startswith(f"sudo tee {PROFILE_PATH}")
+    assert "userns," in command
+    assert command.rstrip().endswith(f"sudo apparmor_parser -r {PROFILE_PATH}")
+
+
+def test_force_setup_variable_trips_the_preflight(monkeypatch):
+    from obsidian_reader import cli
+
+    monkeypatch.setenv("OBSIDIAN_READER_FORCE_SETUP", "1")
+    monkeypatch.delenv("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", raising=False)
+    assert cli.check_sandbox() != ""

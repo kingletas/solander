@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0 — 2026-09-01
+
+The GUI-first release: nothing about installing or using the reader requires a terminal beyond one paste.
+
+- **The one-time sandbox step is now a window.** Launched from the applications grid on a stock Ubuntu, the reader used to die silently to stderr; it now opens a plain-GTK setup window (no WebKit needed — that is the part that cannot start) explaining the situation, offering a single copy-paste command, and relaunching the reader itself when "check again" finds the profile installed. The terminal flow still works headless, unchanged.
+- **The documentation lives inside the app.** `F1` opens the user guide, the menu carries Getting Started beside it, and the welcome page links both — rendered through the reader's own pipeline, so a fresh install can read its manual before opening any vault. The docs ship with the package.
+- The README and getting-started guide now lead with the desktop flow — app grid, welcome page, Open With from the file manager — with the CLI as the alternative. (Markdown files and folders were already registered for Open With; that part just needed saying.)
+
 ## 1.1.1 — 2026-09-01
 
 - **The mind map now has an obvious way back.** The map page carries a "Back to <note>" link, `Ctrl+M` toggles — note to map, map back to note — and the map keeps counting as its note, so the window title, tree selection, and the toggle itself all keep working while it is shown. (Back always worked; nothing said so.)

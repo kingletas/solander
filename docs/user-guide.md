@@ -1,6 +1,6 @@
 # User guide
 
-Everything the reader does, and the exact boundaries of what it will not. Installation and first launch are in [getting started](getting-started.md).
+Everything the reader does, and the exact boundaries of what it will not. Installation and first launch are in [getting started](getting-started.md). This guide is also available inside the app — press `F1`, or find it in the menu.
 
 The three promises frame every feature below: the vault is **never written**, note content is **never executed**, and the network is **never touched**.
 
@@ -139,7 +139,7 @@ State lives outside every vault: `~/.config/obsidian-reader/` (session, preferen
 
 ## Troubleshooting
 
-- **"bwrap: setting up uid map: Permission denied" or the launcher prints an AppArmor profile** — the one-time sandbox step; see [getting started](getting-started.md#3-first-launch--the-one-time-sandbox-step). If the profile is installed but the app still refuses, you launched around the launcher: a `#!` shebang launch bypasses AppArmor's attachment. Start it via `obsidian-reader`.
+- **A setup window appears instead of the reader, or a terminal launch prints an AppArmor profile** — the one-time sandbox step; see [getting started](getting-started.md#3-first-launch--the-one-time-sandbox-step). If the profile is installed but the app still refuses, it was started around its launcher: a `#!` shebang launch bypasses AppArmor's attachment. Start it from the applications grid or via `obsidian-reader`.
 - **Dataview blocks say "the index is still building"** — the first index of a large vault is running; they render on their own when it finishes.
 - **A Dataview block shows its source with a reason** — that query uses syntax outside the supported surface; the label says which part.
 - **A CSS snippet has no visible effect** — snippets written against Obsidian's own interface (sidebars, tabs, editor) target elements that do not exist here; note-content snippets (callouts, checkboxes, `cssclasses`-scoped styling) are the ones that carry over. Declarations using `url()` are removed by the sanitizer regardless.

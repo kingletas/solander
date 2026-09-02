@@ -45,6 +45,10 @@ That creates the virtualenv against the system Python (so the GI bindings are vi
 
 ## Run
 
+Launch **Obsidian Reader** from your applications grid — it restores your last session, and the welcome page opens a vault from there. Markdown files and folders also offer it under *Open With* in your file manager. On a stock Ubuntu the very first launch shows a **one-time setup window** (the sandbox step below) with a single copy-paste command; after that it just opens.
+
+The terminal works too:
+
 ```bash
 obsidian-reader ~/path/to/vault      # open a folder as a vault
 obsidian-reader note.md              # open a single note
@@ -62,7 +66,7 @@ A second launch hands its path to the running instance instead of racing it for 
 
 ## The sandbox and Ubuntu's user-namespace policy
 
-WebKitGTK wraps its rendering processes in a bubblewrap sandbox, and that sandbox needs to create an unprivileged user namespace. Ubuntu 24.04+ restricts those by default (`kernel.apparmor_restrict_unprivileged_userns=1`), so on a stock system the app would abort with `bwrap: setting up uid map: Permission denied`. The launcher detects this before WebKit crashes and prints the fix.
+WebKitGTK wraps its rendering processes in a bubblewrap sandbox, and that sandbox needs to create an unprivileged user namespace. Ubuntu 24.04+ restricts those by default (`kernel.apparmor_restrict_unprivileged_userns=1`), so on a stock system the app would abort with `bwrap: setting up uid map: Permission denied`. The launcher detects this before WebKit crashes: **started from the desktop, it opens a setup window with a single copy-paste command and a “check again” button that relaunches the app once the profile is in**; started from a terminal with no display, it prints the same fix.
 
 The fix is a one-time AppArmor profile that grants the permission to this app's interpreter alone (`make install` gives the venv a private interpreter copy so the profile names nothing else). Run `obsidian-reader` once — it prints the profile rendered for your installation — then install it:
 

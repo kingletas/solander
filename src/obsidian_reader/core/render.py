@@ -237,6 +237,12 @@ class NoteRenderer:
         body = f"<h1>{html.escape(title)}</h1>{render_base(graph, note.text)}"
         return build_page(body, title, theme, typography=self._typo(), extra_css=self._snips())
 
+    def render_text(self, text: str, title: str, theme: str = "light") -> str:
+        """Renders standalone markdown text — the in-app documentation pages."""
+        env = self._env(f"__document__/{title}")
+        body = sanitize(self._render_markdown(split_frontmatter(text).body, env))
+        return build_page(body, title, theme, typography=self._typo())
+
     def render_mindmap(self, rel: str, theme: str = "light") -> str:
         """Renders a note's headings and bullets as a mind-map page."""
         note = self.vault.read_note(rel)

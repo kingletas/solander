@@ -124,6 +124,11 @@ def run_checks(app):
             drawing = window._provide_page("/note/Draw.excalidraw.md", window.reader.webview)
             check("excalidraw note renders as SVG", "<svg" in drawing and "<rect" in drawing)
             check("vault css snippet is applied sanitized", "teal" in page and "url(" not in page)
+            guide = window._provide_page("/page/user-guide", window.reader.webview)
+            check("user guide renders in-app", "The window" in guide and "<table>" in guide)
+            check("guide cross-links stay in-app", "reader:///page/getting-started" in guide)
+            started = window._provide_page("/page/getting-started", window.reader.webview)
+            check("getting started renders in-app", "Open your vault" in started)
             mindmap = window._provide_page("/mindmap/A.md", window.reader.webview)
             check("mind map renders the note structure", "<svg" in mindmap and ">A<" in mindmap)
             back = "reader:///note/A.md" in mindmap and "Back to A" in mindmap
@@ -372,6 +377,28 @@ def write_extra_fixtures() -> None:
     )
 
 
+def check_setup_window() -> None:
+    """The GUI setup flow must stay up as a window instead of dying to stderr."""
+    import os
+    import signal
+    import subprocess
+    import time
+
+    env = dict(os.environ, OBSIDIAN_READER_FORCE_SETUP="1")
+    process = subprocess.Popen(
+        [sys.executable, "-m", "obsidian_reader.cli"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    time.sleep(4)
+    alive = process.poll() is None
+    check("sandbox refusal opens the setup window", alive)
+    if alive:
+        process.send_signal(signal.SIGTERM)
+        process.wait(timeout=5)
+
+
 def main() -> int:
     write_extra_fixtures()
     app = ReaderApplication()
@@ -386,6 +413,7 @@ def main() -> int:
 
     app.connect_after("activate", kick_off)
     app.run([sys.argv[0]])
+    check_setup_window()
     if not checks_run:
         print("RESULT: FAIL (no checks ran)")
         return 1

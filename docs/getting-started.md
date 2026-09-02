@@ -30,29 +30,15 @@ This creates a virtualenv against the system Python (so the GI bindings are visi
 
 ## 3. First launch — the one-time sandbox step
 
-```bash
-obsidian-reader
-```
+Launch **Obsidian Reader** from your applications grid. On stock Ubuntu 24.04+ the first launch shows a **setup window** instead of the reader. That is expected: WebKit sandboxes its rendering processes, Ubuntu restricts the user namespaces that sandbox needs, and the fix is a one-time security profile granting the permission to this app alone — the same mechanism Ubuntu ships for browsers.
 
-On stock Ubuntu 24.04+ the first launch will most likely **refuse to start and print an AppArmor profile instead**. That is expected: WebKit sandboxes its rendering processes, Ubuntu restricts the user namespaces that sandbox needs, and the fix is a one-time profile granting the permission to this app's interpreter alone — the same mechanism Ubuntu ships for browsers. Install what the launcher printed:
+The window hands you a single command. **Copy it, paste it into a Terminal, enter your password, then press “I ran it — check again”** — the reader starts on its own. That is the only time a terminal is involved.
 
-```bash
-obsidian-reader 2>&1 | sed -n '/^abi/,/^}/p' | sudo tee /etc/apparmor.d/obsidian-reader
-```
-
-```bash
-sudo apparmor_parser -r /etc/apparmor.d/obsidian-reader
-```
-
-Then launch again. The profile confines nothing (`flags=(unconfined)`); it only lets WebKit's own sandbox turn on. Always start the app through the `obsidian-reader` launcher — it execs the interpreter directly, which is what makes the profile attach.
+(The same flow works headless: launched from a terminal, the app prints the profile and the steps instead. The profile confines nothing — `flags=(unconfined)` plus one `userns` grant — it only lets WebKit's own sandbox turn on.)
 
 ## 4. Open your vault
 
-```bash
-obsidian-reader ~/path/to/your/vault
-```
-
-Or use the folder button in the header bar, drag a folder onto the window, or open a single `.md` file. The reader opens the vault **in place** — nothing is imported, and nothing is ever written into it.
+Use **Open a vault folder…** on the welcome page, drag a folder onto the window, or right-click a folder or `.md` file in your file manager and choose *Open With → Obsidian Reader*. From a terminal, `obsidian-reader ~/path/to/vault` does the same. The reader opens the vault **in place** — nothing is imported, and nothing is ever written into it.
 
 The first open of a large vault builds the search and link index in the background — expect roughly 20 seconds for a 10,000-note vault, with progress in the sidebar's status line. The index persists under `~/.cache/obsidian-reader/`, so every later launch is warm: about a second, re-reading only notes that changed. While the reader is open it watches the vault, so anything Obsidian or a sync client writes shows up in the tree, search, and link panels within a few seconds.
 
@@ -64,7 +50,7 @@ The first open of a large vault builds the search and link index in the backgrou
 4. **`Ctrl+M`** — the current note as a mind map of its headings and bullets. `Ctrl+M` again (or the link at the top) brings the markdown back.
 5. **`F11`** — reading mode: nothing on screen but the note. `Esc` returns.
 
-`Ctrl+?` shows every shortcut. When you want the rest — Dataview, kanban boards, hidden folders, typography, exports — read the [user guide](user-guide.md).
+`Ctrl+?` shows every shortcut, and **`F1` opens the full user guide inside the app**. When you want the rest — Dataview, kanban boards, hidden folders, typography, exports — it is all in the [user guide](user-guide.md).
 
 ## Where things live
 

@@ -96,7 +96,7 @@ def check_sandbox() -> str:
     """Returns the remediation text when the sandbox cannot start, empty when it can."""
     if os.environ.get("OBSIDIAN_READER_SKIP_SANDBOX_CHECK", "") == "1":
         return ""
-    if sandbox_ready():
+    if sandbox_ready() and os.environ.get("OBSIDIAN_READER_FORCE_SETUP", "") != "1":
         return ""
     if os.path.exists(PROFILE_PATH) and not current_label().startswith("obsidian-reader"):
         return SHEBANG_HELP
@@ -123,6 +123,20 @@ def main() -> int:
     sandbox_problem = check_sandbox()
     if sandbox_problem:
         print(sandbox_problem, file=sys.stderr)
+        # From the applications grid there is no terminal to read that on, so a
+        # plain-GTK setup window guides the fix wherever a display exists.
+        if os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
+            from .gui.setup import run_setup, setup_command
+
+            shebang = sandbox_problem is SHEBANG_HELP
+            command = setup_command(rendered_profile(), PROFILE_PATH)
+
+            def recheck() -> bool:
+                return sandbox_ready() and os.environ.get(
+                    "OBSIDIAN_READER_FORCE_SETUP", ""
+                ) != "1"
+
+            return run_setup(command, shebang, recheck)
         return 1
     try:
         import gi

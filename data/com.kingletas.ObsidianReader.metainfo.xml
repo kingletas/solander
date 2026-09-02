@@ -26,6 +26,12 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="1.2.0" date="2026-09-01">
+      <description>
+        <p>A guided setup window replaces the terminal-only sandbox step,
+        and the user guide and getting-started docs open inside the app.</p>
+      </description>
+    </release>
     <release version="1.1.1" date="2026-09-01">
       <description>
         <p>The mind map carries a visible way back, and Ctrl+M toggles
