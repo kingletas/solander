@@ -1,7 +1,7 @@
 # Flatpak manifest -- a starting point, not yet built or verified.
 # Build with: flatpak-builder --user --install build data/flatpak/com.kingletas.ObsidianReader.yaml
 # The python module sources need pinned sha256 hashes before a real build;
-# generate them with flatpak-pip-generator markdown-it-py mdit-py-plugins linkify-it-py pygments pyyaml
+# generate them with flatpak-pip-generator markdown-it-py mdit-py-plugins linkify-it-py pygments pyyaml latex2mathml
 app-id: com.kingletas.ObsidianReader
 runtime: org.gnome.Platform
 runtime-version: "46"
@@ -17,7 +17,7 @@ modules:
   - name: obsidian-reader
     buildsystem: simple
     build-commands:
-      - pip3 install --no-index --find-links=deps --prefix=/app markdown-it-py mdit-py-plugins linkify-it-py pygments pyyaml
+      - pip3 install --no-index --find-links=deps --prefix=/app markdown-it-py mdit-py-plugins linkify-it-py pygments pyyaml latex2mathml
       - pip3 install --no-index --no-deps --prefix=/app .
       - install -Dm644 data/com.kingletas.ObsidianReader.desktop /app/share/applications/com.kingletas.ObsidianReader.desktop
       - install -Dm644 data/com.kingletas.ObsidianReader.metainfo.xml /app/share/metainfo/com.kingletas.ObsidianReader.metainfo.xml

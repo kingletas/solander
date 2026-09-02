@@ -18,6 +18,7 @@ from gi.repository import Adw, Gio, GLib, Gtk, WebKit
 
 from .. import APP_ID, APP_NAME, __version__
 from ..core.bookmarks import read_bookmarks
+from ..core.csssnippets import load_snippets
 from ..core.graph import VaultGraph, local_neighbors
 from ..core.indexing import sync_indexes
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
@@ -76,6 +77,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._preview_timeout = 0
         self._preview_pending = ""
         self._pending_highlight = ""
+        self._snippets_css = ""
         self._pointer = (0.0, 0.0)
         self.set_default_size(self.store.state.window_width, self.store.state.window_height)
         self._apply_appearance(self.store.state.appearance)
@@ -489,6 +491,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         view.append("Raw Source View", "win.toggle-source")
         view.append("Show Hidden Files", "win.show-hidden")
         view.append("Markdown Files Only", "win.markdown-only")
+        view.append("Vault CSS Snippets", "win.css-snippets")
         view.append("Restore Session on Launch", "win.restore-session")
         menu.append_section(None, view)
         note = Gio.Menu()
@@ -611,6 +614,11 @@ class ReaderWindow(Adw.ApplicationWindow):
             state=GLib.Variant.new_boolean(self.store.state.restore_session),
         )
         add(
+            "css-snippets",
+            self._on_css_snippets,
+            state=GLib.Variant.new_boolean(self.store.state.css_snippets),
+        )
+        add(
             "appearance",
             self._on_appearance,
             parameter=GLib.VariantType.new("s"),
@@ -659,7 +667,9 @@ class ReaderWindow(Adw.ApplicationWindow):
 
         def build():
             vault = Vault.open(root)
-            renderer = NoteRenderer(vault, self._typography, lambda: self.graph)
+            renderer = NoteRenderer(
+                vault, self._typography, lambda: self.graph, lambda: self._snippets_css
+            )
             GLib.idle_add(self._vault_ready, vault, renderer, focus_note, restore_tabs)
 
         threading.Thread(target=build, daemon=True).start()
@@ -753,7 +763,12 @@ class ReaderWindow(Adw.ApplicationWindow):
                     GLib.idle_add(self.index_status.set_text, f"Indexing {done}/{total}…")
 
                 vault = Vault.open(root)
-                renderer = NoteRenderer(vault, self._typography, lambda: self.graph)
+                self._snippets_css = (
+                    load_snippets(root) if self.store.state.css_snippets else ""
+                )
+                renderer = NoteRenderer(
+                vault, self._typography, lambda: self.graph, lambda: self._snippets_css
+            )
                 try:
                     result = sync_indexes(vault, store, progress=progress)
                 except sqlite3.Error:
@@ -1292,6 +1307,15 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _on_restore_session(self, action, value) -> None:
         action.set_state(value)
         self.store.state.restore_session = value.get_boolean()
+
+    def _on_css_snippets(self, action, value) -> None:
+        action.set_state(value)
+        self.store.state.css_snippets = value.get_boolean()
+        if self.vault is not None:
+            self._snippets_css = (
+                load_snippets(self.vault.root) if self.store.state.css_snippets else ""
+            )
+        self._reload_all_tabs()
 
     def _on_appearance(self, action, value) -> None:
         action.set_state(value)

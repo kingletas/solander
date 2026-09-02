@@ -329,3 +329,31 @@ code.math-source { color: var(--muted); }
 .dataview-note { color: var(--muted); font-size: 0.85em; margin: 0.4em 0; }
 .dataview-source { color: var(--muted); font-size: 0.85em; }
 .dataview-inline { color: var(--fg); }
+
+/* Kanban boards */
+.note:has(> .kanban) { max-width: none; }
+.kanban { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto; padding: 4px 0 12px; }
+.kanban-column {
+  flex: 0 0 260px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+.kanban-column-title { font-weight: 600; margin-bottom: 8px; }
+.kanban-count { color: var(--muted); font-weight: 400; font-size: 0.85em; }
+.kanban-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+.kanban-done { opacity: 0.6; text-decoration: line-through; }
+@media print { .kanban { flex-wrap: wrap; overflow-x: visible; } }
+
+/* Excalidraw drawings */
+.note.excalidraw-note { max-width: none; }
+.excalidraw { overflow: auto; }
+.excalidraw svg { color: var(--fg); max-width: none; }

@@ -18,7 +18,9 @@ from .callouts import callouts_rule
 from .canvas import canvas_body, parse_canvas
 from .dataview import DataviewEngine
 from .dql import DqlError
+from .excalidraw import excalidraw_body
 from .frontmatter import split_frontmatter
+from .kanban import kanban_body, parse_kanban
 from .links import WikiLink, slugify
 from .markdown import build_parser, strip_block_comments, strip_html_comments
 from .resolver import Resolution, resolve_attachment, resolve_embed, resolve_note
@@ -151,16 +153,20 @@ def _find_block(body: str, block_id: str) -> str:
 class NoteRenderer:
     """Renders notes from one vault, resolving links and embeds as it goes."""
 
-    def __init__(self, vault: Vault, typography=None, graph_provider=None):
+    def __init__(self, vault: Vault, typography=None, graph_provider=None, snippets=None):
         self.vault = vault
         self.typography = typography
         self.graph_provider = graph_provider
+        self.snippets = snippets
         self.md = build_parser()
         self.md.core.ruler.before("inline", "obsidian_callouts", callouts_rule)
         self._install_render_rules()
 
     def _typo(self) -> dict | None:
         return self.typography() if callable(self.typography) else None
+
+    def _snips(self) -> str:
+        return self.snippets() if callable(self.snippets) else ""
 
     def render(self, rel: str, theme: str = "light") -> RenderedNote:
         """Renders one note into a complete sanitized page."""
@@ -177,11 +183,37 @@ class NoteRenderer:
             )
         split = split_frontmatter(note.text)
         env = self._env(rel)
-        body_html = self._render_markdown(split.body, env)
+        if isinstance(split.properties, dict) and split.properties.get("excalidraw-plugin"):
+            drawing = excalidraw_body(split.body)
+            return RenderedNote(
+                page=build_page(
+                    drawing, title, theme, typography=typo, extra_css=self._snips(),
+                    note_classes="excalidraw-note",
+                ),
+                body=drawing,
+                title=title,
+                source=note.text,
+            )
+        if isinstance(split.properties, dict) and split.properties.get("kanban-plugin"):
+            board = kanban_body(
+                parse_kanban(split.body),
+                lambda text: self.md.renderInline(text, env),
+            )
+            body_html = board
+        else:
+            body_html = self._render_markdown(split.body, env)
         properties_html = _properties_block(split.properties)
         body = sanitize(properties_html + body_html)
         return RenderedNote(
-            page=build_page(body, title, theme, lossy=note.lossy, typography=typo),
+            page=build_page(
+                body,
+                title,
+                theme,
+                lossy=note.lossy,
+                typography=typo,
+                extra_css=self._snips(),
+                note_classes=_css_classes(split.properties),
+            ),
             body=body,
             title=title,
             outline=env["outline"],
@@ -202,7 +234,7 @@ class NoteRenderer:
                 title, "The index is still building — reload shortly.", theme
             )
         body = f"<h1>{html.escape(title)}</h1>{render_base(graph, note.text)}"
-        return build_page(body, title, theme, typography=self._typo())
+        return build_page(body, title, theme, typography=self._typo(), extra_css=self._snips())
 
     def render_canvas(self, rel: str, theme: str = "light") -> str:
         """Renders a `.canvas` file as a static, positioned page."""
@@ -216,7 +248,7 @@ class NoteRenderer:
             return note_uri(resolved.path) if resolved.kind == "note" else ""
 
         body = canvas_body(parse_canvas(note.text), note_href)
-        return build_page(body, title, theme, typography=self._typo())
+        return build_page(body, title, theme, typography=self._typo(), extra_css=self._snips())
 
     def render_preview(self, rel: str, theme: str = "light") -> str:
         """Renders the opening slice of a note for the hover preview popover."""
@@ -643,12 +675,27 @@ def _typography_css(typography: dict | None) -> str:
     return f"<style>{' '.join(rules)}</style>" if rules else ""
 
 
+def _css_classes(properties: dict) -> str:
+    """Obsidian applies `cssclasses` frontmatter to the preview container; so do we."""
+    values = []
+    for key in ("cssclasses", "cssclass"):
+        value = properties.get(key) if isinstance(properties, dict) else None
+        if isinstance(value, str):
+            values.extend(value.split())
+        elif isinstance(value, list):
+            values.extend(str(item) for item in value)
+    safe = [v for v in values if re.fullmatch(r"[A-Za-z0-9_-]+", v)]
+    return " ".join(dict.fromkeys(safe))
+
+
 def build_page(
     body: str,
     title: str,
     theme: str = "light",
     lossy: bool = False,
     typography: dict | None = None,
+    extra_css: str = "",
+    note_classes: str = "",
 ) -> str:
     """Wraps sanitized body markup in the full page shell with CSP and theme CSS."""
     notice = (
@@ -663,10 +710,17 @@ def build_page(
         "<meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; "
         "img-src vault:; media-src vault:; style-src 'unsafe-inline';\">"
         f"<title>{html.escape(title)}</title><style>{_page_css()}</style>"
-        f"{_typography_css(typography)}</head>"
+        f"{_typography_css(typography)}{_snippet_style(extra_css)}</head>"
         f"<body class='{theme_class}' dir='auto'>{notice}"
-        f"<main class='note'>{body}</main></body></html>"
+        f"<main class='note markdown-preview-view {html.escape(note_classes, quote=True)}'>"
+        f"{body}</main></body></html>"
     )
+
+
+def _snippet_style(extra_css: str) -> str:
+    if not extra_css:
+        return ""
+    return f"<style>{extra_css}</style>"
 
 
 def build_source_page(source: str, title: str, theme: str = "light") -> str:

@@ -33,6 +33,9 @@ class LocalGraphView:
         self.neighbors: list[tuple[str, str]] = []
         self._positions: list[tuple[float, float, str]] = []
         self.area = Gtk.DrawingArea(hexpand=True, vexpand=True)
+        self.area.update_property(
+            [Gtk.AccessibleProperty.LABEL], ["Local graph of the current note"]
+        )
         # Bound-method callbacks would cycle area → callback → self → area, so
         # the widget's release would fall to the GC — which may run on the sync
         # thread, and a GTK object finalized off the main loop aborts the app.

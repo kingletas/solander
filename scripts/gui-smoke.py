@@ -114,6 +114,16 @@ def run_checks(app):
             page = window._provide_page("/note/Query.md", window.reader.webview)
             check("dataview table renders", '<div class="dataview"><table>' in page)
             check("dataview inline expression evaluates", ">8</span>" in page)
+            board = window._provide_page("/note/Sprint.md", window.reader.webview)
+            lanes = board.count('<div class="kanban-column">')
+            check("kanban note renders as a board", lanes == 2)
+            check("kanban cards keep their wikilinks", "reader:///note/A.md" in board)
+            base_page = window._provide_page("/note/Things.base", window.reader.webview)
+            check("base file renders its table view", "<table>" in base_page)
+            check("base filter matched the fixture note", "Query" in base_page)
+            drawing = window._provide_page("/note/Draw.excalidraw.md", window.reader.webview)
+            check("excalidraw note renders as SVG", "<svg" in drawing and "<rect" in drawing)
+            check("vault css snippet is applied sanitized", "teal" in page and "url(" not in page)
             check_retrieval()
             return False
 
@@ -298,7 +308,37 @@ def run_checks(app):
     return False
 
 
+def write_extra_fixtures() -> None:
+    """Fixture files for the 1.0 surfaces, written before the vault opens."""
+    import json
+
+    (vault_path / "Sprint.md").write_text(
+        "---\nkanban-plugin: board\n---\n\n## Todo\n\n- [ ] [[A|card one]]\n\n"
+        "## Done\n\n- [x] finished\n"
+    )
+    drawing = json.dumps({"elements": [
+        {"type": "rectangle", "x": 0, "y": 0, "width": 80, "height": 40},
+        {"type": "text", "x": 8, "y": 8, "width": 60, "height": 18, "text": "box"},
+    ]})
+    (vault_path / "Draw.excalidraw.md").write_text(
+        f"---\nexcalidraw-plugin: parsed\n---\n\n```json\n{drawing}\n```\n"
+    )
+    (vault_path / "Things.base").write_text(
+        'views:\n  - type: table\n    name: All\n    filters:\n      and:\n'
+        '        - file.hasProperty("mood")\n    order:\n      - file.name\n      - mood\n'
+    )
+    snippets = vault_path / ".obsidian" / "snippets"
+    snippets.mkdir(parents=True, exist_ok=True)
+    (snippets / "test.css").write_text(
+        ".note { border-top: 3px solid teal; } .evil { background: url(http://x/y.png); }"
+    )
+    (vault_path / ".obsidian" / "appearance.json").write_text(
+        json.dumps({"enabledCssSnippets": ["test"]})
+    )
+
+
 def main() -> int:
+    write_extra_fixtures()
     app = ReaderApplication()
     # Without this, a reader already running for the real vault owns the app id,
     # activate is forwarded to it, and zero checks would read as a pass.

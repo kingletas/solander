@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0 — 2026-09-01
+
+The completion release: the reader now renders every content type the vault it was built against actually contains.
+
+- **Kanban boards render as boards.** A note with `kanban-plugin` frontmatter shows its `##` headings as columns and its task items as cards — wikilinks inside cards resolve, done cards dim, the `***` archive becomes its own lane, and boards scroll horizontally (and wrap in print). Verified against 125 real boards holding 6,545 cards.
+- **Excalidraw drawings render as static SVG** — rectangles, ellipses, diamonds, arrows, lines, freehand strokes, and text, at their drawn positions and rotations. The LZ-String compression Excalidraw uses is decoded by a pure-Python port (decode-only); the JSON is treated as hostile input like canvas.
+- **Vault CSS snippets apply.** The snippets `.obsidian/appearance.json` enables load through a strict allowlist sanitizer — plain rules and @media blocks survive; any declaration that could touch the network or smuggle an escape (`url()`, `@import`, `expression()`, a backslash) is dropped whole. Pages carry Obsidian's `markdown-preview-view` class and the note's own `cssclasses`, so class-scoped snippets match. A View-menu toggle turns them off.
+- Accessibility: the local-graph pane carries an accessible label; tree rows already announce their note names.
+- The Flatpak manifest's dependency list is current. Building it still needs `flatpak-builder`, which is not installed here — the build remains unverified and says so.
+
 ## 0.9.0 — 2026-09-01
 
 Dataview, in pure Python — no JavaScript, same as everything else.

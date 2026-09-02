@@ -1,6 +1,6 @@
 [project]
 name = "obsidian-reader"
-version = "0.9.0"
+version = "1.0.0"
 description = "A read-only GTK4 reader that opens Obsidian vaults in place and never writes into them"
 readme = "README.md"
 license = { file = "LICENSE" }

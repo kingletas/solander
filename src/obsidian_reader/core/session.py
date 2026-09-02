@@ -34,6 +34,7 @@ class SessionState:
     sidebar_width: int = 280
     open_tabs: list[str] = field(default_factory=list)
     recent_notes: list[str] = field(default_factory=list)
+    css_snippets: bool = True
     reader_font: str = "default"
     line_width: str = "normal"
     line_spacing: str = "normal"
