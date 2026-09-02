@@ -7,3 +7,7 @@ dist/
 build/
 *.egg-info/
 .flatpak-builder/
+
+# ~/.gitignore is core.excludesFile for every repository under $HOME and it
+# excludes *.sh, so without this negation a clone ships no installer at all.
+!scripts/*.sh

@@ -12,6 +12,11 @@ A solander is the clamshell box an archive keeps its documents in — which is t
 - **The AppArmor profile is now `/etc/apparmor.d/solander`.** It names the interpreter by path, so moving the checkout requires reinstalling it — `solander` prints the profile rendered for your installation, and the old `/etc/apparmor.d/obsidian-reader` can be deleted.
 - Nothing about the reading surface changed: same fourteen themes, same mark, same renderers.
 
+**Two defects in the install path, found while moving the checkout:**
+
+- **`scripts/install.sh` and `scripts/uninstall.sh` were never in the repository.** `~/.gitignore` is `core.excludesFile` for every repo on this machine and it excludes `*.sh`, so git had silently refused both files since the first commit — a clone had no installer, and `make install` would have failed on a `No such file or directory` for a file the README tells you to run. A repo-local `!scripts/*.sh` negation overrides it, and both are committed now.
+- **`make install` built a virtualenv the app could not start from.** Where no `.venv` existed yet, `uv sync` created one on uv's own interpreter, without system site packages — so `import gi` failed and the GTK bindings were invisible. It now creates the venv against the system Python the way `make sync` does, and **refuses to report success if the venv cannot import `gi`**, naming the apt packages to install.
+
 ## 1.14.0 — 2026-09-02
 
 Blood Record became a family of thirteen.
