@@ -34,6 +34,7 @@ class Vault:
     root: Path
     notes: list[str] = field(default_factory=list)
     files: list[str] = field(default_factory=list)
+    _files_set: set[str] = field(default_factory=set)
     _notes_by_name: dict[str, list[str]] = field(default_factory=dict)
     _files_by_name: dict[str, list[str]] = field(default_factory=dict)
     attachment_folder: str = ""
@@ -60,6 +61,12 @@ class Vault:
             for filename in sorted(filenames):
                 if filename.startswith("."):
                     continue
+                full = Path(dirpath) / filename
+                # os.walk already refuses to follow directory symlinks; a symlinked
+                # file still appears here, so one that points outside the root is
+                # dropped now rather than being trusted later on its index entry.
+                if full.is_symlink() and not self.contains(full):
+                    continue
                 rel = str(rel_dir / filename) if str(rel_dir) != "." else filename
                 files.append(rel)
                 key = unicodedata.normalize("NFC", filename).casefold()
@@ -69,6 +76,7 @@ class Vault:
                     by_name.setdefault(normalize_name(filename), []).append(rel)
         self.notes = notes
         self.files = files
+        self._files_set = set(files)
         self._notes_by_name = by_name
         self._files_by_name = files_by_name
 
@@ -81,7 +89,16 @@ class Vault:
         return True
 
     def has_file(self, rel: str) -> bool:
-        """Reports whether a vault-relative path names an existing, contained file."""
+        """Reports whether a vault-relative path names an existing, contained file.
+
+        The index is consulted first because every path in it was found by walking
+        below the root, so containment holds by construction and no syscall is
+        needed. A miss — a hidden file, or one created since the last index —
+        falls through to the resolving check, which is what enforces containment
+        against a link target such as `../../etc/passwd`.
+        """
+        if rel in self._files_set:
+            return True
         candidate = self.root / rel
         return self.contains(candidate) and candidate.is_file()
 

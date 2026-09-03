@@ -34,6 +34,29 @@ def test_containment_refuses_paths_outside_the_root(vault, tmp_path):
     assert not vault.has_file("../outside.md")
 
 
+def test_symlink_escaping_the_root_is_refused_at_index_time(tmp_path):
+    """A symlink present during the walk must not reach the index it is trusted from."""
+    root = tmp_path / "vault"
+    root.mkdir()
+    (root / "note.md").write_text("hi")
+    outside = tmp_path / "secret.md"
+    outside.write_text("secret")
+    (root / "sneaky.md").symlink_to(outside)
+    vault = Vault.open(root)
+    assert "sneaky.md" not in vault.files
+    assert not vault.has_file("sneaky.md")
+
+
+def test_symlink_inside_the_root_is_kept(tmp_path):
+    root = tmp_path / "vault"
+    (root / "Projects").mkdir(parents=True)
+    (root / "Projects" / "real.md").write_text("real")
+    (root / "shortcut.md").symlink_to(root / "Projects" / "real.md")
+    vault = Vault.open(root)
+    assert "shortcut.md" in vault.files
+    assert vault.has_file("shortcut.md")
+
+
 def test_symlink_escaping_the_root_is_refused(vault, tmp_path):
     outside = tmp_path / "secret.md"
     outside.write_text("secret")
