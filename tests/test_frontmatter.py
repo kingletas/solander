@@ -40,6 +40,23 @@ def test_unterminated_frontmatter_is_body():
     assert "dangling" in note.body
 
 
+def test_a_single_alias_is_refused():
+    """The bomb below proves the size bound; this proves the refusal itself, quickly.
+
+    A loader that composes in C ignores a `compose_node` override, so the refusal
+    can be lost while every other frontmatter test still passes — and the bomb
+    then hangs rather than failing.
+    """
+    note = split_frontmatter("---\na: &anchor [1, 2]\nb: *anchor\n---\nbody\n")
+    assert note.properties == {}
+    assert note.body == "body\n"
+
+
+def test_an_anchor_without_an_alias_still_loads():
+    note = split_frontmatter("---\ntitle: &name Solander\n---\nbody\n")
+    assert note.properties == {"title": "Solander"}
+
+
 def test_yaml_aliases_are_refused():
     bomb = "---\na: &a [x,x,x,x,x,x,x,x,x]\n"
     for index in range(1, 8):
