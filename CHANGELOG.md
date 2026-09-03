@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Opening a vault for the first time is about twice as fast.** On an 11,486-note vault the first index build went from **30.9 to 14.7 seconds**, and rendering a note is **25% faster** (16.8 ms to 12.6 ms on average). Two causes: frontmatter was parsed by PyYAML's pure-Python scanner, which dominated the index build because almost every note has a properties block; and resolving a wikilink asked the filesystem whether each candidate path existed, one syscall per candidate, when the vault index already held the answer. Frontmatter now parses through LibYAML where it is available, and a path found by walking the vault is answered from the index.
+- **The alias refusal is enforced against the parser that actually runs.** Aliases were refused by overriding `compose_node`, which LibYAML never calls — it composes in C — so the faster loader would have silently accepted the YAML bomb the bound exists to stop. Aliases are now refused by scanning the parser's own event stream before anything is composed, and a fast test covers the refusal directly, because the bomb test detects its loss by hanging rather than by failing.
+- **A symlink pointing outside the vault no longer appears in the file index.** Reading one was already refused, and so was resolving a link to one, but the walk still listed it — so it showed up in the file tree and in search results. It is now dropped while indexing, which is also what lets a path found in the index be trusted without re-checking containment. Symlinks that stay inside the vault are unaffected.
+
 ## 2.2.3 — 2026-09-02
 
 - **Frontmatter works in notes with Windows line endings.** A leading YAML block delimited with CRLF is now recognized like the same block with Unix line endings, so its title, tags, CSS classes and plugin metadata no longer appear as Markdown body text. Contributed by Mark Hodge.
