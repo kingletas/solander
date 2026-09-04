@@ -259,7 +259,7 @@ def test_nested_note_gets_breadcrumb_and_one_title(vault):
 def test_root_note_gets_inline_title_and_no_breadcrumb(vault):
     page = NoteRenderer(vault).render("Index.md").page
     assert 'class="crumbs"' not in page
-    assert '<h1 class="inline-title">Index</h1>' in page
+    assert 'class="inline-title"' in page
 
 
 def test_meta_line_counts_words_and_links_tags(vault):
@@ -297,3 +297,10 @@ def test_note_context_elements_honor_their_toggles(vault):
     assert 'class="crumbs"' in page
     assert 'class="note-meta"' in page
     assert 'class="backlinks"' in page
+
+
+def test_a_leading_heading_becomes_the_title_and_leaves_the_body(vault):
+    """A vault of folder indexes is a vault of notes all called README."""
+    page = NoteRenderer(vault).render("Index.md").page
+    assert '<h1 class="inline-title">Welcome</h1>' in page
+    assert page.count(">Welcome<") == 1

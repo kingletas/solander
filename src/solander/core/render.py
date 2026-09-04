@@ -52,7 +52,7 @@ MAX_MATH_CHARS = int(os.environ.get("READER_MAX_MATH_CHARS", "5000"))
 # The linked-mentions footer stays readable by staying bounded; the Links
 # panel carries the full list.
 MAX_FOOTER_BACKLINKS = 50
-MAX_HEADER_TAGS = 8
+MAX_HEADER_TAGS = 5
 READING_WORDS_PER_MINUTE = 220
 
 _BLOCK_ID_TAIL = re.compile(r"[ \t]+\^[A-Za-z0-9-]+[ \t]*$")
@@ -224,6 +224,7 @@ class NoteRenderer:
                 title=title,
                 source=note.text,
             )
+        shown = title
         if isinstance(split.properties, dict) and split.properties.get("kanban-plugin"):
             board = kanban_body(
                 parse_kanban(split.body),
@@ -233,9 +234,8 @@ class NoteRenderer:
         else:
             body_md = split.body
             if opts.get("breadcrumb", True):
-                # The header carries the title, so a leading H1 repeating the
-                # filename would print it twice; the body's copy yields.
-                body_md = _strip_leading_duplicate_title(body_md, title)
+                # The header carries the title, so the body's copy of it yields.
+                shown, body_md = _titled(body_md, title)
             body_html = self._render_markdown(body_md, env)
         book = self._book_context(rel)
         if book:
@@ -253,7 +253,7 @@ class NoteRenderer:
             body = sanitize(_properties_block(split.properties) + body_html)
             header = note_header(
                 rel,
-                title,
+                shown,
                 split.properties,
                 split.body,
                 self._mtime(rel),
@@ -685,17 +685,26 @@ def note_header(
     return f'<header class="note-header">{crumbs}{heading}{meta}</header>'
 
 
-def _strip_leading_duplicate_title(body: str, title: str) -> str:
-    """Drops a leading H1 that repeats the filename; the note header carries it."""
+def _titled(body: str, filename: str) -> tuple[str, str]:
+    """Decides what the header calls this note, and hands back the body without it.
+
+    A note that opens with an H1 has already said what it is called, and the name
+    of the file it is stored in is a different question — a vault of folder
+    indexes is a vault of notes all called README. That heading becomes the
+    title and leaves the body, so it is shown once rather than twice.
+
+    Only the leading heading counts, and nothing else is consulted: a rule with
+    one input is one a reader can predict from the note in front of them.
+    """
     lines = body.split("\n")
     for index, line in enumerate(lines):
         if not line.strip():
             continue
         match = re.match(r"^#\s+(.+?)\s*$", line)
-        if match and match.group(1).strip().casefold() == title.strip().casefold():
-            return "\n".join(lines[:index] + lines[index + 1 :])
+        if match and match.group(1).strip():
+            return match.group(1).strip(), "\n".join(lines[:index] + lines[index + 1 :])
         break
-    return body
+    return filename, body
 
 
 def _crumbs_html(rel: str) -> str:
@@ -724,14 +733,20 @@ def _meta_line_html(properties: dict, body_text: str, mtime: float | None) -> st
         if minutes >= 2:
             pieces.append(f"<span>~{minutes} min read</span>")
     tags = _header_tags(properties)
+    chips = []
     for tag in tags[:MAX_HEADER_TAGS]:
         href = f"reader:///action/tag?arg={quote(tag, safe='')}"
-        pieces.append(f'<a class="tag" href="{href}">#{html.escape(tag)}</a>')
+        chips.append(f'<a class="tag" href="{href}">#{html.escape(tag)}</a>')
     if len(tags) > MAX_HEADER_TAGS:
-        pieces.append(f"<span>+{len(tags) - MAX_HEADER_TAGS} more</span>")
-    if not pieces:
+        chips.append(f'<span class="more-tags">+{len(tags) - MAX_HEADER_TAGS} more</span>')
+    if not (pieces or chips):
         return ""
-    return f'<div class="note-meta">{"".join(pieces)}</div>'
+    # Two runs rather than one: the facts are separated by a dot, and a dot put
+    # before a chip is drawn inside it, because the separator is the chip's own
+    # pseudo-element and a chip has a border.
+    facts = f'<span class="note-facts">{"".join(pieces)}</span>' if pieces else ""
+    tagged = f'<span class="note-tags">{"".join(chips)}</span>' if chips else ""
+    return f'<div class="note-meta">{facts}{tagged}</div>'
 
 
 def _header_tags(properties: dict) -> list[str]:

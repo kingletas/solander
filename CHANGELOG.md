@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **A note that opens with a heading is now called that.** A vault of folder indexes was a vault of notes called README, with the real name printed again a line below. The leading heading becomes the title and leaves the body, so it is shown once; a note with no leading heading keeps its filename.
+- **The tags in a note's metadata line each had a separator drawn inside them.** The dot between items was the chip's own pseudo-element, and a chip has a border, so `· #index` rendered as one chip. Facts and tags are now two runs that separate differently — and at most five tags are shown before the count.
+- **The outline indented every note by one step even when it had no hierarchy.** A note whose headings are all at one level was drawn as though there were a level above it that nothing was at; it now indents relative to the shallowest heading the note actually has.
+
 - **Quick-open ranked `Brie Moffett` above `order-fulfilment-and-demand-executive-brief` for the query `brief`.** No weighting fixes that: a run of the right letters in the wrong word is a different *kind* of match from the word itself, and a person typing a word means the word. Matches are classed first and scored second, so a literal match can no longer be outscored by a scattered one — and a filename like `26904` is found instead of buried under every note that mentions 2026-09-04.
 - **Opening a note from a file manager made its own folder the vault.** A note three folders deep opened a vault of three files, with every link out of it broken; it looked like the app not working unless the note happened to sit at the vault root. The nearest folder above it carrying an `.obsidian` directory is the vault now, and the walk stops at your home directory so a stray marker above it cannot swallow everything.
 
