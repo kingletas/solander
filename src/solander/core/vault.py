@@ -18,6 +18,27 @@ VIDEO_EXTENSIONS = (".mp4", ".webm", ".mkv", ".ogv", ".mov")
 MAX_NOTE_BYTES = int(os.environ.get("READER_MAX_NOTE_BYTES", str(10 * 1024 * 1024)))
 
 
+# The directory Obsidian keeps a vault's own configuration in, and therefore the
+# thing that makes a folder a vault rather than a folder with notes in it.
+VAULT_MARKER = ".obsidian"
+
+
+def vault_holding(folder: Path) -> Path:
+    """The nearest folder at or above `folder` that marks itself as a vault.
+
+    Opening a note from a file manager used to make its own directory the vault,
+    so a note three folders deep opened a vault of three files with every link
+    into the rest of it broken. A folder with no marker above it is opened
+    exactly as it was before.
+    """
+    for candidate in [folder, *folder.parents]:
+        if (candidate / VAULT_MARKER).is_dir():
+            return candidate
+        if candidate == Path.home():
+            break
+    return folder
+
+
 @dataclass(frozen=True)
 class NoteText:
     """The decoded text of a note, with the problem named when decoding degraded."""

@@ -1,7 +1,27 @@
-"""Fuzzy filename matching for quick-open: subsequence scoring, best matches first."""
+"""Fuzzy filename matching for quick-open: matches ranked by kind, then by score.
+
+Scoring alone put `Brie Moffett` above `order-fulfilment-executive-brief` for the
+query `brief`, because four letters landing consecutively at the start of a name
+outscored the same five letters landing whole, thirty characters in. No weighting
+fixes that: a run of the right letters in the wrong word is a different *kind* of
+match from the word itself, and a person typing a word means the word. So a match
+is classed first and scored second, and no score can promote a scattered match
+over a literal one.
+"""
 
 import unicodedata
 from dataclasses import dataclass
+
+# How a match was made, best first. The class decides the order; the score only
+# separates matches of the same class.
+WORD_IN_NAME = 0
+"""The query is a whole word of the filename."""
+INSIDE_NAME = 1
+"""The query appears in the filename, but inside a word."""
+INSIDE_PATH = 2
+"""The query appears in a folder along the way."""
+SCATTERED = 3
+"""The query's letters are all there, in order, and nothing more can be said."""
 
 GAP_PENALTY = 1
 CONSECUTIVE_BONUS = 12
@@ -13,10 +33,11 @@ _BOUNDARY_CHARS = " -_./([{"
 
 @dataclass(frozen=True)
 class FuzzyMatch:
-    """One scored candidate: the path and how well the query fits it."""
+    """One candidate: the path, how the query matched it, and how well."""
 
     path: str
     score: int
+    kind: int = SCATTERED
 
 
 def fuzzy_match(query: str, path: str) -> int | None:
@@ -52,23 +73,43 @@ def fuzzy_match(query: str, path: str) -> int | None:
     return score
 
 
+def match_kind(query: str, path: str) -> int:
+    """Classes how a query matched a path, assuming it matched at all."""
+    folded_query = _fold(query)
+    folded_path = _fold(path)
+    name = folded_path[folded_path.rfind("/") + 1 :]
+    at = name.find(folded_query)
+    if at >= 0:
+        before = name[at - 1] if at else ""
+        after = name[at + len(folded_query) : at + len(folded_query) + 1]
+        whole = (not before or before in _BOUNDARY_CHARS) and (
+            not after or after in _BOUNDARY_CHARS
+        )
+        return WORD_IN_NAME if whole else INSIDE_NAME
+    return INSIDE_PATH if folded_query in folded_path else SCATTERED
+
+
 def fuzzy_filenames(paths, query: str, limit: int = 200) -> list[FuzzyMatch]:
-    """Ranks the paths a query fuzzily matches, ties broken by shorter path."""
+    """Ranks the paths a query matches: by how it matched, then by score, then by length."""
     words = query.split()
     if not words:
         return []
     matches: list[FuzzyMatch] = []
     for path in paths:
         total = 0
+        # Every word has to match, so the weakest one is what the match is worth:
+        # a query half of which only scattered has not found the phrase.
+        kind = WORD_IN_NAME
         for word in words:
             score = fuzzy_match(word, path)
             if score is None:
                 total = None
                 break
             total += score
+            kind = max(kind, match_kind(word, path))
         if total is not None:
-            matches.append(FuzzyMatch(path=path, score=total))
-    matches.sort(key=lambda match: (-match.score, len(match.path), match.path))
+            matches.append(FuzzyMatch(path=path, score=total, kind=kind))
+    matches.sort(key=lambda match: (match.kind, -match.score, len(match.path), match.path))
     return matches[:limit]
 
 

@@ -30,7 +30,7 @@ from ..core.search import VaultSearch, parse_query, search_filenames
 from ..core.session import SessionStore, adopt_former_state
 from ..core.store import open_index_store
 from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
-from ..core.vault import Vault, file_kind, hidden_under
+from ..core.vault import Vault, file_kind, hidden_under, vault_holding
 from .bookpaged import BookPagedView
 from .filetree import VaultTree
 from .localgraph import LocalGraphView
@@ -987,7 +987,8 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._open_vault(path)
         elif path.is_file():
             self.store.remember_file(str(path))
-            self._open_vault(path.parent, focus_note=path.name)
+            root = vault_holding(path.parent)
+            self._open_vault(root, focus_note=path.relative_to(root).as_posix())
         else:
             self._toast(f"No such file or folder: {path}")
 
