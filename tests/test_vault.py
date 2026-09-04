@@ -1,6 +1,8 @@
 """The vault model: indexing, containment, encoding fallback, config reading."""
 
-from solander.core.vault import Vault, file_kind
+from pathlib import Path
+
+from solander.core.vault import Vault, file_kind, vault_holding
 
 
 def test_indexes_notes_and_skips_dot_directories(vault):
@@ -102,3 +104,29 @@ def test_ignore_filters_read_from_app_json(vault_dir):
     assert hidden_under("Projects", vault.ignore_filters)
     assert not hidden_under("Personal/Meeting Notes.md", vault.ignore_filters)
     assert not hidden_under("Projectsish/x.md", vault.ignore_filters)
+
+
+def test_a_note_opens_the_vault_that_holds_it_rather_than_its_own_folder(tmp_path):
+    """From a file manager this used to open a vault of one folder, links and all broken."""
+    vault = tmp_path / "My Notes"
+    deep = vault / "Records" / "Briefs"
+    deep.mkdir(parents=True)
+    (vault / ".obsidian").mkdir()
+    assert vault_holding(deep) == vault
+
+
+def test_a_folder_with_no_marker_is_still_opened_as_it_was(tmp_path):
+    loose = tmp_path / "just notes"
+    loose.mkdir()
+    assert vault_holding(loose) == loose
+
+
+def test_the_walk_stops_at_home_and_never_looks_above_it(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    below = home / "work" / "notes"
+    below.mkdir(parents=True)
+    (tmp_path / ".obsidian").mkdir()
+    monkeypatch.setattr(Path, "home", classmethod(lambda _cls: home))
+    assert vault_holding(below) == below
+    (home / ".obsidian").mkdir()
+    assert vault_holding(below) == home
