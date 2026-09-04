@@ -88,13 +88,23 @@ h1.inline-title::after {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.35em 0;
+  gap: 0.4em 0.9em;
   font-size: 0.78rem;
   color: var(--muted);
   margin-top: 0.8em;
 }
-.note-meta > span:not(:first-child)::before,
-.note-meta > a.tag:not(:first-child)::before { content: "·"; margin: 0 0.55em; color: var(--muted); }
+.note-facts > span:not(:first-child)::before {
+  content: "·";
+  margin: 0 0.55em;
+  color: var(--muted);
+}
+.note-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4em;
+}
+.more-tags { align-self: center; }
 .note-meta a.tag:hover { text-decoration: none; }
 
 /* Linked mentions after the content: present, quiet, collapsed. */

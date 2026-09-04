@@ -133,8 +133,15 @@ def run_checks(app):
             )
             check("a duplicate body H1 yields to the header title", one_title)
             second = window._provide_page("/note/Second Note.md", window.reader.webview)
-            titled = '<h1 class="inline-title">Second Note</h1>' in second
-            check("inline title shows when the body has none", titled)
+            check(
+                "a note is titled by the heading it opens with",
+                '<h1 class="inline-title">B</h1>' in second,
+            )
+            bare = window._provide_page("/note/Bare Note.md", window.reader.webview)
+            check(
+                "a note with no leading heading keeps its filename",
+                '<h1 class="inline-title">Bare Note</h1>' in bare,
+            )
             check("metadata line reports the update date", "Updated " in second)
             mentions_shown = 'class="backlinks"' in second and "reader:///note/A.md" in second
             check("linked mentions follow the content", mentions_shown)

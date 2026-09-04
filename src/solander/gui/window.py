@@ -1862,9 +1862,12 @@ class ReaderWindow(Adw.ApplicationWindow):
         listbox = self.outline_list
         while (row := listbox.get_first_child()) is not None:
             listbox.remove(row)
+        # A note whose headings are all H2 has no hierarchy to show, and indenting
+        # every row by one step says there is a level above that nothing is at.
+        top = min((heading.level for heading in outline), default=1)
         for heading in outline:
             label = Gtk.Label(label=heading.text, xalign=0.0, wrap=True)
-            label.set_margin_start((heading.level - 1) * 12)
+            label.set_margin_start((heading.level - top) * 12)
             label.set_margin_top(2)
             label.set_margin_bottom(2)
             label.add_css_class(f"outline-l{min(heading.level, 3)}")
