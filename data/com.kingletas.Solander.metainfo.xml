@@ -59,6 +59,15 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.2.4" date="2026-09-04">
+      <description>
+        <p>Opening a vault for the first time is about twice as fast, and
+        rendering a note a quarter faster. Quick-open now ranks a note whose
+        name contains the word you typed above one that merely scatters the
+        letters, and a note opened from a file manager finds the vault it
+        belongs to rather than treating its own folder as one.</p>
+      </description>
+    </release>
     <release version="2.2.3" date="2026-09-02">
       <description>
         <p>Frontmatter in notes saved with Windows line endings is recognized
