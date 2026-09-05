@@ -49,7 +49,7 @@ flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/fl
 Then take the bundle from the [latest release](https://github.com/kingletas/solander/releases/latest):
 
 ```bash
-flatpak install --user solander_2.2.3.flatpak
+flatpak install --user solander_2.2.4.flatpak
 ```
 
 The first install also pulls the runtime — about a gigabyte, once, shared with every other Flatpak. A Flatpak install puts no `solander` on your `PATH`; `flatpak run com.kingletas.Solander` is the terminal equivalent.
@@ -59,7 +59,7 @@ The first install also pulls the runtime — about a gigabyte, once, shared with
 For Ubuntu 24.04+. It pulls the GObject bindings itself and installs the AppArmor profile, so there is nothing to do afterwards:
 
 ```bash
-sudo apt install ./solander_2.2.3_all.deb
+sudo apt install ./solander_2.2.4_all.deb
 ```
 
 ### From source

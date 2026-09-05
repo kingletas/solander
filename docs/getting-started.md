@@ -17,7 +17,7 @@ flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/fl
 Then take the bundle from the [latest release](https://github.com/kingletas/solander/releases/latest) and install it:
 
 ```bash
-flatpak install --user solander_2.2.3.flatpak
+flatpak install --user solander_2.2.4.flatpak
 ```
 
 The first install also pulls the GNOME runtime — about a gigabyte, once, shared with every other Flatpak you own. Nothing else is required: Flatpak's own sandbox already carries the permission WebKit needs.
@@ -25,7 +25,7 @@ The first install also pulls the GNOME runtime — about a gigabyte, once, share
 ### The Debian package — for Ubuntu 24.04+
 
 ```bash
-sudo apt install ./solander_2.2.3_all.deb
+sudo apt install ./solander_2.2.4_all.deb
 ```
 
 `apt` pulls the GObject bindings itself, and the package installs the security profile, so there is nothing to do afterwards.

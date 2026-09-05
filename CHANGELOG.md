@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.2.4 — 2026-09-04
 
 - **A note that opens with a heading is now called that.** A vault of folder indexes was a vault of notes called README, with the real name printed again a line below. The leading heading becomes the title and leaves the body, so it is shown once; a note with no leading heading keeps its filename.
 - **The tags in a note's metadata line each had a separator drawn inside them.** The dot between items was the chip's own pseudo-element, and a chip has a border, so `· #index` rendered as one chip. Facts and tags are now two runs that separate differently — and at most five tags are shown before the count.
