@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from .fuzzy import fuzzy_filenames
 from .store import IndexStore
-from .vault import Vault
+from .vault import Vault, hidden_under
 
 MAX_RESULTS = 200
 
@@ -88,6 +88,21 @@ def search_filenames(vault: Vault, query: str) -> list[SearchHit]:
     """Finds notes whose path fuzzily matches the query, best matches first."""
     matches = fuzzy_filenames(vault.notes, query, limit=MAX_RESULTS)
     return [SearchHit(path=match.path) for match in matches]
+
+
+def demote(hits: list[SearchHit], excluded) -> list[SearchHit]:
+    """Moves hits under an excluded folder behind the rest, order otherwise kept.
+
+    Obsidian de-emphasises the folders named in its excluded-files setting rather
+    than hiding them, so a note only an archive holds is still the answer when
+    nothing else matches. Relevance is what the index scored; which folders are
+    history is something only the vault can say.
+    """
+    if not excluded:
+        return list(hits)
+    kept = [hit for hit in hits if not hidden_under(hit.path, excluded)]
+    behind = [hit for hit in hits if hidden_under(hit.path, excluded)]
+    return kept + behind
 
 
 def _tags_match(terms: tuple[str, ...], tags: set[str]) -> bool:

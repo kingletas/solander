@@ -14,7 +14,19 @@ from solander.gui.app import ReaderApplication
 
 failures: list[str] = []
 checks_run: list[str] = []
+finished: list[bool] = []
 vault_path = Path(sys.argv[1]).resolve()
+
+# The whole run is one chain of GLib callbacks, so an exception in any of them
+# takes every check after it with it. Long enough that a slow machine finishes.
+WATCHDOG_SECONDS = 300
+
+# How long the run waits for the vault's landing note before checking anything.
+# The floor is the delay this used to wait unconditionally, so waiting on the
+# condition can only ever extend the wait and never start the checks earlier.
+FIRST_NOTE_POLL_MS = 250
+FIRST_NOTE_FLOOR_TRIES = 14
+FIRST_NOTE_TRIES = 60
 
 
 def check(label: str, condition: bool) -> None:
@@ -22,6 +34,20 @@ def check(label: str, condition: bool) -> None:
     checks_run.append(label)
     if not condition:
         failures.append(label)
+
+
+def record_crash(kind, value, trace) -> None:
+    """Turns an exception in a GLib callback into a failure instead of a silence.
+
+    GLib prints an unhandled callback exception and carries on, so the chain of
+    timeouts that drives this run simply stops — and every check after the crash
+    reads the same as a check that was never written. A run that ended early used
+    to print PASS.
+    """
+    import traceback
+
+    traceback.print_exception(kind, value, trace)
+    check(f"a callback raised {kind.__name__}: {value}", False)
 
 
 def run_checks(app):
@@ -228,9 +254,13 @@ def run_checks(app):
             window.store.state.hidden_folders[key] = ["Sub"]
             window._apply_hidden_folders()
             names = [node.rel for node in window.tree._list_directory("")]
-            hits = window._visible_hits(search_filenames(window.vault, "inside"))
+            hits = window._quick_hits(search_filenames(window.vault, "inside"))
             check("hidden folder leaves the tree", "Sub" not in names)
             check("hidden folder leaves quick-open", all("Sub/" not in h.path for h in hits))
+            check(
+                "a folder hidden here leaves full-text search too",
+                all("Sub/" not in h.path for h in window._ranked_hits(hits)),
+            )
             window._unhide_all_folders()
             names = [node.rel for node in window.tree._list_directory("")]
             check("unhide restores the folder", "Sub" in names)
@@ -515,7 +545,13 @@ def run_checks(app):
             check("no code block is split across a page boundary", whole)
             toggle = window.lookup_action("toggle-source")
             window._on_toggle_source(toggle, GLib.Variant.new_boolean(True))
-            GLib.timeout_add(1200, lambda: (app.quit(), False)[1])
+            def done() -> bool:
+                """The last callback in the chain: the run got all the way here."""
+                finished.append(True)
+                app.quit()
+                return False
+
+            GLib.timeout_add(1200, done)
             return False
 
         GLib.timeout_add(1500, do_split_export)
@@ -632,6 +668,7 @@ def check_setup_window() -> None:
 
 def main() -> int:
     write_extra_fixtures()
+    sys.excepthook = record_crash
     app = ReaderApplication()
     # Without this, a reader already running for the real vault owns the app id,
     # activate is forwarded to it, and zero checks would read as a pass.
@@ -640,7 +677,30 @@ def main() -> int:
     def kick_off(application):
         window = application.get_active_window()
         window.open_path(vault_path)
-        GLib.timeout_add(3500, run_checks, application)
+        wait_for_first_note(application, 0)
+        GLib.timeout_add_seconds(WATCHDOG_SECONDS, give_up, application)
+
+    def wait_for_first_note(application, tries: int) -> bool:
+        """Starts the checks once a note is on screen, rather than after a guess.
+
+        A fixed delay is a bet on how loaded the machine is, and it flapped: the
+        first two checks failed on a run that was otherwise identical to a pass.
+        Waiting on the condition removes the flap without hiding a real failure —
+        past the bound the checks run anyway and report what they find.
+        """
+        window = application.get_active_window()
+        shown = window is not None and window.current_note and window.reader.last_render
+        ready = shown and tries >= FIRST_NOTE_FLOOR_TRIES
+        if ready or tries >= FIRST_NOTE_TRIES:
+            run_checks(application)
+            return False
+        GLib.timeout_add(FIRST_NOTE_POLL_MS, wait_for_first_note, application, tries + 1)
+        return False
+
+    def give_up(application) -> bool:
+        """Ends a run whose chain of callbacks stopped, so the verdict is reached."""
+        application.quit()
+        return False
 
     app.connect_after("activate", kick_off)
     app.run([sys.argv[0]])
@@ -648,6 +708,9 @@ def main() -> int:
     if not checks_run:
         print("RESULT: FAIL (no checks ran)")
         return 1
+    # A chain that stopped early leaves every check after it unwritten, which is
+    # indistinguishable from a run that had less to do.
+    check("the run reached its last check", bool(finished))
     print("RESULT:", "FAIL" if failures else "PASS")
     return 1 if failures else 0
 

@@ -344,20 +344,28 @@ body.theme-dark .callout-quote    { --callout-color: #a29a8b; }
 
 /* Frontmatter properties — the note's colophon. */
 details.properties {
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 8px;
-  background: var(--surface);
   margin-bottom: 1.5em;
   font-size: 0.9em;
 }
+/* Closed, this is one quiet line; a filled bar across the note is a lot of
+   furniture for something nobody has asked to see yet. */
+details.properties[open] { border-color: var(--border); background: var(--surface); }
 details.properties > summary {
-  padding: 0.45em 1em;
+  display: inline-block;
+  padding: 0.2em 0;
   color: var(--muted);
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.78em;
+  list-style: none;
 }
+details.properties[open] > summary { display: block; padding: 0.45em 1em; }
+details.properties > summary::-webkit-details-marker { display: none; }
+details.properties > summary::after { content: "\25b8"; margin-left: 0.5em; }
+details.properties[open] > summary::after { content: "\25be"; }
 .properties-table { margin: 0 1em 0.8em; display: table; }
 .properties-table th, .properties-table td { border: none; padding: 0.15em 0.8em 0.15em 0; }
 .properties-table th { background: none; color: var(--muted); font-weight: 500; text-align: left; }

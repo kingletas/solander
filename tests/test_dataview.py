@@ -57,6 +57,29 @@ def test_date_arithmetic_with_durations():
 def test_dateformat_uses_luxon_tokens():
     assert evaluate('dateformat(date("2026-09-01"), "ccc")') == "Tue"
     assert evaluate('dateformat(date("2026-09-01"), "yyyy-MM-dd")') == "2026-09-01"
+    assert evaluate('dateformat(date("2026-09-01"), "LLL")') == "Sep"
+    assert evaluate('dateformat(date("2026-09-01"), "yyyy-LL-dd")') == "2026-09-01"
+
+
+def test_date_keywords_are_answered_rather_than_read_as_fields():
+    """A bare keyword parses as a field name, and a missing field makes every
+    comparison against it false — so a recency query returned nothing at all."""
+    assert evaluate("date(today)") == datetime.date.today()
+    assert evaluate("date(yesterday)") == datetime.date.today() - datetime.timedelta(days=1)
+    assert evaluate("date(tomorrow)") == datetime.date.today() + datetime.timedelta(days=1)
+    assert isinstance(evaluate("date(now)"), datetime.datetime)
+
+
+def test_a_recency_window_selects_a_recent_note():
+    recent = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()
+    stale = (datetime.date.today() - datetime.timedelta(days=90)).isoformat()
+    assert evaluate("date(when) >= date(today) - dur(30 days)", {"when": recent}) is True
+    assert evaluate("date(when) >= date(today) - dur(30 days)", {"when": stale}) is False
+
+
+def test_a_property_named_today_is_still_reachable():
+    """The keyword is only read as one inside `date()`; elsewhere it is a field."""
+    assert evaluate("today", {"today": "busy"}) == "busy"
 
 
 def test_field_lookup_is_case_insensitive():

@@ -15,7 +15,7 @@ import os
 import re
 import sqlite3
 
-from gi.repository import Adw, Gio, GLib, Gtk, WebKit
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk, WebKit
 
 from .. import APP_ID, APP_NAME, __version__
 from ..core.book import chapter_title, chapters_in
@@ -26,7 +26,7 @@ from ..core.graph import VaultGraph, local_neighbors
 from ..core.indexing import sync_indexes
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
 from ..core.resolver import resolve_note
-from ..core.search import VaultSearch, parse_query, search_filenames
+from ..core.search import VaultSearch, demote, parse_query, search_filenames
 from ..core.session import SessionStore, adopt_former_state
 from ..core.store import open_index_store
 from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
@@ -35,12 +35,14 @@ from .bookpaged import BookPagedView
 from .filetree import VaultTree
 from .localgraph import LocalGraphView
 from .monitor import VaultMonitor
+from .panes import SplitPane
 from .pdfview import PdfWindow, poppler_available
 from .webpane import ReaderView
 
 MAX_AMBIGUOUS_CHOICES = 8
 MAX_PANEL_ROWS = 200
 HOVER_PREVIEW_DELAY_MS = 600
+OUTLINE_MIN_WIDTH = 200
 
 SHORTCUTS = [
     ("Ctrl+O", "Open file"),
@@ -63,6 +65,11 @@ SHORTCUTS = [
     ("F1", "User guide"),
     ("Ctrl+?", "This window"),
 ]
+
+
+def _not_under(hits, hidden):
+    """The hits that sit outside every one of these folders."""
+    return [hit for hit in hits if not hidden_under(hit.path, hidden)]
 
 
 class ReaderWindow(Adw.ApplicationWindow):
@@ -696,15 +703,14 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     def _build_reading_area(self) -> Gtk.Widget:
         """The reading pane with the outline as a real, closable panel on its right."""
-        self.outline_split = Adw.OverlaySplitView(
-            sidebar_position=Gtk.PackType.END,
-            show_sidebar=self.store.state.outline_visible,
-            min_sidebar_width=200,
-            max_sidebar_width=300,
-            sidebar_width_fraction=0.22,
+        self.outline_split = SplitPane(
+            sidebar=self._build_outline_panel(),
+            content=self._build_content(),
+            at_end=True,
+            width=self.store.state.outline_width,
+            minimum=OUTLINE_MIN_WIDTH,
         )
-        self.outline_split.set_content(self._build_content())
-        self.outline_split.set_sidebar(self._build_outline_panel())
+        self.outline_split.set_show_sidebar(self.store.state.outline_visible)
         return self.outline_split
 
     def _build_outline_panel(self) -> Gtk.Widget:
@@ -1158,12 +1164,17 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._reload_all_tabs()
         return False
 
+    def _own_hidden_folders(self) -> set[str]:
+        """The folders hidden in this reader, which is not the vault's own setting."""
+        if self.vault is None:
+            return set()
+        return set(self.store.state.hidden_folders.get(str(self.vault.root), []))
+
     def _hidden_folders(self) -> set[str]:
         """Obsidian's own excluded folders plus the ones hidden in this reader."""
         if self.vault is None:
             return set()
-        mine = self.store.state.hidden_folders.get(str(self.vault.root), [])
-        return set(self.vault.ignore_filters) | set(mine)
+        return set(self.vault.ignore_filters) | self._own_hidden_folders()
 
     def _apply_hidden_folders(self) -> None:
         self.tree.hidden_folders = self._hidden_folders()
@@ -1223,8 +1234,18 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._toast(message)
 
     def _visible_hits(self, hits):
-        hidden = self._hidden_folders()
-        return [hit for hit in hits if not hidden_under(hit.path, hidden)]
+        """Drops what this reader was told to hide, and nothing else."""
+        return _not_under(hits, self._own_hidden_folders())
+
+    def _quick_hits(self, hits):
+        """Quick open answers with a note you meant to reach, so an excluded one is out."""
+        return _not_under(hits, self._hidden_folders())
+
+    def _ranked_hits(self, hits):
+        """What full-text search shows: this reader's hidden folders out, the
+        vault's own excluded ones behind the rest."""
+        excluded = set(self.vault.ignore_filters) if self.vault is not None else set()
+        return demote(self._visible_hits(hits), excluded)
 
     def _show_mindmap(self) -> None:
         """Toggles between a note and its mind map."""
@@ -1926,7 +1947,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             for rel in recents:
                 self._add_result(rel, "")
             return
-        hits = self._visible_hits(search_filenames(self.vault, query))
+        hits = self._quick_hits(search_filenames(self.vault, query))
         self.search_status.set_text(
             f"{len(hits)} filename matches — press Enter for full-text search"
             if hits
@@ -1949,7 +1970,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             return
         self._clear_results()
         note_tags = self.graph.note_tags if self.graph is not None else None
-        hits = self._visible_hits(self.search_index.search_content(query, note_tags))
+        hits = self._ranked_hits(self.search_index.search_content(query, note_tags))
         if not hits:
             self.search_status.set_text(f"No matches for “{query}”")
             return
@@ -1978,7 +1999,37 @@ class ReaderWindow(Adw.ApplicationWindow):
         box.set_margin_bottom(4)
         row = Gtk.ListBoxRow(child=box)
         row.note_path = path
+        self._open_in_new_tab_on(row, path)
         self.search_results.append(row)
+
+    def _open_in_new_tab_on(self, row, path: str) -> None:
+        """Middle-click, Ctrl+click and right-click open a result in a new tab.
+
+        The tree already answers all three, and a result list that answers only
+        the one click it was activated by is the same list behaving differently
+        depending on which half of the sidebar it is in.
+        """
+
+        def open_new_tab(gesture) -> None:
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+            self.open_in_new_tab(path)
+
+        middle = Gtk.GestureClick(button=Gdk.BUTTON_MIDDLE)
+        middle.connect("pressed", lambda gesture, *_: open_new_tab(gesture))
+        row.add_controller(middle)
+
+        secondary = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
+        secondary.connect("pressed", lambda gesture, *_: open_new_tab(gesture))
+        row.add_controller(secondary)
+
+        primary = Gtk.GestureClick(button=Gdk.BUTTON_PRIMARY)
+
+        def primary_pressed(gesture, *_):
+            if gesture.get_current_event_state() & Gdk.ModifierType.CONTROL_MASK:
+                open_new_tab(gesture)
+
+        primary.connect("pressed", primary_pressed)
+        row.add_controller(primary)
 
     def _on_search_row(self, _list, row) -> None:
         words = parse_query(self.search_entry.get_text()).words
@@ -2417,6 +2468,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         state.window_height = self.get_height()
         state.sidebar_visible = self.sidebar_widget.get_visible()
         state.sidebar_width = self.paned.get_position()
+        state.outline_width = self.outline_split.sidebar_width
         state.open_tabs = [
             reader.current_note
             for reader in (
