@@ -6,7 +6,6 @@ have happened here.
 """
 
 import re
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -67,19 +66,21 @@ def test_every_relative_link_resolves(document):
     assert broken == [], f"{document.name}: " + "; ".join(broken)
 
 
-def test_the_documented_version_is_the_released_one():
-    """A package filename in the docs goes stale the moment a version ships."""
-    with (ROOT / "pyproject.toml").open("rb") as handle:
-        version = tomllib.load(handle)["project"]["version"]
-    stale = []
+def test_no_document_names_a_versioned_package():
+    """A version written into an install command is stale the next release.
+
+    The install commands take whichever bundle the reader downloaded, so the
+    version is never theirs to type. The changelog is the record of what each
+    release was, so it names versions by definition.
+    """
+    named = []
     for document in DOCS:
         if document.name == "CHANGELOG.md":
             continue
         text = document.read_text(encoding="utf-8")
         for found in re.findall(r"solander[_-](\d+\.\d+\.\d+)", text):
-            if found != version:
-                stale.append(f"{document.name} names {found}")
-    assert stale == [], f"pyproject says {version}: " + "; ".join(stale)
+            named.append(f"{document.name} names {found}")
+    assert named == [], "install commands take a glob, not a version: " + "; ".join(named)
 
 
 NUMBER_WORDS = {

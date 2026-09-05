@@ -187,7 +187,6 @@ wheels = [
 
 [[package]]
 name = "solander"
-version = "2.2.4"
 source = { editable = "." }
 dependencies = [
     { name = "latex2mathml" },
