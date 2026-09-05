@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+Slate was forked out of this codebase, and several things fixed over there had never come back. These are the ones that are about reading a vault rather than about the runtime Slate became.
+
+- **Every "last 30 days" Dataview query returned nothing.** `date(today)` writes the keyword bare, so the parser handed it back as a field name; evaluating it found no such property, and a comparison against nothing is silently false. There was no error and no empty-result message — the table simply had no rows in it, which reads as a vault with nothing recent in it. `today`, `now`, `yesterday` and `tomorrow` are answered as the dates they name, and only inside `date()`, so a note with a property called `today` still reads its own value.
+- **`dateformat` lost Luxon's standalone month tokens.** `LLLL`, `LLL`, `LL` and `L` are what Luxon writes a month as when it is not part of a date, and each was passed through to `strftime` verbatim — so `yyyy-LL-dd` formatted as the literal text `LL` where the month belonged.
+- **Search dropped everything in a folder Obsidian had been told to exclude.** Obsidian de-emphasises those files rather than hiding them, and a result only an archive holds is still the answer when nothing else matches. Full-text search now ranks them behind the rest, keeping the index's own order within each group; quick open still leaves them out, which is what Obsidian's own switcher does. A folder hidden *in this reader* is still hidden everywhere, because that one was asked for here.
+- **A search result opened only where you clicked it.** Middle-click, `Ctrl+click` and right-click all open a note in a new tab from the file tree, and did nothing at all in the results list — the same sidebar behaving two ways depending on which half of it you were in.
+- **The outline panel could not be resized.** It was sized by a fraction of the window with a ceiling, which is a layout the window decided and the reader could not argue with. It has a divider that drags, a floor of 200 px, and where it is left is remembered with the other pane preferences. The rail already worked this way.
+- **Properties was a filled bar across the note before anyone opened it.** Closed, it is one quiet line with a disclosure arrow; the border and the surface arrive when it does.
+
+Verifying those against the real window turned up three things wrong with the check that was meant to verify them.
+
+- **A smoke run that stopped early printed `PASS`.** Every check is a GLib callback in one long chain, so an exception in any of them takes the rest with it — and a check that never ran reads exactly like a check that was never written. One run reported `PASS` on 38 of 120 checks. An exception in a callback is now recorded as a named failure, the run has to reach its last check to pass, and a watchdog ends a chain that has stopped so the verdict is still printed. The guard that was there covered only the case where *nothing* ran.
+- **`make smoke` always exited 0.** The recipe cleaned up its fixture vault after the run with a `;`, which discarded the status, so the target reported success on a run that had said `RESULT: FAIL` on the line above.
+- **The first two checks flapped.** They ran after a fixed 3.5-second delay, which is a bet on how loaded the machine is; on a busy one the landing note had not rendered and *a note is shown* failed on a tree that was fine. The run waits for the note to be on screen, keeping the old delay as a floor so it can only ever wait longer, and checks anyway past a bound rather than hanging.
+
 - **Moving a tag no longer fails the release after building everything.** The publish step created the GitHub release, and creating one that already exists is an error — so re-tagging 2.2.4 built both packages, install-tested each of them, and then discarded the lot on the last line. An existing release now has its notes updated and its assets replaced instead.
 
 ## 2.2.4 — 2026-09-04

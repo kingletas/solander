@@ -53,6 +53,7 @@ class SessionState:
     window_height: int = 760
     sidebar_visible: bool = True
     sidebar_width: int = 280
+    outline_width: int = 240
     open_tabs: list[str] = field(default_factory=list)
     recent_notes: list[str] = field(default_factory=list)
     css_snippets: bool = True

@@ -1,7 +1,13 @@
 """Filename and content search over the fixture vault, through the persistent index."""
 
 from solander.core.indexing import sync_indexes
-from solander.core.search import VaultSearch, parse_query, search_filenames
+from solander.core.search import (
+    SearchHit,
+    VaultSearch,
+    demote,
+    parse_query,
+    search_filenames,
+)
 from solander.core.store import IndexStore
 
 
@@ -86,3 +92,31 @@ def test_hostile_query_text_never_reaches_fts_syntax(vault, tmp_path):
     search, _ = make_search(vault, tmp_path)
     for hostile in ('"broken', "a NEAR b", "col:x AND y", "((("):
         search.search_content(hostile)
+
+
+def test_excluded_folders_rank_behind_rather_than_disappear():
+    """Obsidian de-emphasises its excluded files; a dropped result is a different
+    setting than the one that was chosen."""
+    hits = [
+        SearchHit(path="Archive/Old.md"),
+        SearchHit(path="Notes/Live.md"),
+        SearchHit(path="Archive/Older.md"),
+        SearchHit(path="Notes/Newer.md"),
+    ]
+    ranked = demote(hits, {"Archive"})
+    assert [hit.path for hit in ranked] == [
+        "Notes/Live.md",
+        "Notes/Newer.md",
+        "Archive/Old.md",
+        "Archive/Older.md",
+    ]
+
+
+def test_demotion_keeps_the_index_order_within_each_group():
+    hits = [SearchHit(path=f"Notes/{n}.md") for n in "abc"]
+    assert [hit.path for hit in demote(hits, {"Archive"})] == [hit.path for hit in hits]
+
+
+def test_a_vault_that_excludes_nothing_is_left_alone():
+    hits = [SearchHit(path="Archive/Old.md"), SearchHit(path="Notes/Live.md")]
+    assert demote(hits, set()) == hits

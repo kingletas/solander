@@ -34,6 +34,12 @@ from .dql import (
 
 MAX_RESULT_ROWS = 2000
 
+# `date(today)` writes the keyword bare, so the parser hands it back as a field
+# name. Evaluating it as one finds no such property and the whole comparison
+# silently comes out false, which is how every "last 30 days" query returns
+# nothing at all rather than saying it could not be answered.
+DATE_KEYWORDS = frozenset({"today", "now", "tomorrow", "yesterday"})
+
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?)?$")
 _FILENAME_DATE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 
@@ -50,8 +56,9 @@ _DUR_UNITS = {
 # Luxon format tokens, longest first, mapped onto strftime pieces.
 _LUXON = [
     ("yyyy", "%Y"), ("yy", "%y"), ("MMMM", "%B"), ("MMM", "%b"), ("MM", "%m"),
+    ("LLLL", "%B"), ("LLL", "%b"), ("LL", "%m"),
     ("dd", "%d"), ("cccc", "%A"), ("ccc", "%a"), ("HH", "%H"), ("hh", "%I"),
-    ("mm", "%M"), ("ss", "%S"), ("a", "%p"), ("M", "%-m"), ("d", "%-d"),
+    ("mm", "%M"), ("ss", "%S"), ("a", "%p"), ("M", "%-m"), ("L", "%-m"), ("d", "%-d"),
 ]
 
 
@@ -185,8 +192,19 @@ class Evaluator:
                 elif _truthy(outcome):
                     results.append(item)
             return results
+        if name == "date" and len(node.arguments) == 1:
+            keyword = _date_keyword(node.arguments[0])
+            if keyword:
+                return _to_date(keyword)
         arguments = [self.evaluate(argument, row) for argument in node.arguments]
         return _function(name, arguments)
+
+
+def _date_keyword(node) -> str:
+    """Returns the date keyword a bare identifier names, or an empty string."""
+    if isinstance(node, Field) and len(node.parts) == 1 and node.parts[0] in DATE_KEYWORDS:
+        return node.parts[0]
+    return ""
 
 
 def _arity(node: Call, count: int) -> None:
@@ -363,6 +381,10 @@ def _to_date(value):
         text = value.strip()
         if text == "today":
             return datetime.date.today()
+        if text == "yesterday":
+            return datetime.date.today() - datetime.timedelta(days=1)
+        if text == "tomorrow":
+            return datetime.date.today() + datetime.timedelta(days=1)
         if text == "now":
             return datetime.datetime.now()
         if _ISO_DATE.match(text):
