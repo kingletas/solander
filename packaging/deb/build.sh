@@ -16,7 +16,7 @@
 # typelibs are system packages, and the deb declares them as dependencies.
 #
 # Environment overrides:
-#   VERSION   package version (default: read from pyproject.toml)
+#   VERSION   package version (default: packaging/version.sh)
 #   PYTHON    the interpreter that installs the vendored dependencies
 #             (default: /usr/bin/python3 -- the same one the launcher runs, so
 #             what is packaged is what will import)
@@ -25,14 +25,13 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUTDIR="${1:-$HERE/dist}"
-VERSION="${VERSION:-$(sed -n 's/^version = "\(.*\)"/\1/p' "$HERE/pyproject.toml" | head -1)}"
+VERSION="${VERSION:-$("$HERE/packaging/version.sh")}"
 APP_ID="com.kingletas.Solander"
 # Deliberately the absolute system interpreter, not whatever `python3` resolves
 # to on this PATH: the launcher runs /usr/bin/python3, and packaging with a
 # different one can vendor code that interpreter cannot import.
 PYTHON="${PYTHON:-/usr/bin/python3}"
 
-[ -n "$VERSION" ] || { echo "build.sh: no version in pyproject.toml" >&2; exit 1; }
 [ -x "$PYTHON" ] || { echo "build.sh: no interpreter at $PYTHON" >&2; exit 1; }
 if ! "$PYTHON" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)'; then
   echo "build.sh: $PYTHON is older than 3.12, which the package requires" >&2

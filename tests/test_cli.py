@@ -136,20 +136,3 @@ def test_the_sandbox_probe_still_runs_outside_flatpak(monkeypatch):
     # which() returning None is the "cannot probe" path, which answers True --
     # what matters is that inside_flatpak() did not short-circuit ahead of it.
     assert cli.inside_flatpak() is False
-
-
-def test_the_version_the_app_prints_is_the_version_it_was_built_as():
-    """__version__ and pyproject are two literals that can disagree, and did.
-
-    2.2.1 shipped reporting 2.2.0: the release job compares the tag, pyproject
-    and the changelog, and never looks at this one.
-    """
-    import tomllib
-    from pathlib import Path
-
-    import solander
-
-    root = Path(__file__).resolve().parent.parent
-    with (root / "pyproject.toml").open("rb") as handle:
-        declared = tomllib.load(handle)["project"]["version"]
-    assert solander.__version__ == declared

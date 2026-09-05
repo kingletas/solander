@@ -60,7 +60,19 @@ The smoke run drives the **real window on a live display** through open, render,
 - One concern per pull request, with the reasoning in the description.
 - `make check` green, and `make smoke` green if you touched the GTK layer.
 - A test with the fix. For a rendering bug, the fixture note that reproduced it.
-- Update `CHANGELOG.md` under a new heading, in the voice of the entries already there: what changed for someone using it, not what the diff did.
+- Add your entry to `CHANGELOG.md` under `## Unreleased`, in the voice of the entries already there: what changed for someone using it, not what the diff did.
+
+## Releasing
+
+The version is declared once, as `__version__` in `src/solander/__init__.py`. `pyproject.toml` reads it from there, `packaging/version.sh` is what everything outside Python asks, and the install commands in the documentation take a glob rather than naming a version.
+
+```bash
+make release VERSION=2.2.5
+```
+
+That writes the version, retitles the `## Unreleased` changelog section with today's date, and adds the AppStream entry a software centre reads. It seeds that entry's description with a placeholder, which `make check` refuses — the paragraph a software centre shows is the one thing here no script can write. Add `DRY_RUN=1` to see what it would change.
+
+Then `make check`, commit, and tag: pushing a `v*` tag is the whole release trigger, and the release body is that version's changelog section.
 
 ## Security
 

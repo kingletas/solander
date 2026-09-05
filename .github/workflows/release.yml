@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The tag, the packaging version and the changelog have to agree, or the
+      # The tag, the declared version and the changelog have to agree, or the
       # release ships one version's files under another version's notes.
       - id: pick
         run: |
@@ -32,9 +32,9 @@ jobs:
           else
             version="${GITHUB_REF_NAME#v}"
           fi
-          declared="$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)"
+          declared="$(packaging/version.sh)"
           if [ "$version" != "$declared" ]; then
-            echo "::error::tag says $version, pyproject.toml says $declared"
+            echo "::error::tag says $version, the package says $declared"
             exit 1
           fi
           packaging/release-notes.sh "$version" > /dev/null

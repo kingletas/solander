@@ -68,6 +68,15 @@ flatpak: ## Build and install the Flatpak locally (needs the GNOME 50 runtime an
 notes: ## Print one version's changelog section: make notes VERSION=2.1.1
 	@packaging/release-notes.sh $(VERSION)
 
+.PHONY: version
+version: ## Print the version this tree builds as
+	@packaging/version.sh
+
+.PHONY: release
+release: ## Bump to a release: make release VERSION=2.2.5 (add DRY_RUN=1 to preview)
+	@test -n "$(VERSION)" || { echo "usage: make release VERSION=2.2.5"; exit 2; }
+	@scripts/release.sh $(if $(DRY_RUN),-n) $(VERSION)
+
 # --- housekeeping ---
 
 .PHONY: clean

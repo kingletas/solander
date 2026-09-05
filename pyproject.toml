@@ -1,6 +1,6 @@
 [project]
 name = "solander"
-version = "2.2.4"
+dynamic = ["version"]
 description = "A read-only GTK4 reading application that opens a Markdown vault in place and never writes into it"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -23,6 +23,13 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.6",
 ]
+
+# The version is the one in src/solander/__init__.py. It reads it from there
+# rather than declaring a second literal here, because a deb install has no
+# package metadata to ask -- build.sh strips the dist-info -- so the literal
+# the application prints has to be the real one.
+[tool.hatch.version]
+path = "src/solander/__init__.py"
 
 [build-system]
 requires = ["hatchling"]
@@ -49,6 +56,9 @@ ignore = [
 # gi.require_version must run before the gi.repository imports it pins.
 "src/solander/gui/*" = ["E402"]
 "scripts/*" = ["E402"]
+# S603: this one runs packaging/version.sh, which is in this repository. The
+# point of the test is that the real script is what answers.
+"tests/test_versioning.py" = ["S603"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
