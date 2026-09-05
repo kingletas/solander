@@ -147,12 +147,25 @@ jobs:
 
       # The release body is the changelog entry rather than a second account of
       # the same release written by hand.
+      #
+      # Moving a tag runs this again, and by the time it gets here both packages
+      # are built and install-tested. Creating a release that already exists is
+      # an error, so an existing one is updated in place: the alternative is
+      # doing all of the work and then discarding it over the last line.
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="${{ needs.version.outputs.version }}"
           packaging/release-notes.sh "$version" > notes.md
-          gh release create "v${version}" artifacts/* \
-            --title "Solander ${version}" \
-            --notes-file notes.md
+          if gh release view "v${version}" >/dev/null 2>&1; then
+            echo "v${version} exists: updating its notes and replacing its assets"
+            gh release edit "v${version}" \
+              --title "Solander ${version}" \
+              --notes-file notes.md
+            gh release upload "v${version}" artifacts/* --clobber
+          else
+            gh release create "v${version}" artifacts/* \
+              --title "Solander ${version}" \
+              --notes-file notes.md
+          fi

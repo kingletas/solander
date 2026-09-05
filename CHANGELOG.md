@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Moving a tag no longer fails the release after building everything.** The publish step created the GitHub release, and creating one that already exists is an error — so re-tagging 2.2.4 built both packages, install-tested each of them, and then discarded the lot on the last line. An existing release now has its notes updated and its assets replaced instead.
+
 ## 2.2.4 — 2026-09-04
 
 - **A note that opens with a heading is now called that.** A vault of folder indexes was a vault of notes called README, with the real name printed again a line below. The leading heading becomes the title and leaves the body, so it is shown once; a note with no leading heading keeps its filename.
