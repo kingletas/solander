@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.3.0 — 2026-09-05
 
 Slate was forked out of this codebase, and several things fixed over there had never come back. These are the ones that are about reading a vault rather than about the runtime Slate became.
 

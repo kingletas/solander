@@ -59,6 +59,18 @@
     <control>pointing</control>
   </supports>
   <releases>
+    <release version="2.3.0" date="2026-09-05">
+      <description>
+        <p>Dataview queries asking for recent notes returned nothing at
+        all, silently, because a bare date keyword was read as the name of a
+        property no note has; they answer again. Search no longer drops the
+        folders Obsidian has been told to exclude, ranking them behind
+        everything else the way Obsidian does. A search result opens in a new
+        tab from a middle-click or a right-click, the outline panel can be
+        resized, and a note's properties stay one quiet line until you open
+        them.</p>
+      </description>
+    </release>
     <release version="2.2.4" date="2026-09-04">
       <description>
         <p>Opening a vault for the first time is about twice as fast, and
