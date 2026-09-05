@@ -14,6 +14,9 @@ from urllib.parse import quote
 
 MAX_SNIPPET_BYTES = int(os.environ.get("READER_MAX_SNIPPET_BYTES", str(256 * 1024)))
 
+# The window serves a vault font from its own scheme; another client says where.
+ASSET_BASE = "vault:///"
+
 _COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 _DANGEROUS = re.compile(r"url\s*\(|expression\s*\(|@import|javascript:|\\|</", re.IGNORECASE)
 
@@ -27,7 +30,7 @@ _FONT_SRC = re.compile(
 )
 
 
-def load_snippets(root: Path) -> str:
+def load_snippets(root: Path, asset_base: str = ASSET_BASE) -> str:
     """Returns the sanitized CSS of every snippet the vault has enabled."""
     obsidian = root / ".obsidian"
     try:
@@ -59,12 +62,12 @@ def load_snippets(root: Path) -> str:
     return "\n".join(piece for piece in pieces if piece)
 
 
-def sanitize_css(text: str) -> str:
+def sanitize_css(text: str, asset_base: str = ASSET_BASE) -> str:
     """Reduces a stylesheet to plain rules and @media blocks with safe declarations."""
-    return "".join(_safe_rules(_COMMENT.sub("", text)))
+    return "".join(_safe_rules(_COMMENT.sub("", text), asset_base))
 
 
-def _safe_rules(text: str):
+def _safe_rules(text: str, asset_base: str):
     position = 0
     while position < len(text):
         brace = text.find("{", position)
@@ -76,11 +79,11 @@ def _safe_rules(text: str):
             continue
         if selector.startswith("@"):
             if selector.casefold().startswith("@media") and "\\" not in selector:
-                inner = "".join(_safe_rules(block))
+                inner = "".join(_safe_rules(block, asset_base))
                 if inner:
                     yield f"{selector} {{ {inner} }}\n"
             elif selector.casefold() == "@font-face":
-                rule = _font_face_rule(block)
+                rule = _font_face_rule(block, asset_base)
                 if rule:
                     yield rule
             continue
@@ -95,7 +98,7 @@ def _safe_rules(text: str):
             yield f"{selector} {{ {'; '.join(declarations)}; }}\n"
 
 
-def _font_face_rule(block: str) -> str:
+def _font_face_rule(block: str, asset_base: str) -> str:
     """Rebuilds a @font-face whose src is a vault font file; anything else is dropped."""
     if "{" in block:
         return ""
@@ -113,7 +116,8 @@ def _font_face_rule(block: str) -> str:
             src = _FONT_SRC.match(value)
             if not src:
                 return ""
-            value = f'url("vault:///.obsidian/fonts/{quote(src.group("name"), safe="")}")'
+            filename = quote(src.group("name"), safe="")
+            value = f'url("{asset_base}.obsidian/fonts/{filename}")'
         elif _DANGEROUS.search(part):
             return ""
         kept.append(f"{name}: {value}")

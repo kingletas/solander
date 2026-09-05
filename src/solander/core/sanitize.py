@@ -130,9 +130,20 @@ _SAFE_LENGTH = re.compile(r"^-?\d{0,4}(\.\d{1,4})?(em|ex|px|pt|%)?$")
 
 
 def _safe_url(value: str, schemes: tuple[str, ...]) -> str:
-    """Returns the URL unchanged when its scheme is allowed, empty otherwise."""
+    """Returns the URL unchanged when it points somewhere allowed, empty otherwise.
+
+    A scheme, a fragment, or a path rooted at the page's own origin — which is
+    what a client that cannot register a URI scheme writes its links as, and
+    which can reach nowhere but wherever the page came from.
+
+    **`//` is not that.** A protocol-relative URL is another origin wearing a
+    path's clothes, and it is the reason this is a check rather than a
+    `startswith("/")`.
+    """
     stripped = value.strip()
     if stripped.startswith("#"):
+        return stripped
+    if stripped.startswith("/") and not stripped.startswith("//"):
         return stripped
     lowered = stripped.casefold()
     for scheme in schemes:

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+The Android port starts here. Neither of these changes the window; both are things the window's own design had made true only for the window.
+
+- **Where a link points is now the client's decision, not the renderer's.** Every note link, asset, breadcrumb, tag, embed, backlink, canvas node, mind-map node and Dataview result was written with `reader:` or `vault:` — schemes only the GTK window can register, and which an Android or browser WebView cannot. A client passes the prefixes it wants and gets them everywhere; passing nothing gets the window's, so nothing changed for the client that was here first. **A client that says it has no window actions, with an empty prefix, gets a folder and a tag written as text rather than as a link nothing can follow.**
+- **A link written as a path was being dropped by the sanitizer, silently.** It allowed a list of URL schemes, and a link a browser can follow is a path — so a page rendered for a path-based client came back with every wikilink stripped of its target and every image of its source. A path rooted at the page's own origin survives now; **`//` still does not, because a protocol-relative URL is another origin wearing a path's clothes.**
+- **Measured against this vault rather than a fixture**: six real notes, including the Dataview-heavy dashboard, render with **zero** window schemes for a path client and unchanged output for the window.
+
 - **The vault is now the only thing in the core that touches storage.** The renderer read a note's modified time by calling `stat` on the file itself, reaching around the `Vault` every other read goes through. The walk that builds the index now records each file's time and size as it goes, and the renderer and the indexer both read what it found. **Measured: 132,524 stat calls against 143,313 for an index of this vault's 11,290 files — 10,789 fewer, one per note.** No wall-clock claim is made; the difference was below the noise on the machine it was measured on.
 - The reason is not the syscalls. **A storage backend that is not a POSIX filesystem now has one 210-line module to answer for**, which is what an Android or iOS port would need, and it was one `stat()` away from being untrue.
 
