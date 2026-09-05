@@ -304,3 +304,22 @@ def test_a_leading_heading_becomes_the_title_and_leaves_the_body(vault):
     page = NoteRenderer(vault).render("Index.md").page
     assert '<h1 class="inline-title">Welcome</h1>' in page
     assert page.count(">Welcome<") == 1
+
+
+def test_the_metadata_line_reads_the_time_the_walk_recorded(vault):
+    """The renderer asks the vault, never the filesystem.
+
+    A storage backend that is not a POSIX filesystem has to answer for the vault
+    and nothing else, which only holds while nothing renders around it. The file
+    on disk is untouched here, so a renderer that stats it reports this year.
+    """
+    # Mid-September 2001, so no timezone can move it into another year.
+    vault.mtimes["Index.md"] = 1_000_000_000.0
+    assert "2001" in rendered(vault, "Index.md").page
+
+
+def test_a_note_the_walk_never_saw_is_rendered_without_a_time(vault):
+    (vault.root / "Unlisted.md").write_text("# Unlisted\n\nSome prose.\n")
+    page = rendered(vault, "Unlisted.md")
+    assert page.error == ""
+    assert "Updated" not in page.page

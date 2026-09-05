@@ -2,6 +2,7 @@
 
 import json
 import os
+import stat
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -61,6 +62,12 @@ class Vault:
     attachment_folder: str = ""
     ignore_filters: list[str] = field(default_factory=list)
 
+    mtimes: dict[str, float] = field(default_factory=dict)
+    """Each indexed file's modified time, taken during the walk that found it."""
+
+    sizes: dict[str, int] = field(default_factory=dict)
+    """Each indexed file's size, taken during the same walk."""
+
     @classmethod
     def open(cls, root: Path) -> "Vault":
         """Builds a vault over a directory, indexing every non-hidden file below it."""
@@ -76,6 +83,8 @@ class Vault:
         files: list[str] = []
         by_name: dict[str, list[str]] = {}
         files_by_name: dict[str, list[str]] = {}
+        mtimes: dict[str, float] = {}
+        sizes: dict[str, int] = {}
         for dirpath, dirnames, filenames in os.walk(self.root, followlinks=False):
             dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
             rel_dir = Path(dirpath).relative_to(self.root)
@@ -83,13 +92,29 @@ class Vault:
                 if filename.startswith("."):
                     continue
                 full = Path(dirpath) / filename
-                # os.walk already refuses to follow directory symlinks; a symlinked
-                # file still appears here, so one that points outside the root is
-                # dropped now rather than being trusted later on its index entry.
-                if full.is_symlink() and not self.contains(full):
+                # One lstat answers both questions the walk has about a file: whether
+                # it is a symlink, and how big it is and when it changed. Everything
+                # downstream reads those from here rather than asking again.
+                try:
+                    info = full.lstat()
+                except OSError:
                     continue
+                if stat.S_ISLNK(info.st_mode):
+                    # os.walk already refuses to follow directory symlinks; a symlinked
+                    # file still appears here, so one that points outside the root is
+                    # dropped now rather than being trusted later on its index entry.
+                    if not self.contains(full):
+                        continue
+                    # A link's own lstat describes the link. What is being read is
+                    # what it points at.
+                    try:
+                        info = full.stat()
+                    except OSError:
+                        continue
                 rel = str(rel_dir / filename) if str(rel_dir) != "." else filename
                 files.append(rel)
+                mtimes[rel] = info.st_mtime
+                sizes[rel] = info.st_size
                 key = unicodedata.normalize("NFC", filename).casefold()
                 files_by_name.setdefault(key, []).append(rel)
                 if filename.casefold().endswith(NOTE_EXTENSIONS):
@@ -97,6 +122,8 @@ class Vault:
                     by_name.setdefault(normalize_name(filename), []).append(rel)
         self.notes = notes
         self.files = files
+        self.mtimes = mtimes
+        self.sizes = sizes
         self._files_set = set(files)
         self._notes_by_name = by_name
         self._files_by_name = files_by_name

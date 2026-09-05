@@ -1,6 +1,5 @@
 """Synchronizes the persistent index with the vault: read what changed, keep the rest."""
 
-import os
 from dataclasses import dataclass
 
 from .graph import VaultGraph, scan_note
@@ -23,15 +22,15 @@ def sync_indexes(vault: Vault, store: IndexStore, progress=None) -> SyncResult:
     Only notes whose (mtime, size) changed are read and re-scanned; everything
     else loads from the store. The graph is always re-assembled in full, so a
     rename or deletion re-resolves every link against the current index.
+
+    The file facts come from the walk that built the vault's index rather than
+    from a second pass of `stat` over every note, which is why a vault is always
+    opened immediately before it is synced.
     """
     cached = store.load_meta()
-    stats: dict[str, tuple[float, int]] = {}
-    for rel in vault.notes:
-        try:
-            info = os.stat(vault.root / rel)
-            stats[rel] = (info.st_mtime, info.st_size)
-        except OSError:
-            continue
+    stats = {
+        rel: (vault.mtimes.get(rel, 0.0), vault.sizes.get(rel, 0)) for rel in vault.notes
+    }
     gone = [rel for rel in cached if rel not in stats]
     if gone:
         store.remove(gone)

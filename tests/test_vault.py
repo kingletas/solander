@@ -130,3 +130,20 @@ def test_the_walk_stops_at_home_and_never_looks_above_it(tmp_path, monkeypatch):
     assert vault_holding(below) == below
     (home / ".obsidian").mkdir()
     assert vault_holding(below) == home
+
+
+def test_the_walk_records_each_file_s_time_and_size(vault):
+    """Everything downstream reads these rather than asking the filesystem again."""
+    assert set(vault.mtimes) == set(vault.files)
+    assert set(vault.sizes) == set(vault.files)
+    real = (vault.root / "Index.md").stat()
+    assert vault.mtimes["Index.md"] == real.st_mtime
+    assert vault.sizes["Index.md"] == real.st_size
+
+
+def test_a_symlink_inside_the_vault_is_measured_by_what_it_points_at(vault):
+    target = vault.root / "Index.md"
+    link = vault.root / "Linked.md"
+    link.symlink_to(target)
+    vault.reindex()
+    assert vault.sizes["Linked.md"] == target.stat().st_size

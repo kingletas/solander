@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **The vault is now the only thing in the core that touches storage.** The renderer read a note's modified time by calling `stat` on the file itself, reaching around the `Vault` every other read goes through. The walk that builds the index now records each file's time and size as it goes, and the renderer and the indexer both read what it found. **Measured: 132,524 stat calls against 143,313 for an index of this vault's 11,290 files — 10,789 fewer, one per note.** No wall-clock claim is made; the difference was below the noise on the machine it was measured on.
+- The reason is not the syscalls. **A storage backend that is not a POSIX filesystem now has one 210-line module to answer for**, which is what an Android or iOS port would need, and it was one `stat()` away from being untrue.
+
 ## 2.3.0 — 2026-09-05
 
 Slate was forked out of this codebase, and several things fixed over there had never come back. These are the ones that are about reading a vault rather than about the runtime Slate became.

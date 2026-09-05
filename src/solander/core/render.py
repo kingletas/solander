@@ -288,10 +288,7 @@ class NoteRenderer:
         )
 
     def _mtime(self, rel: str) -> float | None:
-        try:
-            return (self.vault.root / rel).stat().st_mtime
-        except OSError:
-            return None
+        return self.vault.mtimes.get(rel)
 
     def _backlinks_footer(self, rel: str) -> str:
         """Lists the notes linking here after the content, quietly and collapsed."""
