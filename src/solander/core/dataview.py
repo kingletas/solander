@@ -517,8 +517,13 @@ def _duration_text(delta: datetime.timedelta) -> str:
 # -- execution over the vault graph -----------------------------------------
 
 
-def _note_uri(rel: str) -> str:
-    return f"reader:///note/{quote(rel)}"
+# The window's own scheme, used when no client has said otherwise. The engine
+# takes a prefix rather than importing the renderer's, which would be a cycle.
+NOTE_BASE = "reader:///note/"
+
+
+def _note_uri(rel: str, base: str = NOTE_BASE) -> str:
+    return f"{base}{quote(rel)}"
 
 
 def _file_namespace(rel: str, graph) -> dict:
@@ -559,8 +564,9 @@ def _file_namespace(rel: str, graph) -> dict:
 class DataviewEngine:
     """Runs DQL queries and inline expressions against one vault graph snapshot."""
 
-    def __init__(self, graph):
+    def __init__(self, graph, note_base: str = NOTE_BASE):
         self.graph = graph
+        self.note_base = note_base
 
     def _page_row(self, rel: str) -> Row:
         props = self.graph.props.get(rel, {}) or {}
@@ -596,7 +602,7 @@ class DataviewEngine:
         node = parse_expression(text)
         this_row = self._page_row(this_rel)
         value = Evaluator(this_row).evaluate(node, this_row)
-        return _value_html(value)
+        return _value_html(value, self.note_base)
 
     def run_query(self, text: str, this_rel: str) -> str:
         """Executes a DQL block and returns the escaped result markup."""
@@ -611,11 +617,11 @@ class DataviewEngine:
         truncated = len(rows) > MAX_RESULT_ROWS
         rows = rows[:MAX_RESULT_ROWS]
         if query.kind == "table":
-            body = _render_table(query, rows, evaluator)
+            body = _render_table(query, rows, evaluator, self.note_base)
         elif query.kind == "list":
-            body = _render_list(query, rows, evaluator)
+            body = _render_list(query, rows, evaluator, self.note_base)
         else:
-            body = _render_tasks(rows)
+            body = _render_tasks(rows, self.note_base)
         notice = (
             f'<div class="dataview-note">Showing the first {MAX_RESULT_ROWS} rows</div>'
             if truncated
@@ -699,30 +705,32 @@ def _sorted_rows(rows: list[Row], keys, evaluator: Evaluator) -> list[Row]:
     return [row for row, _ in sorted(evaluated, key=cmp_to_key(compare))]
 
 
-def _value_html(value) -> str:
+def _value_html(value, note_base: str = NOTE_BASE) -> str:
     if isinstance(value, Link):
-        href = html.escape(_note_uri(value.rel), quote=True)
+        href = html.escape(_note_uri(value.rel, note_base), quote=True)
         return f'<a class="wikilink" href="{href}">{html.escape(value.display)}</a>'
     if isinstance(value, list):
-        return ", ".join(_value_html(item) for item in value)
+        return ", ".join(_value_html(item, note_base) for item in value)
     if isinstance(value, Row):
         file_ns = value.get("file")
         if isinstance(file_ns, dict) and isinstance(file_ns.get("link"), Link):
-            return _value_html(file_ns["link"])
-        return _value_html(value.get("key"))
+            return _value_html(file_ns["link"], note_base)
+        return _value_html(value.get("key"), note_base)
     if value is None:
         return "-"
     return html.escape(_to_text(value))
 
 
-def _row_identity(row: Row) -> str:
+def _row_identity(row: Row, note_base: str = NOTE_BASE) -> str:
     file_ns = row.get("file")
     if isinstance(file_ns, dict) and isinstance(file_ns.get("link"), Link):
-        return _value_html(file_ns["link"])
-    return _value_html(row.get("key"))
+        return _value_html(file_ns["link"], note_base)
+    return _value_html(row.get("key"), note_base)
 
 
-def _render_table(query: Query, rows: list[Row], evaluator: Evaluator) -> str:
+def _render_table(
+    query: Query, rows: list[Row], evaluator: Evaluator, note_base: str = NOTE_BASE
+) -> str:
     headers = [column.header for column in query.columns]
     if not query.without_id:
         headers = ["File" if rows and rows[0].get("file") else "Group", *headers]
@@ -731,35 +739,42 @@ def _render_table(query: Query, rows: list[Row], evaluator: Evaluator) -> str:
     for row in rows:
         cells = []
         if not query.without_id:
-            cells.append(f"<td>{_row_identity(row)}</td>")
+            cells.append(f"<td>{_row_identity(row, note_base)}</td>")
         for column in query.columns:
-            cells.append(f"<td>{_value_html(evaluator.evaluate(column.expression, row))}</td>")
+            cells.append(
+                f"<td>{_value_html(evaluator.evaluate(column.expression, row), note_base)}</td>"
+            )
         lines.append(f"<tr>{''.join(cells)}</tr>")
     count = f'<div class="dataview-note">{len(rows)} result(s)</div>' if not rows else ""
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(lines)}</tbody></table>{count}"
 
 
-def _render_list(query: Query, rows: list[Row], evaluator: Evaluator) -> str:
+def _render_list(
+    query: Query, rows: list[Row], evaluator: Evaluator, note_base: str = NOTE_BASE
+) -> str:
     items = []
     for row in rows:
         if query.columns:
-            value = _value_html(evaluator.evaluate(query.columns[0].expression, row))
-            items.append(f"<li>{_row_identity(row)}: {value}</li>")
+            value = _value_html(
+                evaluator.evaluate(query.columns[0].expression, row), note_base
+            )
+            items.append(f"<li>{_row_identity(row, note_base)}: {value}</li>")
         else:
-            items.append(f"<li>{_row_identity(row)}</li>")
+            items.append(f"<li>{_row_identity(row, note_base)}</li>")
     if not items:
         return '<div class="dataview-note">0 result(s)</div>'
     return f"<ul>{''.join(items)}</ul>"
 
 
-def _render_tasks(rows: list[Row]) -> str:
+def _render_tasks(rows: list[Row], note_base: str = NOTE_BASE) -> str:
     items = []
     for row in rows:
         checked = " checked" if row.get("checked") else ""
         source = ""
         file_ns = row.get("file")
         if isinstance(file_ns, dict) and isinstance(file_ns.get("link"), Link):
-            source = f' <span class="dataview-source">{_value_html(file_ns["link"])}</span>'
+            link = _value_html(file_ns["link"], note_base)
+            source = f' <span class="dataview-source">{link}</span>'
         items.append(
             f'<li class="task-list-item"><input type="checkbox" disabled{checked} /> '
             f"{html.escape(str(row.get('text') or ''))}{source}</li>"

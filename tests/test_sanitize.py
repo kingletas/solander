@@ -57,3 +57,15 @@ def test_input_only_as_disabled_checkbox_shape():
 
 def test_text_content_is_escaped():
     assert sanitize("a < b & c") == "a &lt; b &amp; c"
+
+
+def test_a_path_survives_so_a_client_without_a_scheme_has_links():
+    """A WebView that cannot register `reader:` writes its links as paths."""
+    kept = sanitize('<a href="/note/Index.md">x</a>')
+    assert 'href="/note/Index.md"' in kept
+
+
+def test_a_protocol_relative_url_is_another_origin_and_does_not():
+    """`//evil.example` is a host wearing a path's clothes."""
+    kept = sanitize('<a href="//evil.example/x">x</a>')
+    assert "evil.example" not in kept

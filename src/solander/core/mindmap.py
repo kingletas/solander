@@ -13,6 +13,9 @@ from urllib.parse import quote
 
 from .links import slugify
 
+# The window's own scheme, used when no client has said otherwise.
+NOTE_BASE = "reader:///note/"
+
 MAX_NODES = int(os.environ.get("READER_MAX_MINDMAP_NODES", "500"))
 MAX_LABEL_CHARS = 60
 
@@ -90,7 +93,7 @@ def build_tree(title: str, body: str) -> MindNode:
     return root
 
 
-def mindmap_body(title: str, body: str, rel: str) -> str:
+def mindmap_body(title: str, body: str, rel: str, note_base: str = NOTE_BASE) -> str:
     """Lays the tree out and renders the SVG page body."""
     root = build_tree(title, body)
     if not root.children:
@@ -105,7 +108,7 @@ def mindmap_body(title: str, body: str, rel: str) -> str:
     height = next_row[0] * ROW_HEIGHT + 2 * MARGIN
     width = sum(columns) + COLUMN_GAP * len(columns) + 2 * MARGIN
     shapes: list[str] = []
-    _draw(root, 0, rel, shapes)
+    _draw(root, 0, rel, shapes, note_base)
     return (
         f'<div class="mindmap"><svg width="{width:.0f}" height="{height:.0f}" '
         f'viewBox="{-MARGIN:.0f} {-MARGIN:.0f} {width:.0f} {height:.0f}">'
@@ -154,7 +157,7 @@ def _layout(node: MindNode, depth: int, columns: list[float], next_row: list[flo
     node.y = (node.children[0].y + node.children[-1].y) / 2
 
 
-def _draw(node: MindNode, depth: int, rel: str, shapes: list[str]) -> None:
+def _draw(node: MindNode, depth: int, rel: str, shapes: list[str], note_base: str) -> None:
     color = _PALETTE[depth % len(_PALETTE)]
     right = node.x + node.width
     for child in node.children:
@@ -166,7 +169,7 @@ def _draw(node: MindNode, depth: int, rel: str, shapes: list[str]) -> None:
             f'{child.y + ROW_HEIGHT / 2:.1f} {child.x:.1f} {child.y + ROW_HEIGHT / 2:.1f}" '
             f'fill="none" stroke="{child_color}" stroke-width="1.6" opacity="0.7" />'
         )
-        _draw(child, depth + 1, rel, shapes)
+        _draw(child, depth + 1, rel, shapes, note_base)
     label = html.escape(node.label)
     box = (
         f'<rect x="{node.x:.1f}" y="{node.y + 3:.1f}" width="{node.width:.1f}" '
@@ -176,7 +179,7 @@ def _draw(node: MindNode, depth: int, rel: str, shapes: list[str]) -> None:
         f'font-size="13">{label}</text>'
     )
     if node.anchor:
-        href = html.escape(f"reader:///note/{quote(rel)}#{quote(node.anchor)}", quote=True)
+        href = html.escape(f"{note_base}{quote(rel)}#{quote(node.anchor)}", quote=True)
         shapes.append(f'<a href="{href}">{box}</a>')
     else:
         shapes.append(box)

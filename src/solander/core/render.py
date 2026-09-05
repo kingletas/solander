@@ -82,15 +82,49 @@ class RenderedNote:
     error: str = ""
 
 
-def note_uri(rel: str, anchor: str = "") -> str:
-    """Builds the internal `reader:` URI for a vault-relative note path."""
-    uri = f"reader:///note/{quote(rel)}"
+# Where a link points is the client's business, not the renderer's. The GTK
+# window serves notes and assets from URI schemes only it can intercept; a
+# WebView that cannot register a scheme is served the same pages over paths.
+# Every writer of a link takes these, and they default to the window's, so
+# nothing changes for the client that was here first.
+NOTE_BASE = "reader:///note/"
+ASSET_BASE = "vault:///"
+ACTION_BASE = "reader:///action/"
+AMBIGUOUS_BASE = "reader:///ambiguous/"
+EXTERNAL_BASE = "reader:///external/"
+
+DEFAULT_BASES = {
+    "note": NOTE_BASE,
+    "asset": ASSET_BASE,
+    "action": ACTION_BASE,
+    "ambiguous": AMBIGUOUS_BASE,
+    "external": EXTERNAL_BASE,
+}
+
+
+def link_bases(options: dict | None) -> dict:
+    """The prefixes a client wants its links written with, filling in the window's.
+
+    An empty string is a client saying it has no such destination, which is a
+    different statement from not mentioning it — so a key that is present and
+    empty is kept rather than defaulted, and the label is written as plain text.
+    """
+    given = options or {}
+    return {
+        name: str(given[name]) if name in given else default
+        for name, default in DEFAULT_BASES.items()
+    }
+
+
+def note_uri(rel: str, anchor: str = "", bases: dict | None = None) -> str:
+    """Builds the URI for a vault-relative note path, in the client's own form."""
+    uri = f"{(bases or DEFAULT_BASES)['note']}{quote(rel)}"
     return f"{uri}#{quote(anchor)}" if anchor else uri
 
 
-def vault_uri(rel: str) -> str:
-    """Builds the `vault:` URI the asset scheme handler serves a file from."""
-    return f"vault:///{quote(rel)}"
+def vault_uri(rel: str, bases: dict | None = None) -> str:
+    """Builds the URI an asset is served from, in the client's own form."""
+    return f"{(bases or DEFAULT_BASES)['asset']}{quote(rel)}"
 
 
 def strip_block_ids(text: str) -> str:
@@ -190,6 +224,10 @@ class NoteRenderer:
         """Which note-context elements the person wants shown; everything by default."""
         return self.options() if callable(self.options) else {}
 
+    def _bases(self) -> dict:
+        """The link prefixes this client asked for, or the window's."""
+        return link_bases(self._opts().get("link_bases"))
+
     def _book_context(self, rel: str) -> dict | None:
         """Book placement for a note when a book is being read; None otherwise."""
         return self.book(rel) if callable(self.book) else None
@@ -248,7 +286,7 @@ class NoteRenderer:
                 f'<h1 class="inline-title">{html.escape(title_text)}</h1></header>'
             )
             body = sanitize(body_html)
-            footer = _book_nav(book)
+            footer = _book_nav(book, self._bases())
         else:
             body = sanitize(_properties_block(split.properties) + body_html)
             header = note_header(
@@ -259,6 +297,7 @@ class NoteRenderer:
                 self._mtime(rel),
                 show_title=opts.get("breadcrumb", True),
                 show_meta=opts.get("meta", True),
+                bases=self._bases(),
             )
             footer = self._backlinks_footer(rel) if opts.get("backlinks", True) else ""
         # Obsidian's preview DOM, so cssclasses snippets written against
@@ -298,6 +337,7 @@ class NoteRenderer:
         mentions = graph.backlinks.get(rel, [])
         if not mentions:
             return ""
+        bases = self._bases()
         items = []
         for mention in mentions[:MAX_FOOTER_BACKLINKS]:
             source_title = html.escape(mention.source.rsplit("/", 1)[-1].rsplit(".", 1)[0])
@@ -305,7 +345,8 @@ class NoteRenderer:
             context = html.escape(mention.context or "")
             context_html = f'<div class="backlink-context">{context}</div>' if context else ""
             items.append(
-                f'<li><a class="wikilink" href="{note_uri(mention.source)}">{source_title}</a>'
+                f'<li><a class="wikilink" href="{note_uri(mention.source, bases=bases)}">'
+                f'{source_title}</a>'
                 f'<span class="backlink-path">{path}</span>{context_html}</li>'
             )
         more = ""
@@ -347,12 +388,13 @@ class NoteRenderer:
         if note.error:
             return build_message_page("Cannot open note", note.error, theme)
         body = strip_html_comments(strip_block_comments(split_frontmatter(note.text).body))
+        bases = self._bases()
         back = (
-            f'<div class="mindmap-bar"><a class="wikilink" href="{note_uri(rel)}">'
+            f'<div class="mindmap-bar"><a class="wikilink" href="{note_uri(rel, bases=bases)}">'
             f"\u25c0 Back to {html.escape(title)}</a> "
             '<span class="dataview-note">(or press Ctrl+M)</span></div>'
         )
-        page_body = back + mindmap_body(title, body, rel)
+        page_body = back + mindmap_body(title, body, rel, bases["note"])
         return build_page(
             page_body, f"{title} (mind map)", theme,
             typography=self._typo(), note_classes="mindmap-note",
@@ -364,10 +406,11 @@ class NoteRenderer:
         title = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
         if note.error:
             return build_message_page("Cannot open canvas", note.error, theme)
+        bases = self._bases()
 
         def note_href(file_rel: str) -> str:
             resolved = resolve_note(self.vault, rel, file_rel)
-            return note_uri(resolved.path) if resolved.kind == "note" else ""
+            return note_uri(resolved.path, bases=bases) if resolved.kind == "note" else ""
 
         body = canvas_body(parse_canvas(note.text), note_href)
         return build_page(body, title, theme, typography=self._typo(), extra_css=self._snips())
@@ -394,7 +437,8 @@ class NoteRenderer:
         if graph is None:
             return _inert_dataview(code, "dataview — the index is still building")
         try:
-            return DataviewEngine(graph).run_query(code, env.get("source", ""))
+            engine = DataviewEngine(graph, self._bases()["note"])
+            return engine.run_query(code, env.get("source", ""))
         except DqlError as error:
             return _inert_dataview(code, f"dataview — not evaluated: {error}")
 
@@ -521,7 +565,7 @@ class NoteRenderer:
             elif not lowered.startswith(("mailto:", "reader:", "vault:")):
                 resolved = resolve_note(renderer.vault, env["source"], unquote(href))
                 if resolved.kind == "note":
-                    token.attrSet("href", note_uri(resolved.path))
+                    token.attrSet("href", note_uri(resolved.path, bases=renderer._bases()))
                     token.attrJoin("class", "internal")
                 else:
                     token.attrSet("href", "")
@@ -548,11 +592,12 @@ class NoteRenderer:
         resolved = resolve_note(self.vault, env["source"], link.target)
         if resolved.kind == "note":
             anchor = slugify(link.anchor.split("#")[-1]) if link.anchor else ""
-            href = note_uri(resolved.path, anchor)
+            href = note_uri(resolved.path, anchor, self._bases())
             title = html.escape(resolved.path, quote=True)
             return f'<a class="wikilink" href="{href}" title="{title}">{label}</a>'
         if resolved.kind == "ambiguous":
-            href = f"reader:///ambiguous/{quote(link.target)}?from={quote(env['source'])}"
+            base = self._bases()["ambiguous"]
+            href = f"{base}{quote(link.target)}?from={quote(env['source'])}"
             count = len(resolved.candidates)
             return (
                 f'<a class="wikilink ambiguous" href="{href}" '
@@ -570,7 +615,7 @@ class NoteRenderer:
             return _embed_error(f"Ambiguous embed “{link.target}” — {count} matches")
         if resolved.kind == "note":
             return self._note_embed_html(resolved, link, env)
-        return _media_embed_html(resolved, link)
+        return _media_embed_html(resolved, link, self._bases())
 
     def _note_embed_html(self, resolved: Resolution, link: WikiLink, env: dict) -> str:
         if resolved.path in env["ancestors"]:
@@ -596,7 +641,9 @@ class NoteRenderer:
         inner_env = self._env(resolved.path, env["depth"] + 1, env["ancestors"], budget)
         inner = self._render_markdown(body, inner_env)
         title = html.escape(link.label)
-        href = note_uri(resolved.path, slugify(link.anchor) if link.anchor else "")
+        href = note_uri(
+            resolved.path, slugify(link.anchor) if link.anchor else "", self._bases()
+        )
         return (
             f'<div class="embed embed-note"><div class="embed-title">'
             f'<a class="wikilink" href="{href}">{title}</a></div>'
@@ -672,11 +719,12 @@ def note_header(
     mtime: float | None,
     show_title: bool = True,
     show_meta: bool = True,
+    bases: dict | None = None,
 ) -> str:
     """Context before content: breadcrumb, inline title, and a compact metadata line."""
-    crumbs = _crumbs_html(rel) if show_title else ""
+    crumbs = _crumbs_html(rel, bases) if show_title else ""
     heading = f'<h1 class="inline-title">{html.escape(title)}</h1>' if show_title else ""
-    meta = _meta_line_html(properties, body_text, mtime) if show_meta else ""
+    meta = _meta_line_html(properties, body_text, mtime, bases) if show_meta else ""
     if not (crumbs or heading or meta):
         return ""
     return f'<header class="note-header">{crumbs}{heading}{meta}</header>'
@@ -704,7 +752,8 @@ def _titled(body: str, filename: str) -> tuple[str, str]:
     return filename, body
 
 
-def _crumbs_html(rel: str) -> str:
+def _crumbs_html(rel: str, bases: dict | None = None) -> str:
+    action = (bases or DEFAULT_BASES)["action"]
     parts = rel.split("/")[:-1]
     if not parts:
         return ""
@@ -712,13 +761,21 @@ def _crumbs_html(rel: str) -> str:
     prefix = ""
     for part in parts:
         prefix = f"{prefix}/{part}" if prefix else part
-        href = f"reader:///action/reveal-folder?arg={quote(prefix, safe='')}"
+        # A client with no such action says so with an empty prefix, and the
+        # folder is written as the text it is rather than a link nothing follows.
+        if not action:
+            links.append(f"<span>{html.escape(part)}</span>")
+            continue
+        href = f"{action}reveal-folder?arg={quote(prefix, safe='')}"
         links.append(f'<a href="{href}">{html.escape(part)}</a>')
     joined = '<span class="crumb-sep">/</span>'.join(links)
     return f'<nav class="crumbs" aria-label="Location">{joined}</nav>'
 
 
-def _meta_line_html(properties: dict, body_text: str, mtime: float | None) -> str:
+def _meta_line_html(
+    properties: dict, body_text: str, mtime: float | None, bases: dict | None = None
+) -> str:
+    action = (bases or DEFAULT_BASES)["action"]
     pieces = []
     if mtime is not None:
         stamp = datetime.fromtimestamp(mtime).strftime("%b %-d, %Y")
@@ -732,8 +789,12 @@ def _meta_line_html(properties: dict, body_text: str, mtime: float | None) -> st
     tags = _header_tags(properties)
     chips = []
     for tag in tags[:MAX_HEADER_TAGS]:
-        href = f"reader:///action/tag?arg={quote(tag, safe='')}"
-        chips.append(f'<a class="tag" href="{href}">#{html.escape(tag)}</a>')
+        label = f"#{html.escape(tag)}"
+        if not action:
+            chips.append(f'<span class="tag">{label}</span>')
+            continue
+        href = f"{action}tag?arg={quote(tag, safe='')}"
+        chips.append(f'<a class="tag" href="{href}">{label}</a>')
     if len(tags) > MAX_HEADER_TAGS:
         chips.append(f'<span class="more-tags">+{len(tags) - MAX_HEADER_TAGS} more</span>')
     if not (pieces or chips):
@@ -758,16 +819,17 @@ def _header_tags(properties: dict) -> list[str]:
     return list(dict.fromkeys(v for v in cleaned if v))
 
 
-def _book_nav(book: dict) -> str:
+def _book_nav(book: dict, bases: dict | None = None) -> str:
     """The chapter footer: the way back, the place in the book, the way on."""
+    action = (bases or DEFAULT_BASES)["action"]
     prev_title = book.get("prev_title")
     next_title = book.get("next_title")
     prev_html = (
-        f'<a class="book-prev" href="reader:///action/book-prev">← {html.escape(prev_title)}</a>'
+        f'<a class="book-prev" href="{action}book-prev">← {html.escape(prev_title)}</a>'
         if prev_title else '<span class="book-prev"></span>'
     )
     next_html = (
-        f'<a class="book-next" href="reader:///action/book-next">{html.escape(next_title)} →</a>'
+        f'<a class="book-next" href="{action}book-next">{html.escape(next_title)} →</a>'
         if next_title else '<span class="book-next"></span>'
     )
     place = html.escape(book.get("place", ""))
@@ -816,9 +878,9 @@ def _embed_error(message: str) -> str:
     return f'<div class="embed embed-error">{html.escape(message)}</div>'
 
 
-def _media_embed_html(resolved: Resolution, link: WikiLink) -> str:
+def _media_embed_html(resolved: Resolution, link: WikiLink, bases: dict) -> str:
     """Renders an image, audio, video, or file-card embed for a resolved attachment."""
-    uri = vault_uri(resolved.path)
+    uri = vault_uri(resolved.path, bases)
     name = html.escape(resolved.path.rsplit("/", 1)[-1])
     if resolved.kind == "image":
         size = f' width="{link.size.split("x")[0]}"' if link.size else ""
@@ -827,7 +889,7 @@ def _media_embed_html(resolved: Resolution, link: WikiLink) -> str:
         return f'<audio controls src="{uri}"></audio>'
     if resolved.kind == "video":
         return f'<video controls src="{uri}"></video>'
-    href = f"reader:///external/{quote(resolved.path)}"
+    href = f"{bases['external']}{quote(resolved.path)}"
     label = "Open" if resolved.kind == "pdf" else "Open with the system default app"
     return (
         f'<div class="embed embed-file"><span class="embed-file-name">{name}</span> '

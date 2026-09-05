@@ -323,3 +323,67 @@ def test_a_note_the_walk_never_saw_is_rendered_without_a_time(vault):
     page = rendered(vault, "Unlisted.md")
     assert page.error == ""
     assert "Updated" not in page.page
+
+
+# -- a client that is not the window ----------------------------------------
+
+BROWSER_BASES = {
+    "note": "/note/",
+    "asset": "/asset/",
+    "action": "",
+    "ambiguous": "/ambiguous/",
+    "external": "/open/",
+}
+
+
+def browser_rendered(vault, rel: str):
+    """Renders as a client that serves over paths and has no window actions."""
+    renderer = NoteRenderer(vault, options=lambda: {"link_bases": BROWSER_BASES})
+    return renderer.render(rel)
+
+
+def test_a_path_client_gets_no_window_schemes_anywhere(vault):
+    """An Android or browser WebView cannot register `reader:` or `vault:`.
+
+    A link written in a scheme the client cannot intercept is a dead link, and a
+    page that is only mostly free of them is still broken.
+    """
+    page = browser_rendered(vault, "Index.md").page
+    assert "reader:///" not in page
+    assert "vault:///" not in page
+    assert "/note/" in page
+
+
+def test_the_window_is_still_served_its_own_schemes(vault):
+    page = rendered(vault, "Index.md").page
+    assert "reader:///note/" in page
+
+
+def test_a_client_with_no_actions_writes_them_as_text(vault):
+    """A browser cannot reveal a folder in a tree, so it is told, not linked."""
+    page = browser_rendered(vault, "Projects/Alpha.md").page
+    assert "reveal-folder" not in page
+    assert "<span>Projects</span>" in page
+
+
+def test_dataview_results_follow_the_client_too(vault):
+    (vault.root / "Query.md").write_text(
+        '```dataview\nLIST FROM "" SORT file.name ASC LIMIT 3\n```\n'
+    )
+    vault.reindex()
+    from solander.core.graph import VaultGraph
+
+    graph = VaultGraph.build(vault)
+    renderer = NoteRenderer(
+        vault, graph_provider=lambda: graph, options=lambda: {"link_bases": BROWSER_BASES}
+    )
+    page = renderer.render("Query.md").page
+    assert "reader:///" not in page
+    assert "/note/" in page
+
+
+def test_a_mind_map_follows_the_client_too(vault):
+    renderer = NoteRenderer(vault, options=lambda: {"link_bases": BROWSER_BASES})
+    page = renderer.render_mindmap("Index.md")
+    assert "reader:///" not in page
+    assert "/note/" in page
