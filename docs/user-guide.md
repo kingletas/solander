@@ -92,7 +92,7 @@ Right-click a folder of chapters — a manuscript's `Chapters/`, say — and cho
 
 Right-click a folder in the tree to hide it from the tree, quick-open, and search results. The toast offers Unhide; View → Unhide All Folders clears the reader's list for this vault. Two boundaries:
 
-- Obsidian's own excluded-files setting (`userIgnoreFilters` in `.obsidian/app.json`) is honored read-only on top and is not affected by Unhide All.
+- Obsidian's own excluded-files setting (`userIgnoreFilters` in `.obsidian/app.json`) is honored read-only on top and is not affected by Unhide All. It is honored the way Obsidian honors it: those folders leave the tree and quick-open, and in full-text search they rank behind everything else rather than disappearing — a note only an archive holds is still the answer when nothing else matches.
 - The Links, Tags, Graph panes and Dataview results stay complete: they answer explicit questions, and a query that silently omits rows would be lying.
 
 The hidden list is stored in the reader's config, never in the vault.
