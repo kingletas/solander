@@ -3,11 +3,11 @@
 [![CI](https://github.com/kingletas/solander/actions/workflows/ci.yml/badge.svg)](https://github.com/kingletas/solander/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A reading application for Ubuntu that opens a folder of Markdown **in place** and never writes into it — no caches, no plugins, no scripts, no network. It is fluent in [Obsidian](https://obsidian.md)'s dialect: wikilinks, embeds, callouts, frontmatter, tags, canvases, kanban boards, `.base` views and Dataview queries all render as themselves.
+A reading application for Ubuntu that opens a folder of Markdown **in place** and never writes into it — no caches, no plugins, no scripts, no network. It's fluent in [Obsidian](https://obsidian.md)'s dialect: wikilinks, embeds, callouts, frontmatter, tags, canvases, kanban boards, `.base` views and Dataview queries all render as themselves.
 
-A solander is the clamshell box an archive keeps its documents in. That is the job: present the record, and leave it exactly as it was found — whether Obsidian is closed, not installed, or simply not something you want pointed at a vault you only mean to inspect.
+A solander is the clamshell box an archive keeps its documents in. That's the job: present the record, and leave it exactly as it was found — whether Obsidian is closed, not installed, or simply not something you want pointed at a vault you only mean to inspect.
 
-> This project is not affiliated with or endorsed by Obsidian.md / Dynalist Inc. "Obsidian" here names the vault format the reader understands.
+> This project isn't affiliated with or endorsed by Obsidian.md / Dynalist Inc. "Obsidian" here names the vault format the reader understands.
 
 ![Solander in the Atelier theme](docs/images/atelier.png)
 
@@ -15,13 +15,13 @@ A solander is the clamshell box an archive keeps its documents in. That is the j
 
 A **solander** is the clamshell box an archive keeps its documents in — a hinged case, made to the size of what it holds, that you open to look at a thing and close to leave it as it was. Named for Daniel Solander, the botanist who devised it for Joseph Banks's specimens so they could be examined without being handled.
 
-That is the whole design brief of this application, in one object. It presents the record and changes nothing: it never writes into your vault, never runs anything the vault contains, and never opens a network connection. A reader, not an editor — a case, not a workshop.
+That's the whole design brief of this application, in one object. It presents the record and changes nothing: it never writes into your vault, never runs anything the vault contains, and never opens a network connection. A reader, not an editor — a case, not a workshop.
 
-It is also deliberately **not** named after the format it reads. The app understands Obsidian's dialect fluently, but that is a property of the reader rather than its identity, and borrowing another project's name for your own is a bad habit whichever way the trademark points.
+It's also deliberately **not** named after the format it reads. The app understands Obsidian's dialect fluently, but that's a property of the reader rather than its identity, and borrowing another project's name for your own is a bad habit whichever way the trademark points.
 
 ## What it does
 
-The full walkthrough is the **[user guide](docs/user-guide.md)**; installation is **[getting started](docs/getting-started.md)**. In summary:
+Never used it? **[From nothing to reading a vault](docs/from-nothing.md)** takes you from an empty folder to a vault open in front of you. The full walkthrough is the **[user guide](docs/user-guide.md)**; installation on its own is **[getting started](docs/getting-started.md)**. In summary:
 
 - **Renders the whole vault, not just the markdown.** CommonMark/GFM plus the Obsidian layer — wikilinks with Obsidian's own resolution order, embeds, callouts, highlights, comments, tags, footnotes, frontmatter properties, syntax-highlighted code — and TeX math as native MathML, `.canvas` pages, kanban boards as boards, Excalidraw drawings as SVG, `.base` table views, and **Dataview queries and inline expressions evaluated in pure Python**, live against the index. Anything unsupported degrades to labeled source with the reason.
 - **Finds things like a launcher.** Fuzzy quick-open, relevance-ranked full-text search with `path:`/`file:`/`tag:` operators and highlighted hits, backlinks with context, a tag browser, the vault's bookmarks, a local graph, and hover previews.
@@ -40,7 +40,7 @@ The full walkthrough is the **[user guide](docs/user-guide.md)**; installation i
 
 The simplest route, and the only one with **no sandbox step at all** — Flatpak's own bubblewrap already has the permission WebKit needs, so nothing has to be installed into `/etc`.
 
-The bundle is 3 MB and does not contain the GNOME 50 runtime it runs on, so a remote that provides it has to be configured. If you have ever installed anything from Flathub, it already is:
+The bundle is 3 MB and doesn't contain the GNOME 50 runtime it runs on, so a remote that provides it has to be configured. If you have ever installed anything from Flathub, it already is:
 
 ```bash
 flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -56,7 +56,7 @@ The first install also pulls the runtime — about a gigabyte, once, shared with
 
 ### Debian package
 
-For Ubuntu 24.04+. It pulls the GObject bindings itself and installs the AppArmor profile, so there is nothing to do afterwards:
+For Ubuntu 24.04+. It pulls the GObject bindings itself and installs the AppArmor profile, so there's nothing to do afterwards:
 
 ```bash
 sudo apt install ./solander_*_all.deb
@@ -82,7 +82,7 @@ Then, with [uv](https://docs.astral.sh/uv/) installed:
 make install
 ```
 
-That creates the virtualenv against the system Python (so the GI bindings are visible), installs the dependencies, and puts a `solander` launcher on your `PATH`. `make help` lists everything else. A source install needs the one-time [sandbox step](#the-sandbox-and-ubuntus-user-namespace-policy) below; the Flatpak and the deb do not.
+That creates the virtualenv against the system Python (so the GI bindings are visible), installs the dependencies, and puts a `solander` launcher on your `PATH`. `make help` lists everything else. A source install needs the one-time [sandbox step](#the-sandbox-and-ubuntus-user-namespace-policy) below; the Flatpak and the deb don't.
 
 ## Run
 
@@ -100,6 +100,7 @@ A second launch hands its path to the running instance instead of racing it for 
 
 ## Documentation
 
+- **[From nothing to reading a vault](docs/from-nothing.md)** — never used it, and not an Obsidian user either. Start here.
 - **[Getting started](docs/getting-started.md)** — install, the one-time sandbox step, first vault.
 - **[User guide](docs/user-guide.md)** — every feature, the Dataview surface, shortcuts, configuration, troubleshooting.
 - **[SECURITY.md](SECURITY.md)** — the threat model and reporting route.
@@ -108,7 +109,9 @@ A second launch hands its path to the running instance instead of racing it for 
 
 ## Themes
 
-Fourteen, and the theme is remembered. **Atelier** is the default — parchment and sepia ink by day, a candlelit nocturne by night. The **Archive** family is thirteen dark themes over one design language: a dark ground, bone text, an accent for what is important, and one hot colour held back for what actually matters. The semantics hold across all of them, so danger, warning, verified and information mean the same thing in every one, and every colour that carries text is checked against WCAG AA on the ground it sits on.
+Fourteen, and the theme is remembered. **Atelier** is the default — parchment and sepia ink by day, a candlelit nocturne by night. 
+
+The **Archive** family is thirteen dark themes over one design language: a dark ground, bone text, an accent for what is important, and one hot colour held back for what actually matters. The semantics hold across all of them, so danger, warning, verified and information mean the same thing in every one, and every colour that carries text is checked against WCAG AA on the ground it sits on.
 
 ![Solander in the Blood Record theme](docs/images/blood-record.png)
 
@@ -150,7 +153,11 @@ The core (vault model, link resolution, Markdown transforms, sanitizer, search) 
 
 ## Security model
 
-The vault is treated as attacker-controlled input. The trust boundary is the sanitizer: everything upstream of it (parsing, transforms, link resolution) handles untrusted text, and nothing downstream receives unsanitized markup. On top of that, the WebKit surface runs with JavaScript disabled (and refuses to start if it cannot be), vault assets are served through a `vault:` URI scheme handler that refuses any path resolving outside the vault root, and the navigation policy blocks every load that is not an internal page, a vault asset, or a user-initiated external link. Resource use is bounded too: note size, frontmatter size, embed depth, and embeds per page are capped, and YAML aliases in frontmatter are refused — each bound proven against a payload that previously froze the renderer. See [SECURITY.md](SECURITY.md) for the model and the reporting route.
+The vault is treated as attacker-controlled input. The trust boundary is the sanitizer: everything upstream of it (parsing, transforms, link resolution) handles untrusted text, and nothing downstream receives unsanitized markup. 
+
+On top of that, the WebKit surface runs with JavaScript disabled (and refuses to start if it can't be), vault assets are served through a `vault:` URI scheme handler that refuses any path resolving outside the vault root, and the navigation policy blocks every load that isn't an internal page, a vault asset, or a user-initiated external link. 
+
+Resource use is bounded too: note size, frontmatter size, embed depth, and embeds per page are capped, and YAML aliases in frontmatter are refused — each bound proven against a payload that previously froze the renderer. See [SECURITY.md](SECURITY.md) for the model and the reporting route.
 
 ## License
 
