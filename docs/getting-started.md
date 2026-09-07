@@ -8,7 +8,7 @@ Pick one. **The Flatpak and the Debian package both skip the sandbox step in sec
 
 ### The Flatpak — simplest
 
-It needs the GNOME 50 runtime, which is not inside the 3 MB bundle. If you have ever installed anything from Flathub you already have the remote configured; if not, add it first:
+It needs the GNOME 50 runtime, which isn't inside the 3 MB bundle. If you have ever installed anything from Flathub you already have the remote configured; if not, add it first:
 
 ```bash
 flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
@@ -28,7 +28,7 @@ The first install also pulls the GNOME runtime — about a gigabyte, once, share
 sudo apt install ./solander_*_all.deb
 ```
 
-`apt` pulls the GObject bindings itself, and the package installs the security profile, so there is nothing to do afterwards.
+`apt` pulls the GObject bindings itself, and the package installs the security profile, so there's nothing to do afterwards.
 
 ### From source
 
@@ -60,9 +60,9 @@ If you installed the Flatpak or the deb, you are done — skip to section 4. A s
 
 ## 3. The one-time sandbox step — source installs only
 
-On stock Ubuntu 24.04+ a source install's first launch shows a **setup window** instead of the reader. That is expected: WebKit sandboxes its rendering processes, Ubuntu restricts the user namespaces that sandbox needs, and the fix is a one-time security profile granting the permission to this app alone — the same mechanism Ubuntu ships for browsers.
+On stock Ubuntu 24.04+ a source install's first launch shows a **setup window** instead of the reader. That's expected: WebKit sandboxes its rendering processes, Ubuntu restricts the user namespaces that sandbox needs, and the fix is a one-time security profile granting the permission to this app alone — the same mechanism Ubuntu ships for browsers.
 
-The window hands you a single command. **Copy it, paste it into a Terminal, enter your password, then press "I ran it — check again"** — the reader starts on its own. That is the only time a terminal is involved.
+The window hands you a single command. **Copy it, paste it into a Terminal, enter your password, then press "I ran it — check again"** — the reader starts on its own. That's the only time a terminal is involved.
 
 (The same flow works headless: launched from a terminal, the app prints the profile and the steps instead. The profile confines nothing — `flags=(unconfined)` plus one `userns` grant — it only lets WebKit's own sandbox turn on. `solander --sandbox-status` reports whether it worked and exits non-zero while anything is still wrong.)
 
@@ -80,7 +80,7 @@ The first open of a large vault builds the search and link index in the backgrou
 4. **`Ctrl+M`** — the current note as a mind map of its headings and bullets. `Ctrl+M` again (or the link at the top) brings the markdown back.
 5. **`F11`** — reading mode: nothing on screen but the note. `Esc` returns.
 
-`Ctrl+?` shows every shortcut, and **`F1` opens the full user guide inside the app**. When you want the rest — Dataview, kanban boards, hidden folders, typography, exports — it is all in the [user guide](user-guide.md).
+`Ctrl+?` shows every shortcut, and **`F1` opens the full user guide inside the app**. When you want the rest — Dataview, kanban boards, hidden folders, typography, exports — it's all in the [user guide](user-guide.md).
 
 ## Where things live
 
