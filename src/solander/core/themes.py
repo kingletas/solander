@@ -142,6 +142,9 @@ def chrome(palette: Palette) -> str:
         f"@define-color canvas_muted {p.muted};\n"
         # Stone separates its surfaces by hairline rather than by value, so the
         # lines are named colours instead of a wash of white over whatever is behind.
+        # GTK draws a link in its own colour unless the theme states one, which
+        # is how three accent links came out in the desktop's default red.
+        f"@define-color link_color {p.legible(p.link)};\n"
         f"@define-color hairline {p.line};\n"
         f"@define-color hairline_strong {p.line_strong};\n"
         f"@define-color accent_soft {mix(p.accent, p.bg, 0.86)};\n"
