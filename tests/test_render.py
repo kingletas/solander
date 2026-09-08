@@ -333,6 +333,7 @@ BROWSER_BASES = {
     "action": "",
     "ambiguous": "/ambiguous/",
     "external": "/open/",
+    "font": "/font/",
 }
 
 
@@ -352,6 +353,17 @@ def test_a_path_client_gets_no_window_schemes_anywhere(vault):
     assert "reader:///" not in page
     assert "vault:///" not in page
     assert "/note/" in page
+
+
+def test_the_bundled_faces_follow_the_client_too(vault):
+    """A face is a link like any other: written in a scheme this client cannot
+    register, it is a font that never loads and a page set in the fallback."""
+    page = browser_rendered(vault, "Index.md").page
+    assert "url('/font/Manrope-Variable.ttf')" in page
+    assert "font-src 'self';" in page
+    window = rendered(vault, "Index.md").page
+    assert "url('reader:///font/Manrope-Variable.ttf')" in window
+    assert "font-src reader:;" in window
 
 
 def test_the_window_is_still_served_its_own_schemes(vault):

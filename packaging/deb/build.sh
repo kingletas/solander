@@ -54,6 +54,7 @@ install -d "$STAGE/usr/lib/solander" \
            "$STAGE/usr/share/icons/hicolor/scalable/apps" \
            "$STAGE/usr/share/metainfo" \
            "$STAGE/usr/share/doc/solander" \
+           "$STAGE/usr/share/fonts/truetype/solander" \
            "$STAGE/etc/apparmor.d" \
            "$STAGE/DEBIAN"
 
@@ -85,6 +86,13 @@ install -m 0644 "$HERE/data/$APP_ID.svg" \
   "$STAGE/usr/share/icons/hicolor/scalable/apps/$APP_ID.svg"
 install -m 0644 "$HERE/data/$APP_ID.metainfo.xml" \
   "$STAGE/usr/share/metainfo/$APP_ID.metainfo.xml"
+# The window chrome reads a family name through fontconfig, which cannot see
+# what is inside the wheel — so the same files the page loads over its own
+# scheme are also installed where fontconfig will find them.
+install -m 0644 "$HERE"/src/solander/assets/fonts/*.ttf \
+  "$STAGE/usr/share/fonts/truetype/solander/"
+install -m 0644 "$HERE"/src/solander/assets/fonts/*-OFL.txt \
+  "$STAGE/usr/share/doc/solander/"
 install -m 0644 "$HERE/LICENSE" "$STAGE/usr/share/doc/solander/copyright"
 install -m 0644 "$HERE/README.md" "$STAGE/usr/share/doc/solander/README.md"
 
@@ -144,6 +152,10 @@ if [ "$1" = "configure" ]; then
     # A stale icon cache hides a newly installed icon entirely.
     if command -v gtk-update-icon-cache >/dev/null 2>&1; then
         gtk-update-icon-cache -q -f -t /usr/share/icons/hicolor || true
+    fi
+    # A font that is installed but not in the cache is a font nothing can ask for.
+    if command -v fc-cache >/dev/null 2>&1; then
+        fc-cache -f /usr/share/fonts/truetype/solander >/dev/null 2>&1 || true
     fi
 fi
 POSTINST

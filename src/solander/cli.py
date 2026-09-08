@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 from . import __version__
+from .core.fonts import teach_fontconfig
 
 USAGE = """\
 solander [PATH]
@@ -223,6 +224,8 @@ def main() -> int:
 
             return run_setup(command, shebang, recheck)
         return 1
+    # Before the first GTK import, because fontconfig is read once when it loads.
+    teach_fontconfig()
     try:
         import gi
 
