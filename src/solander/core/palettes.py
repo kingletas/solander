@@ -1,9 +1,10 @@
-"""The Archive theme family: one palette per theme, and nothing else per theme.
+"""Every theme's colours, and nothing per theme but colours.
 
-Every member shares one design language — a dark archive, bone text, an accent for
-what is important and a hot colour held back for what matters — so a theme here is
-sixteen colours. The shared rules live in `assets/theme-archive.css`; the tokens
-those rules consume are generated from these palettes.
+Stone is the house identity and the reference the rest are measured against. The
+Archive family below it shares one design language — a dark ground, bone text, an
+accent for what is important and a hot colour held back for what matters — so a
+member of it is sixteen colours. The shared rules live in `assets/theme-archive.css`;
+the tokens those rules consume are generated from these palettes.
 """
 
 from dataclasses import dataclass
@@ -92,6 +93,9 @@ class Palette:
     success: str
     info: str
 
+    dark: bool = True
+    """Which way the ground runs. Every derived colour below is measured from it."""
+
     # -- derived ----------------------------------------------------------
 
     def legible(self, color: str, ground: str = "", ratio: float = 4.5) -> str:
@@ -100,8 +104,12 @@ class Palette:
 
     @property
     def deep(self) -> str:
-        """The accent sunk towards the void: structure tints and selected rows."""
-        return mix(self.accent, self.void, 0.30)
+        """The accent carried towards the void: structure tints and selected rows.
+
+        On a light ground the void is the pale rail, so the same move produces a
+        soft tint rather than a depth, and it has to travel further to be seen.
+        """
+        return mix(self.accent, self.void, 0.30 if self.dark else 0.70)
 
     @property
     def second(self) -> str:
@@ -110,21 +118,85 @@ class Palette:
 
     @property
     def bright(self) -> str:
-        """Brighter than body text: a title, a selected row's label."""
-        return mix(self.text, "#ffffff", 0.35)
+        """More prominent than body text: a title, a selected row's label."""
+        return mix(self.text, "#ffffff" if self.dark else "#000000", 0.35)
 
     @property
     def code_bg(self) -> str:
-        return mix(self.void, "#000000", 0.25)
+        """The ground code sits on: the void taken one step further from the text."""
+        return mix(self.void, "#000000" if self.dark else "#ffffff", 0.25)
 
     @property
     def code_fg(self) -> str:
         return mix(self.link, self.text, 0.22)
 
     @property
+    def on_accent(self) -> str:
+        """Whichever extreme carries text on the solid accent; never assumed.
+
+        The candidates are white and the palette's own two ends, because a bright
+        accent takes dark text and a deep one takes light, and which is which is a
+        measurement rather than a property of the mode.
+        """
+        candidates = ("#ffffff", self.text, self.void)
+        return max(candidates, key=lambda color: contrast_ratio(color, self.accent))
+
+    @property
     def rail_label(self) -> str:
         """The rail's small-caps section labels, on the void rather than the page."""
         return self.legible(mix(self.accent, self.text, 0.25), self.void)
+
+
+STONE_LIGHT = Palette(
+    key="stone",
+    label="Stone",
+    vibe="warm neutral, quiet pine",
+    dark=False,
+    void="#f1efeb",
+    bg="#faf9f7",
+    surface="#ffffff",
+    line="#e4e1da",
+    line_strong="#d3cec4",
+    link="#14684f",
+    accent="#14684f",
+    # Hover sinks on a light ground: there is nowhere brighter for it to go.
+    hot="#0d5540",
+    ornament="#a8977a",
+    text="#1b1917",
+    muted="#8f8a83",
+    danger="#a3372a",
+    warning="#8a5d16",
+    success="#14684f",
+    info="#2b5f8f",
+)
+"""Stone by day: warm neutral greys with the sepia out, and one deep pine.
+
+`muted` measures 3.26:1 on the canvas, which is the identity's own value. It carries
+text only after `page_tokens()` puts it through `legible()`, which lifts it to 4.81:1.
+"""
+
+STONE_DARK = Palette(
+    key="stone",
+    label="Stone",
+    vibe="warm neutral, quiet pine",
+    dark=True,
+    void="#121110",
+    bg="#191817",
+    surface="#22201e",
+    line="#2e2b28",
+    line_strong="#454039",
+    link="#4fb694",
+    accent="#2e9a76",
+    hot="#69cfab",
+    ornament="#b39a6b",
+    text="#e9e5de",
+    muted="#8e8880",
+    danger="#e0705c",
+    warning="#d0a04a",
+    success="#5cb98f",
+    info="#7aa8d4",
+)
+"""Stone by night: the same warm neutrals, with the pine lifted until it can be read."""
 
 
 PALETTES: tuple[Palette, ...] = (
@@ -147,6 +219,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#c1843d",
         success="#78966a",
         info="#7b9298",
+        dark=True,
     ),
     Palette(
         key="ember-archive",
@@ -167,6 +240,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#c9903f",
         success="#87a06b",
         info="#8f9ca4",
+        dark=True,
     ),
     Palette(
         key="blackout",
@@ -187,6 +261,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#d8a13f",
         success="#84a56d",
         info="#93a7af",
+        dark=True,
     ),
     Palette(
         key="corrosion",
@@ -207,6 +282,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#d2b23f",
         success="#84b65c",
         info="#8b9ba1",
+        dark=True,
     ),
     Palette(
         key="bruise",
@@ -227,6 +303,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#c79a4a",
         success="#83ab7c",
         info="#8d9bb5",
+        dark=True,
     ),
     Palette(
         key="drowned",
@@ -247,6 +324,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#c9a04f",
         success="#74ae8e",
         info="#88a0a9",
+        dark=True,
     ),
     Palette(
         key="sepulcher",
@@ -267,6 +345,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#bf9f56",
         success="#8b9c81",
         info="#90979e",
+        dark=True,
     ),
     Palette(
         key="cold-iron",
@@ -287,6 +366,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#c39a4e",
         success="#85a885",
         info="#87a0ac",
+        dark=True,
     ),
     Palette(
         key="hazard",
@@ -307,6 +387,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#d1b62c",
         success="#8ca664",
         info="#909b95",
+        dark=True,
     ),
     Palette(
         key="velvet-knife",
@@ -327,6 +408,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#c79a52",
         success="#8aa57d",
         info="#949cab",
+        dark=True,
     ),
     Palette(
         key="ash",
@@ -347,6 +429,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#c79b4e",
         success="#90a672",
         info="#909aa0",
+        dark=True,
     ),
     Palette(
         key="null",
@@ -367,6 +450,7 @@ PALETTES: tuple[Palette, ...] = (
         warning="#c9953f",
         success="#74ae86",
         info="#87a2bc",
+        dark=True,
     ),
     Palette(
         key="black-blood",
@@ -387,5 +471,6 @@ PALETTES: tuple[Palette, ...] = (
         warning="#bf9f56",
         success="#8b9c81",
         info="#90979e",
+        dark=True,
     ),
 )

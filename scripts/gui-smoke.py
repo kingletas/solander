@@ -230,7 +230,7 @@ def run_checks(app):
             check("a second family theme shares the rules and swaps the palette",
                   "theme-archive" in other and "theme-corrosion" in other
                   and "theme-blood-record" not in other)
-            theme_action.change_state(GLib.Variant.new_string("atelier"))
+            theme_action.change_state(GLib.Variant.new_string("stone"))
             restored = window._provide_page("/note/A.md", window.reader.webview)
             check("switching back restores the original theme",
                   "theme-blood-record" not in restored)

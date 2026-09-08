@@ -2,7 +2,14 @@
 
 import re
 
-from solander.core.palettes import PALETTES, contrast_ratio, mix, readable
+from solander.core.palettes import (
+    PALETTES,
+    STONE_DARK,
+    STONE_LIGHT,
+    contrast_ratio,
+    mix,
+    readable,
+)
 from solander.core.render import _asset_css, build_page
 from solander.core.session import SessionState
 from solander.core.themes import (
@@ -60,12 +67,13 @@ def test_an_unknown_theme_key_falls_back_to_the_default():
     assert page_id("no-such-theme", dark=False) == "light"
 
 
-def test_the_original_theme_still_answers_to_light_and_dark():
-    assert page_id("atelier", dark=False) == "light"
-    assert page_id("atelier", dark=True) == "dark"
+def test_the_house_theme_still_answers_to_light_and_dark():
+    """`light` and `dark` are what the whole app is written against; Stone fills them."""
+    assert page_id("stone", dark=False) == "light"
+    assert page_id("stone", dark=True) == "dark"
     assert variant_for("light").body_classes == "theme-light"
     assert variant_for("dark").body_classes == "theme-dark"
-    assert not theme_by_key("atelier").dark_only
+    assert not theme_by_key("stone").dark_only
 
 
 # -- the archive family ---------------------------------------------------
@@ -102,9 +110,9 @@ def test_one_theme_never_ships_another_theme_s_palette():
     page = build_page("<p>x</p>", "Note", "corrosion")
     assert "theme-blood-record" not in page
     for identifier in ("light", "dark"):
-        atelier = build_page("<p>x</p>", "Note", identifier)
-        assert "theme-archive" not in atelier
-        assert "--arc-hot" not in atelier
+        stone = build_page("<p>x</p>", "Note", identifier)
+        assert "theme-archive" not in stone
+        assert "theme-corrosion" not in stone
 
 
 def test_each_page_carries_only_its_own_syntax_palette():
@@ -112,6 +120,14 @@ def test_each_page_carries_only_its_own_syntax_palette():
     light = build_page("", "Note", "light")
     assert ".theme-light .highlight .k" in light
     assert ".theme-dark .highlight .k" not in light
+
+
+def test_no_generated_palette_reaches_paper():
+    """A theme emitted after the print block would win on source order and print dark."""
+    for palette in (STONE_LIGHT, STONE_DARK, *PALETTES):
+        block = page_tokens(palette)
+        assert block.startswith("@media screen {"), f"{palette.key} would reach paper"
+        assert block.endswith("}")
 
 
 def test_the_family_never_reaches_paper():
@@ -176,3 +192,35 @@ def test_code_and_rail_labels_are_measured_against_their_own_grounds():
         assert code >= AA, f"{palette.key} inline code is {code:.2f} on the code ground"
         label = contrast_ratio(palette.rail_label, palette.void)
         assert label >= AA, f"{palette.key} rail labels are {label:.2f} on the rail"
+
+
+# -- the swatch a theme is chosen by ---------------------------------------
+
+HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def test_every_theme_states_the_colours_its_swatch_is_drawn_from():
+    """Nothing generates a picture: the swatch is the theme's own three colours."""
+    for key, theme in THEMES.items():
+        for field in ("paper", "ink", "mark"):
+            value = getattr(theme, field)
+            assert HEX.match(value), f"{key} has no {field} to draw with ({value!r})"
+
+
+def test_every_theme_says_what_it_is_going_for():
+    """The name is evocative and the vibe is what says which look it belongs to."""
+    for key, theme in THEMES.items():
+        assert theme.vibe, f"{key} offers no description of itself"
+
+
+def test_a_swatch_can_tell_its_text_from_its_ground():
+    """A swatch whose ink cannot be seen on its paper is a solid rectangle."""
+    for key, theme in THEMES.items():
+        assert contrast_ratio(theme.ink, theme.paper) >= AA, f"{key} draws as one block"
+
+
+def test_text_on_the_solid_accent_is_measured_rather_than_assumed():
+    """`accent_fg_color` sits on the accent; the lighter end is not always the answer."""
+    for palette in (STONE_LIGHT, STONE_DARK, *PALETTES):
+        ratio = contrast_ratio(palette.on_accent, palette.accent)
+        assert ratio >= AA, f"{palette.key} puts {ratio:.2f} text on its own accent"

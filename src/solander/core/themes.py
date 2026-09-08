@@ -4,8 +4,8 @@ A theme owns three things — the page tokens the reading surface consumes, the 
 colors the window chrome consumes, and the syntax palette for code. Layout lives in
 `reader.css` and the chrome structure lives with the window; neither is per-theme.
 
-Atelier is written out here because it is its own design. Every member of the Archive
-family is generated from one `Palette`, so adding one is sixteen colours and no rules.
+Every theme is generated from a `Palette`, Stone included, so adding one is sixteen
+colours and no rules — and no theme carries a hand-written block the others cannot.
 """
 
 from dataclasses import dataclass, field
@@ -24,9 +24,9 @@ from pygments.token import (
     Token,
 )
 
-from .palettes import PALETTES, Palette, mix
+from .palettes import PALETTES, STONE_DARK, STONE_LIGHT, Palette, mix
 
-DEFAULT_THEME = "atelier"
+DEFAULT_THEME = "stone"
 ARCHIVE_CLASS = "theme-archive"
 
 
@@ -53,6 +53,18 @@ class Theme:
     variants: dict[str, Variant] = field(default_factory=dict)
     family: str = ""
 
+    vibe: str = ""
+    """What the theme is going for, in the words the chooser shows under its name."""
+
+    paper: str = ""
+    """The ground the theme reads on, for a swatch of it."""
+
+    ink: str = ""
+    """The colour text is set in, for a swatch of it."""
+
+    mark: str = ""
+    """The theme's own colour: the seal on a swatch of it."""
+
     @property
     def dark_only(self) -> bool:
         """A theme with a single dark variant; the light/dark choice does not apply to it."""
@@ -66,60 +78,17 @@ class Theme:
         return next(iter(self.variants.values()))
 
 
-# Two surfaces, one identity: a deep sepia rail beside the parchment canvas,
-# with the header flattened into the canvas rather than a third tint.
-_ATELIER_LIGHT_CHROME = """
-@define-color accent_bg_color #1c4e9c;
-@define-color accent_fg_color #ffffff;
-@define-color accent_color #1c4e9c;
-@define-color window_bg_color #f9f4e7;
-@define-color window_fg_color #2b2620;
-@define-color headerbar_bg_color #f9f4e7;
-@define-color headerbar_fg_color #2b2620;
-@define-color view_bg_color #f9f4e7;
-@define-color view_fg_color #2b2620;
-@define-color popover_bg_color #f6f0df;
-@define-color popover_fg_color #2b2620;
-@define-color dialog_bg_color #f6f0df;
-@define-color dialog_fg_color #2b2620;
-@define-color card_bg_color #f4eeda;
-@define-color card_fg_color #2b2620;
-@define-color rail_bg #2a2420;
-@define-color rail_fg #d8d0c0;
-@define-color rail_muted #97907f;
-@define-color rail_accent #d0a44e;
-@define-color canvas_muted #6f6455;
-"""
+def page_tokens(palette: Palette, selector: str = "") -> str:
+    """The custom properties one theme contributes; the rules it uses are shared.
 
-_ATELIER_DARK_CHROME = """
-@define-color accent_bg_color #5c84c4;
-@define-color accent_fg_color #ffffff;
-@define-color accent_color #8fb0e8;
-@define-color window_bg_color #1c1a16;
-@define-color window_fg_color #d9d2c2;
-@define-color headerbar_bg_color #1c1a16;
-@define-color headerbar_fg_color #d9d2c2;
-@define-color view_bg_color #1c1a16;
-@define-color view_fg_color #d9d2c2;
-@define-color popover_bg_color #2a261e;
-@define-color popover_fg_color #d9d2c2;
-@define-color dialog_bg_color #2a261e;
-@define-color dialog_fg_color #d9d2c2;
-@define-color card_bg_color #262218;
-@define-color card_fg_color #d9d2c2;
-@define-color rail_bg #16130f;
-@define-color rail_fg #cfc7b6;
-@define-color rail_muted #857d6d;
-@define-color rail_accent #d0a44e;
-@define-color canvas_muted #a29882;
-"""
-
-
-def page_tokens(palette: Palette) -> str:
-    """The custom properties one Archive theme contributes; the rules are shared."""
+    Screen only. Paper has no dark mode, reader.css states the palette a page is
+    printed in, and a generated block is emitted after it — so a theme that reached
+    print would win on source order and put the reader's ink on a black page.
+    """
     p = palette
     return (
-        f"body.theme-{p.key} {{\n"
+        "@media screen {\n"
+        f"{selector or f'body.theme-{p.key}'} {{\n"
         f"  --bg: {p.bg};\n"
         f"  --fg: {p.text};\n"
         f"  --muted: {p.legible(p.muted)};\n"
@@ -143,7 +112,7 @@ def page_tokens(palette: Palette) -> str:
         f"  --arc-warning: {p.legible(p.warning)};\n"
         f"  --arc-success: {p.legible(p.success)};\n"
         f"  --arc-info: {p.legible(p.info)};\n"
-        "}"
+        "}\n}"
     )
 
 
@@ -152,7 +121,7 @@ def chrome(palette: Palette) -> str:
     p = palette
     return (
         f"@define-color accent_bg_color {p.accent};\n"
-        f"@define-color accent_fg_color {p.bright};\n"
+        f"@define-color accent_fg_color {p.on_accent};\n"
         f"@define-color accent_color {p.legible(mix(p.link, p.text, 0.25))};\n"
         f"@define-color window_bg_color {p.bg};\n"
         f"@define-color window_fg_color {p.text};\n"
@@ -242,12 +211,28 @@ def highlight_style(palette: Palette) -> type[Style]:
     return type(Style)(name, (Style,), namespace)
 
 
+def _stone_variant(palette: Palette, mode: str) -> Variant:
+    """One half of Stone: the house palette worn on the page the app already names."""
+    return Variant(
+        page_id=mode,
+        body_classes=f"theme-{mode}",
+        highlight_scope=f".theme-{mode}",
+        chrome=chrome(palette),
+        highlight=highlight_style(palette),
+        tokens=page_tokens(palette, f"body.theme-{mode}"),
+    )
+
+
 def _archive_theme(palette: Palette) -> Theme:
     """Wraps one palette as a selectable theme; every rule it uses is shared."""
     return Theme(
         key=palette.key,
         label=palette.label,
         family="Archive",
+        vibe=palette.vibe,
+        paper=palette.bg,
+        ink=palette.text,
+        mark=palette.accent,
         variants={
             "dark": Variant(
                 page_id=palette.key,
@@ -266,28 +251,24 @@ def _archive_theme(palette: Palette) -> Theme:
     )
 
 
-ATELIER = Theme(
-    key="atelier",
-    label="Atelier",
+STONE = Theme(
+    key="stone",
+    label="Stone",
+    family="Stone",
+    vibe=STONE_LIGHT.vibe,
+    paper=STONE_LIGHT.bg,
+    ink=STONE_LIGHT.text,
+    mark=STONE_LIGHT.accent,
     variants={
-        "light": Variant(
-            page_id="light",
-            body_classes="theme-light",
-            highlight_scope=".theme-light",
-            chrome=_ATELIER_LIGHT_CHROME,
-            highlight="default",
-        ),
-        "dark": Variant(
-            page_id="dark",
-            body_classes="theme-dark",
-            highlight_scope=".theme-dark",
-            chrome=_ATELIER_DARK_CHROME,
-            highlight="monokai",
-        ),
+        # `light` and `dark` are the page identifiers the whole app is written
+        # against: the renderer's default, the fallback for an unknown page, and
+        # the body classes reader.css states its base rules on. Stone fills them.
+        "light": _stone_variant(STONE_LIGHT, "light"),
+        "dark": _stone_variant(STONE_DARK, "dark"),
     },
 )
 
-THEMES: dict[str, Theme] = {ATELIER.key: ATELIER}
+THEMES: dict[str, Theme] = {STONE.key: STONE}
 for _palette in PALETTES:
     THEMES[_palette.key] = _archive_theme(_palette)
 

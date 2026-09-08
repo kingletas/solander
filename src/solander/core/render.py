@@ -953,9 +953,9 @@ def _page_css(page: str) -> str:
 
 # Reading-comfort presets; unknown values fall back to the stylesheet's own defaults.
 _FONT_STACKS = {
-    "serif": "'Noto Serif', 'Liberation Serif', Georgia, serif",
-    "sans": "'Cantarell', 'Ubuntu', 'Segoe UI', system-ui, sans-serif",
-    "mono": "'Ubuntu Mono', 'Source Code Pro', 'DejaVu Sans Mono', monospace",
+    "serif": "'Literata', 'Noto Serif', 'Liberation Serif', Georgia, serif",
+    "sans": "'Manrope', 'Cantarell', 'Ubuntu', system-ui, sans-serif",
+    "mono": "'IBM Plex Mono', 'Ubuntu Mono', 'Source Code Pro', monospace",
 }
 _LINE_WIDTHS = {"narrow": "35rem", "wide": "58rem", "full": "none"}
 _LINE_HEIGHTS = {"compact": "1.45", "relaxed": "1.85"}

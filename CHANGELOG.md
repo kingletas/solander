@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Stone: one design language, and every theme measured against it
+
+- **Stone replaces Atelier as the house identity**, in a light and a dark version — warm neutral greys with the sepia taken out, one deep pine accent, and a sans in the chrome against a serif on the page. It is built from a palette like every other theme, so the last hand-written block of colours is gone from the app.
+- **A palette now states which way its ground runs.** Four derived colours were measured from a dark ground and did the wrong thing on a light one: "brighter" made a title *less* prominent, and the code panel turned to mid-grey. Each reads the direction now.
+- **Text on the solid accent is measured rather than assumed.** It used to be the palette's light end, which is wrong wherever the accent is bright: *Hazard* put text at 2.09:1 on its own accent and *Corrosion* at 2.28:1. The colour is chosen by contrast from the palette's own two ends, and the worst of the fifteen themes is now 4.66:1.
+- **A theme could reach paper and print the page black.** The palettes are generated after the print rules, so on equal specificity the screen colours won on source order — printing an Archive note put the ink on its dark ground. Every generated palette is screen-only now, which is what the family's shared sheet already did.
+- **The Archive family keeps its colours and drops its second typographic system.** It was pinned to a serif for both display and body; it wears the house pairing now, and the rules it shares with every other theme moved to the base sheet, leaving it a third shorter and holding only what is its own — square tags, the rule under a title, code sunk into the ground, industrial scrollbars.
+
+- **The theme is now chosen by looking at it.** The menu listed fourteen names; it shows each theme as a swatch drawn from that theme's own paper, ink and mark, with the one in force ticked. No picture is stored anywhere.
+
 The Android port starts here. Neither of these changes the window; both are things the window's own design had made true only for the window.
 
 - **Where a link points is now the client's decision, not the renderer's.** Every note link, asset, breadcrumb, tag, embed, backlink, canvas node, mind-map node and Dataview result was written with `reader:` or `vault:` — schemes only the GTK window can register, and which an Android or browser WebView cannot. A client passes the prefixes it wants and gets them everywhere; passing nothing gets the window's, so nothing changed for the client that was here first. **A client that says it has no window actions, with an empty prefix, gets a folder and a tag written as text rather than as a link nothing can follow.**

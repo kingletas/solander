@@ -196,7 +196,7 @@ Two notes don't need finding. Ten thousand do, and this is where a reader earns 
 
 ## Make it comfortable
 
-Fourteen themes, and the one you pick is remembered. **Atelier** is the default: parchment and sepia by day, a candlelit version after dark. The **Archive** family is thirteen dark themes over one design language, and the meanings hold across all of them — danger, warning, verified and information look like themselves in every one.
+Fourteen themes, and the one you pick is remembered. **Stone** is the default: warm neutral greys and one deep pine accent, in a light version by day and a dark one after it. The **Archive** family is thirteen dark themes over one design language, and the meanings hold across all of them — danger, warning, verified and information look like themselves in every one.
 
 Beyond that: tabs, an outline panel (`F8`), reading mode, typography controls, pinned notes, a mind-map view of any note, your vault's own CSS snippets (sanitized first), folder hiding, and PDF export through a real print stylesheet.
 
