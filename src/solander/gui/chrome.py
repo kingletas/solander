@@ -13,6 +13,9 @@ from gi.repository import Gtk
 SEPARATOR = "/"
 """What sits between two steps of a path. The vault's own separator, not an arrow."""
 
+STEP_FLOOR = 6
+"""How much of a folder name stays readable when the header runs out of room."""
+
 
 class CrumbPath(Gtk.Box):
     """Where the open note lives: its folders quiet, its own name in ink.
@@ -71,6 +74,10 @@ class CrumbPath(Gtk.Box):
         # The leaf is the answer to "which note is this"; an ancestor is context,
         # so a header with no room shortens the folders and keeps the name whole.
         label = Gtk.Label(label=text, ellipsize=3 if style == "crumb-step" else 0)
+        if style == "crumb-step":
+            # With no floor a squeezed step shrinks to a bare ellipsis, and a path
+            # of those says only that there were folders, not which.
+            label.set_width_chars(STEP_FLOOR)
         label.add_css_class(style)
         if style == "crumb-sep":
             label.set_margin_start(5)

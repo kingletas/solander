@@ -6,7 +6,7 @@ import weakref
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gdk, Gtk, Pango, PangoCairo
+from gi.repository import Gtk, Pango, PangoCairo
 
 NODE_RADIUS = 7.0
 CENTER_RADIUS = 10.0
@@ -68,8 +68,10 @@ class LocalGraphView:
             return
         style = area.get_style_context()
         fg = style.get_color()
-        accent = Gdk.RGBA()
-        if not accent.parse("#d0a44e"):
+        # The theme's own accent, looked up rather than written down: this held
+        # the old identity's gold and stayed gold in all fourteen themes.
+        found, accent = style.lookup_color("accent_color")
+        if not found:
             accent = fg
         center_x, center_y = width / 2, height / 2
         count = len(self.neighbors)
