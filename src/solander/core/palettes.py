@@ -141,12 +141,6 @@ class Palette:
         candidates = ("#ffffff", self.text, self.void)
         return max(candidates, key=lambda color: contrast_ratio(color, self.accent))
 
-    @property
-    def rail_label(self) -> str:
-        """The rail's small-caps section labels, on the void rather than the page."""
-        return self.legible(mix(self.accent, self.text, 0.25), self.void)
-
-
 STONE_LIGHT = Palette(
     key="stone",
     label="Stone",

@@ -889,6 +889,7 @@ class ReaderWindow(Adw.ApplicationWindow):
     .reader-rail entry image { color: @rail_muted; }
     .reader-rail expander { color: @rail_muted; }
     .reader-rail .rail-separator { background: @hairline; }
+    .reader-rail entry:focus-within { border-color: @accent_bg_color; }
 
     /* The switcher is a segmented control: one track, and the page you are on raised. */
     .reader-rail stackswitcher {

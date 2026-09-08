@@ -137,7 +137,7 @@ def chrome(palette: Palette) -> str:
         f"@define-color card_fg_color {p.text};\n"
         f"@define-color rail_bg {p.void};\n"
         f"@define-color rail_fg {mix(p.text, p.muted, 0.4)};\n"
-        f"@define-color rail_muted {p.muted};\n"
+        f"@define-color rail_muted {p.legible(p.muted, p.void)};\n"
         f"@define-color rail_accent {p.legible(p.hot, p.void)};\n"
         f"@define-color canvas_muted {p.muted};\n"
         # Stone separates its surfaces by hairline rather than by value, so the
@@ -154,24 +154,18 @@ def chrome(palette: Palette) -> str:
 
 
 def chrome_extra(palette: Palette) -> str:
-    """The archive's own chrome: quiet labels, one flagged row, industrial scrollbars."""
+    """The Archive family's own chrome, which is one thing: an industrial scrollbar.
+
+    This is loaded after the shared structure, so everything it names silently
+    wins. It used to state the rail's borders, its section labels and its
+    selected row, which meant the family never received any of the structure's
+    own treatment for those — a theme kept the chrome it had before Stone.
+
+    The structure names a token per palette for each of them, so a theme still
+    wears its own colours there. What is left here is what no token can say.
+    """
     p = palette
     return f"""
-headerbar {{ border-bottom: 1px solid {mix(p.line_strong, p.bg, 0.4)}; }}
-.reader-rail {{ border-right: 1px solid {mix(p.line_strong, p.void, 0.3)}; }}
-.reader-rail .rail-title,
-.reader-rail .quick-heading,
-.outline-panel .panel-heading {{ color: {p.rail_label}; }}
-.reader-rail row:selected {{
-    background: linear-gradient(to right, alpha({p.deep}, 0.38), alpha({p.deep}, 0.08));
-    box-shadow: inset 2px 0 0 {p.hot};
-    color: {p.bright};
-}}
-.reader-rail row:hover {{ background: alpha({p.hot}, 0.07); }}
-.reader-rail entry:focus-within {{ border-color: {p.accent}; }}
-.reader-rail .rail-separator {{ background: {mix(p.line_strong, p.void, 0.3)}; }}
-.navigation-sidebar row:selected {{ box-shadow: inset 2px 0 0 {p.hot}; }}
-.outline-panel row:hover, .outline-panel row:selected {{ color: {mix(p.link, p.text, 0.25)}; }}
 scrollbar {{ background: {p.void}; }}
 scrollbar slider {{
     background: {mix(p.deep, p.void, 0.45)};

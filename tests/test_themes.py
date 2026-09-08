@@ -15,6 +15,7 @@ from solander.core.session import SessionState
 from solander.core.themes import (
     DEFAULT_THEME,
     THEMES,
+    chrome_extra,
     page_id,
     page_tokens,
     theme_by_key,
@@ -185,13 +186,39 @@ def test_text_stays_legible_on_panels_as_well_as_the_page():
             assert ratio >= AA, f"{palette.key} {name} is {ratio:.2f} on a panel"
 
 
-def test_code_and_rail_labels_are_measured_against_their_own_grounds():
-    for palette in PALETTES:
+def test_code_and_rail_text_are_measured_against_their_own_grounds():
+    """The rail is a surface of its own, and Stone's is a light one.
+
+    Its muted text was handed to the chrome unlifted, which was survivable while
+    every rail was near-black and is not now: Stone's own measures 2.98:1 raw.
+    """
+    for palette in (STONE_LIGHT, STONE_DARK, *PALETTES):
         tokens = tokens_of(palette)
         code = contrast_ratio(tokens["--arc-code-fg"], tokens["--arc-code-bg"])
         assert code >= AA, f"{palette.key} inline code is {code:.2f} on the code ground"
-        label = contrast_ratio(palette.rail_label, palette.void)
-        assert label >= AA, f"{palette.key} rail labels are {label:.2f} on the rail"
+        rail = contrast_ratio(palette.legible(palette.muted, palette.void), palette.void)
+        assert rail >= AA, f"{palette.key} rail text is {rail:.2f} on the rail"
+
+
+def test_the_family_adds_only_its_own_voice_to_the_chrome():
+    """`chrome_extra` is loaded after the shared structure, so it silently wins.
+
+    It once stated the rail's borders, its section labels and its selected row,
+    and the thirteen themes therefore never received the structure's treatment
+    for any of them — each kept the chrome it had before Stone. Anything the
+    structure can say belongs there, where every theme is drawn the same way.
+    """
+    for palette in PALETTES:
+        stated = {
+            block.split("{", 1)[0].strip()
+            for block in chrome_extra(palette).split("}")
+            if "{" in block
+        }
+        assert stated, f"{palette.key} contributes nothing at all"
+        assert all(name.startswith("scrollbar") for name in stated), (
+            f"{palette.key} overrides the shared chrome: "
+            f"{sorted(name for name in stated if not name.startswith('scrollbar'))}"
+        )
 
 
 # -- the swatch a theme is chosen by ---------------------------------------
