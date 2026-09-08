@@ -9,7 +9,7 @@ A solander is the clamshell box an archive keeps its documents in. That's the jo
 
 > This project isn't affiliated with or endorsed by Obsidian.md / Dynalist Inc. "Obsidian" here names the vault format the reader understands.
 
-![Solander in the Atelier theme](docs/images/atelier.png)
+![Solander in the Stone theme](docs/images/stone.png)
 
 ## The name
 
