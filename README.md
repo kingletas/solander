@@ -26,7 +26,7 @@ Never used it? **[From nothing to reading a vault](docs/from-nothing.md)** takes
 - **Renders the whole vault, not just the markdown.** CommonMark/GFM plus the Obsidian layer — wikilinks with Obsidian's own resolution order, embeds, callouts, highlights, comments, tags, footnotes, frontmatter properties, syntax-highlighted code — and TeX math as native MathML, `.canvas` pages, kanban boards as boards, Excalidraw drawings as SVG, `.base` table views, and **Dataview queries and inline expressions evaluated in pure Python**, live against the index. Anything unsupported degrades to labeled source with the reason.
 - **Finds things like a launcher.** Fuzzy quick-open, relevance-ranked full-text search with `path:`/`file:`/`tag:` operators and highlighted hits, backlinks with context, a tag browser, the vault's bookmarks, a local graph, and hover previews.
 - **Stays current and starts warm.** The vault is watched — outside edits appear in seconds — and the index persists per vault, so a 10,000-note vault opens in about a second after its first build.
-- **Reads comfortably.** Fourteen themes — **Atelier**, a warm manuscript palette with serif display type, and the thirteen dark themes of the **Archive** family, from *Blood Record* to *Cold Iron* — and each note opens with a breadcrumb, title, and metadata line, linked mentions follow the content, and the outline is a real panel with a visible toggle (`F8`). Tabs, a mind-map view of any note, reading (zen) mode, typography controls, pinned notes, the vault's own CSS snippets (sanitized), folder hiding, and PDF export through a proper print stylesheet — plus an in-app PDF viewer when Poppler's bindings are present.
+- **Reads comfortably.** Fourteen themes — **Stone**, warm neutral greys with one deep pine accent, in light and dark, and the thirteen dark themes of the **Archive** family, from *Blood Record* to *Cold Iron* — and each note opens with a breadcrumb, title, and metadata line, linked mentions follow the content, and the outline is a real panel with a visible toggle (`F8`). Tabs, a mind-map view of any note, reading (zen) mode, typography controls, pinned notes, the vault's own CSS snippets (sanitized), folder hiding, and PDF export through a proper print stylesheet — plus an in-app PDF viewer when Poppler's bindings are present.
 
 ## What it will never do
 
@@ -109,7 +109,7 @@ A second launch hands its path to the running instance instead of racing it for 
 
 ## Themes
 
-Fourteen, and the theme is remembered. **Atelier** is the default — parchment and sepia ink by day, a candlelit nocturne by night. 
+Fourteen, and the theme is remembered. **Stone** is the default — warm neutral greys and one deep pine accent, light by day and dark by night. 
 
 The **Archive** family is thirteen dark themes over one design language: a dark ground, bone text, an accent for what is important, and one hot colour held back for what actually matters. The semantics hold across all of them, so danger, warning, verified and information mean the same thing in every one, and every colour that carries text is checked against WCAG AA on the ground it sits on.
 

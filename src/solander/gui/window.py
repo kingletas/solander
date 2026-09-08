@@ -31,6 +31,7 @@ from ..core.session import SessionStore, adopt_former_state
 from ..core.store import open_index_store
 from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
 from ..core.vault import Vault, file_kind, hidden_under, vault_holding
+from .appearance import ThemeChooser
 from .bookpaged import BookPagedView
 from .filetree import VaultTree
 from .localgraph import LocalGraphView
@@ -38,6 +39,9 @@ from .monitor import VaultMonitor
 from .panes import SplitPane
 from .pdfview import PdfWindow, poppler_available
 from .webpane import ReaderView
+
+THEME_CUSTOM = "themes"
+"""The name the popover puts the grid of swatches in under."""
 
 MAX_AMBIGUOUS_CHOICES = 8
 MAX_PANEL_ROWS = 200
@@ -592,21 +596,18 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _main_menu_button(self) -> Gtk.MenuButton:
         menu = Gio.Menu()
         appearance = Gio.Menu()
-        themes = Gio.Menu()
-        families: dict[str, Gio.Menu] = {}
-        for theme in THEMES.values():
-            section = families.get(theme.family)
-            if section is None:
-                section = Gio.Menu()
-                families[theme.family] = section
-                themes.append_section(theme.family or None, section)
-            section.append(theme.label, f"win.theme::{theme.key}")
-        appearance.append_submenu("Theme", themes)
         modes = Gio.Menu()
         modes.append("Follow System", "win.appearance::system")
         modes.append("Light", "win.appearance::light")
         modes.append("Dark", "win.appearance::dark")
         appearance.append_section("Mode", modes)
+        # The grid of swatches is a custom item: the popover builds its pages from
+        # this model, and whoever builds the popover puts the widget in by name.
+        swatches = Gio.Menu()
+        item = Gio.MenuItem.new(None, None)
+        item.set_attribute_value("custom", GLib.Variant.new_string(THEME_CUSTOM))
+        swatches.append_item(item)
+        appearance.append_section("Theme", swatches)
         menu.append_submenu("Appearance", appearance)
         typography = Gio.Menu()
         fonts = Gio.Menu()
@@ -662,7 +663,17 @@ class ReaderWindow(Adw.ApplicationWindow):
         menu.append_section(None, meta)
         button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu)
         button.set_tooltip_text("Main menu")
+        self.menu_popover = button.get_popover()
+        self.theme_chooser = ThemeChooser(self.store.state.theme, self._choose_theme)
+        self.menu_popover.add_child(self.theme_chooser, THEME_CUSTOM)
         return button
+
+    def _choose_theme(self, key: str) -> None:
+        """A swatch was clicked: the action does the work, the menu gets out of the way."""
+        action = self.lookup_action("theme")
+        if action is not None:
+            action.activate(GLib.Variant.new_string(key))
+        self.menu_popover.popdown()
 
     def _readonly_badge(self) -> Gtk.MenuButton:
         """The read-only state as a quiet lock: the reason and next actions one click away."""
@@ -2252,6 +2263,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._apply_appearance(self.store.state.appearance)
         self._apply_chrome_css()
         self._reload_all_tabs()
+        self.theme_chooser.show(self.store.state.theme)
         self._toast(f"{theme_by_key(self.store.state.theme).label} theme")
 
     def _sync_mode_action(self) -> None:

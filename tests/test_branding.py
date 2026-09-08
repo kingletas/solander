@@ -34,13 +34,9 @@ def test_the_mark_can_wear_any_theme():
     markup = mark_markup()
     for part in ("mark-board", "mark-face", "mark-seal"):
         assert f'class="{part}"' in markup
-    blood = (
-        resources.files("solander.assets")
-        .joinpath("theme-archive.css")
-        .read_text("utf-8")
-    )
+    base = resources.files("solander.assets").joinpath("reader.css").read_text("utf-8")
     for part in ("mark-board", "mark-face", "mark-seal"):
-        assert f".{part} {{ fill:" in blood
+        assert f".{part} {{ fill:" in base
 
 
 def test_the_desktop_entry_and_metainfo_agree_with_the_app_id():
