@@ -37,6 +37,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/solander"]
+artifacts = ["src/solander/assets/fonts/*"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "docs" = "solander/docs"

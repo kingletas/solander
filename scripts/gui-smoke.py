@@ -149,7 +149,12 @@ def run_checks(app):
             check("base filter matched the fixture note", "Query" in base_page)
             drawing = window._provide_page("/note/Draw.excalidraw.md", window.reader.webview)
             check("excalidraw note renders as SVG", "<svg" in drawing and "<rect" in drawing)
-            check("vault css snippet is applied sanitized", "teal" in page and "url(" not in page)
+            # The page carries its own `url()` for the bundled faces, so what
+            # must be absent is the snippet's, not every one on the page.
+            check(
+                "vault css snippet is applied sanitized",
+                "teal" in page and "http://x/y.png" not in page,
+            )
             inside = window._provide_page("/note/Sub/Inside.md", window.reader.webview)
             check(
                 "the page no longer repeats the path the header bar carries",

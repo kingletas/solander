@@ -21,6 +21,7 @@ from .canvas import canvas_body, parse_canvas
 from .dataview import DataviewEngine
 from .dql import DqlError
 from .excalidraw import excalidraw_body
+from .fonts import font_css
 from .frontmatter import split_frontmatter
 from .kanban import kanban_body, parse_kanban
 from .links import WikiLink, slugify
@@ -92,6 +93,7 @@ ASSET_BASE = "vault:///"
 ACTION_BASE = "reader:///action/"
 AMBIGUOUS_BASE = "reader:///ambiguous/"
 EXTERNAL_BASE = "reader:///external/"
+FONT_BASE = "reader:///font/"
 
 DEFAULT_BASES = {
     "note": NOTE_BASE,
@@ -99,6 +101,7 @@ DEFAULT_BASES = {
     "action": ACTION_BASE,
     "ambiguous": AMBIGUOUS_BASE,
     "external": EXTERNAL_BASE,
+    "font": FONT_BASE,
 }
 
 
@@ -243,7 +246,11 @@ class NoteRenderer:
         if note.error:
             return RenderedNote(
                 page=build_page(
-                    _message_body("Cannot open note", note.error), title, theme, typography=typo
+                    _message_body("Cannot open note", note.error),
+                    title,
+                    theme,
+                    typography=typo,
+                    bases=self._bases(),
                 ),
                 title=title,
                 error=note.error,
@@ -255,7 +262,12 @@ class NoteRenderer:
             drawing = excalidraw_body(split.body)
             return RenderedNote(
                 page=build_page(
-                    drawing, title, theme, typography=typo, extra_css=self._snips(),
+                    drawing,
+                    title,
+                    theme,
+                    typography=typo,
+                    bases=self._bases(),
+                    extra_css=self._snips(),
                     note_classes="excalidraw-note",
                 ),
                 body=drawing,
@@ -315,7 +327,7 @@ class NoteRenderer:
                 title,
                 theme,
                 lossy=note.lossy,
-                typography=typo,
+                typography=typo, bases=self._bases(),
                 extra_css=self._snips(),
                 note_classes=classes,
             ),
@@ -374,13 +386,20 @@ class NoteRenderer:
                 title, "The index is still building — reload shortly.", theme
             )
         body = f"<h1>{html.escape(title)}</h1>{render_base(graph, note.text)}"
-        return build_page(body, title, theme, typography=self._typo(), extra_css=self._snips())
+        return build_page(
+            body,
+            title,
+            theme,
+            typography=self._typo(),
+            bases=self._bases(),
+            extra_css=self._snips(),
+        )
 
     def render_text(self, text: str, title: str, theme: str = "light") -> str:
         """Renders standalone markdown text — the in-app documentation pages."""
         env = self._env(f"__document__/{title}")
         body = sanitize(self._render_markdown(split_frontmatter(text).body, env))
-        return build_page(body, title, theme, typography=self._typo())
+        return build_page(body, title, theme, typography=self._typo(), bases=self._bases())
 
     def render_mindmap(self, rel: str, theme: str = "light") -> str:
         """Renders a note's headings and bullets as a mind-map page."""
@@ -398,7 +417,7 @@ class NoteRenderer:
         page_body = back + mindmap_body(title, body, rel, bases["note"])
         return build_page(
             page_body, f"{title} (mind map)", theme,
-            typography=self._typo(), note_classes="mindmap-note",
+            typography=self._typo(), bases=self._bases(), note_classes="mindmap-note",
         )
 
     def render_canvas(self, rel: str, theme: str = "light") -> str:
@@ -414,7 +433,14 @@ class NoteRenderer:
             return note_uri(resolved.path, bases=bases) if resolved.kind == "note" else ""
 
         body = canvas_body(parse_canvas(note.text), note_href)
-        return build_page(body, title, theme, typography=self._typo(), extra_css=self._snips())
+        return build_page(
+            body,
+            title,
+            theme,
+            typography=self._typo(),
+            bases=self._bases(),
+            extra_css=self._snips(),
+        )
 
     def render_preview(self, rel: str, theme: str = "light") -> str:
         """Renders the opening slice of a note for the hover preview popover."""
@@ -427,7 +453,7 @@ class NoteRenderer:
         inner = sanitize(self._render_markdown(body, env))
         more = '<div class="preview-more">…</div>' if truncated else ""
         page_body = f'<div class="preview"><h1>{html.escape(title)}</h1>{inner}{more}</div>'
-        return build_page(page_body, title, theme, typography=self._typo())
+        return build_page(page_body, title, theme, typography=self._typo(), bases=self._bases())
 
     def _graph(self):
         graph = self.graph_provider() if callable(self.graph_provider) else None
@@ -1005,6 +1031,7 @@ def build_page(
     typography: dict | None = None,
     extra_css: str = "",
     note_classes: str = "",
+    bases: dict | None = None,
 ) -> str:
     """Wraps sanitized body markup in the full page shell with CSP and theme CSS."""
     notice = (
@@ -1014,16 +1041,32 @@ def build_page(
         else ""
     )
     theme_class = variant_for(theme).body_classes
+    # The faces are the app's own rather than the vault's, so they are served on
+    # their own route — and addressed the way this client can follow, because a
+    # client with no `reader:` scheme cannot load a font written in one.
+    base = (bases or DEFAULT_BASES)["font"]
+    faces = font_css(base)
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; "
-        "img-src vault:; media-src vault:; font-src vault:; style-src 'unsafe-inline';\">"
-        f"<title>{html.escape(title)}</title><style>{_page_css(theme)}</style>"
+        f"img-src vault:; media-src vault:; font-src {_font_origin(base)}; "
+        "style-src 'unsafe-inline';\">"
+        f"<title>{html.escape(title)}</title><style>{faces}\n{_page_css(theme)}</style>"
         f"{_typography_css(typography)}{_snippet_style(extra_css)}</head>"
         f"<body class='{theme_class}' dir='auto'>{notice}"
         f"<main class='note markdown-preview-view {html.escape(note_classes, quote=True)}'>"
         f"{body}</main></body></html>"
     )
+
+
+def _font_origin(base: str) -> str:
+    """What the policy has to allow for a face addressed this way.
+
+    A base written as a scheme names that scheme; one written as a path is the
+    page's own origin, and saying `'self'` is what lets it load at all.
+    """
+    scheme = base.split(":", 1)[0]
+    return f"{scheme}:" if "://" in base else "'self'"
 
 
 def _snippet_style(extra_css: str) -> str:

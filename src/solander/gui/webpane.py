@@ -8,6 +8,8 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("WebKit", "6.0")
 from gi.repository import Gdk, Gio, GLib, GObject, WebKit
 
+from ..core.fonts import MIME as FONT_MIME
+from ..core.fonts import font_bytes
 from ..core.render import build_message_page
 
 ASSET_MIME_ALLOWLIST = {
@@ -89,15 +91,32 @@ class ReaderView(GObject.Object):
         self.webview.load_uri(f"reader:///page/{name}")
 
     def _serve_reader(self, request, _data) -> None:
-        """Serves rendered pages for `reader:` URIs out of the window's page provider."""
+        """Serves the app's own pages and files for `reader:` URIs.
+
+        The fonts are the app's rather than the vault's, so they are served here
+        rather than on `vault:`, which resolves inside the person's own vault.
+        """
         uri = urlparse(request.get_uri())
         path = unquote(uri.path)
+        if path.startswith("/font/"):
+            self._serve_font(request, path[len("/font/"):])
+            return
         page = ""
         if self.page_provider is not None:
             page = self.page_provider(path, request.get_web_view())
         if not page:
             page = build_message_page("Not found", f"Nothing is served at {path}")
         self._finish(request, page.encode("utf-8"), "text/html")
+
+    def _serve_font(self, request, name: str) -> None:
+        """Serves one bundled face, or refuses a name that is not one of them."""
+        data = font_bytes(name)
+        if data is None:
+            request.finish_error(GLib.Error.new_literal(
+                GLib.quark_from_string("reader"), f"Refused font: {name}", 1
+            ))
+            return
+        self._finish(request, data, FONT_MIME)
 
     def _serve_vault(self, request, _data) -> None:
         """Serves a vault asset when, and only when, the provider proves containment."""
