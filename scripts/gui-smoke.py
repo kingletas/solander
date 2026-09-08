@@ -151,8 +151,15 @@ def run_checks(app):
             check("excalidraw note renders as SVG", "<svg" in drawing and "<rect" in drawing)
             check("vault css snippet is applied sanitized", "teal" in page and "url(" not in page)
             inside = window._provide_page("/note/Sub/Inside.md", window.reader.webview)
-            crumb = "reader:///action/reveal-folder?arg=Sub" in inside
-            check("nested note header carries the breadcrumb", crumb)
+            check(
+                "the page no longer repeats the path the header bar carries",
+                "reader:///action/reveal-folder?arg=Sub" not in inside,
+            )
+            window.title_widget.show_note("Sub/Inside.md")
+            check(
+                "the header bar carries the folders the note sits in",
+                window.title_widget.steps() == ["Sub"],
+            )
             one_title = (
                 '<h1 class="inline-title">Inside</h1>' in inside
                 and inside.count(">Inside</h1>") == 1

@@ -138,8 +138,15 @@ def chrome(palette: Palette) -> str:
         f"@define-color rail_bg {p.void};\n"
         f"@define-color rail_fg {mix(p.text, p.muted, 0.4)};\n"
         f"@define-color rail_muted {p.muted};\n"
-        f"@define-color rail_accent {p.hot};\n"
+        f"@define-color rail_accent {p.legible(p.hot, p.void)};\n"
         f"@define-color canvas_muted {p.muted};\n"
+        # Stone separates its surfaces by hairline rather than by value, so the
+        # lines are named colours instead of a wash of white over whatever is behind.
+        f"@define-color hairline {p.line};\n"
+        f"@define-color hairline_strong {p.line_strong};\n"
+        f"@define-color accent_soft {mix(p.accent, p.bg, 0.86)};\n"
+        f"@define-color rail_soft {mix(p.accent, p.void, 0.84)};\n"
+        f"@define-color rail_raised {mix(p.surface, p.void, 0.35)};\n"
     )
 
 

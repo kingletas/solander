@@ -31,14 +31,26 @@ from ..core.session import SessionStore, adopt_former_state
 from ..core.store import open_index_store
 from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
 from ..core.vault import Vault, file_kind, hidden_under, vault_holding
+from .appearance import CSS as THEME_CSS
 from .appearance import ThemeChooser
 from .bookpaged import BookPagedView
+from .chrome import CrumbPath, ReaderFoot
 from .filetree import VaultTree
 from .localgraph import LocalGraphView
 from .monitor import VaultMonitor
 from .panes import SplitPane
 from .pdfview import PdfWindow, poppler_available
 from .webpane import ReaderView
+
+
+def _words_in(rendered) -> int:
+    """How many words are on the page, from the source the renderer already read."""
+    return len(rendered.source.split()) if rendered is not None and rendered.source else 0
+
+
+DISPLAY_FACE = '"Manrope", "Cantarell", "Ubuntu", system-ui, sans-serif'
+"""The chrome's face. GTK reads it through fontconfig, so a missing Manrope
+degrades to Cantarell rather than failing."""
 
 THEME_CUSTOM = "themes"
 """The name the popover puts the grid of swatches in under."""
@@ -164,8 +176,10 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.tab_view.connect("close-page", self._on_close_page)
         self.tab_view.connect("page-detached", self._on_page_detached)
 
+        # What this reader may do never changes, so the foot says it outright.
+        self.foot = ReaderFoot("Reader · cannot write, cannot reach the network")
         header = Adw.HeaderBar()
-        self.title_widget = Adw.WindowTitle(title=APP_NAME, subtitle="")
+        self.title_widget = CrumbPath(on_folder=self._reveal_folder)
         header.set_title_widget(self.title_widget)
 
         open_menu = Gio.Menu()
@@ -193,6 +207,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.forward_button.connect("clicked", lambda *_: self.reader.webview.go_forward())
         header.pack_start(self.back_button)
         header.pack_start(self.forward_button)
+        rule = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
+        rule.add_css_class("header-rule")
+        header.pack_start(rule)
 
         header.pack_end(self._main_menu_button())
         self.outline_toggle = Gtk.ToggleButton(
@@ -203,10 +220,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             "toggled", lambda button: self._set_outline_visible(button.get_active())
         )
         header.pack_end(self.outline_toggle)
-        search_button = Gtk.Button(icon_name="system-search-symbolic")
-        search_button.set_tooltip_text("Search the vault (Ctrl+Shift+F)")
-        search_button.connect("clicked", lambda *_: self._show_search())
-        header.pack_end(search_button)
+        header.pack_end(self._search_pill())
         header.pack_end(self._readonly_badge())
 
         self.sidebar_widget = self._build_sidebar()
@@ -217,6 +231,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.toolbar_view = Adw.ToolbarView()
         self.toolbar_view.add_top_bar(header)
         self.toolbar_view.set_content(self._build_reading_area())
+        self.toolbar_view.add_bottom_bar(self.foot)
+        self.foot.say_theme(theme_by_key(self.store.state.theme).label)
 
         self.paned = Gtk.Paned(
             orientation=Gtk.Orientation.HORIZONTAL,
@@ -337,17 +353,13 @@ class ReaderWindow(Adw.ApplicationWindow):
         # The rail has no header bar, so its top strip still drags the window.
         handle = Gtk.WindowHandle(child=head)
 
-        self.index_status = Gtk.Label(xalign=0.0)
-        self.index_status.add_css_class("dim-label")
-        self.index_status.set_margin_start(12)
-        self.index_status.set_margin_top(6)
-        self.index_status.set_margin_bottom(8)
+        # The rail used to carry its own status line saying what the foot now says.
+        self.index_status = self.foot.indexed
 
         rail = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         rail.add_css_class("reader-rail")
         rail.append(handle)
         rail.append(self.sidebar_stack)
-        rail.append(self.index_status)
         return rail
 
     def _add_sidebar_page(self, child, name: str, title: str, icon: str) -> None:
@@ -630,7 +642,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         typography.append_submenu("Line Spacing", spacings)
         menu.append_submenu("Typography", typography)
         context = Gio.Menu()
-        context.append("Title & Breadcrumb", "win.show-breadcrumb")
+        context.append("Note Title", "win.show-breadcrumb")
         context.append("Metadata Line", "win.show-note-meta")
         context.append("Linked Mentions", "win.show-backlinks")
         view = Gio.Menu()
@@ -663,9 +675,28 @@ class ReaderWindow(Adw.ApplicationWindow):
         menu.append_section(None, meta)
         button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu)
         button.set_tooltip_text("Main menu")
+        button.add_css_class("primary-menu")
         self.menu_popover = button.get_popover()
         self.theme_chooser = ThemeChooser(self.store.state.theme, self._choose_theme)
         self.menu_popover.add_child(self.theme_chooser, THEME_CUSTOM)
+        return button
+
+    def _reveal_folder(self, rel: str) -> None:
+        """A step of the path was clicked: show that folder in the tree."""
+        self.tree.reveal(rel)
+
+    def _search_pill(self) -> Gtk.Widget:
+        """Search as a field you can see, carrying the shortcut that also opens it."""
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        row.append(Gtk.Image(icon_name="system-search-symbolic", pixel_size=14))
+        row.append(Gtk.Label(label="Search the vault"))
+        chip = Gtk.Label(label="Ctrl \u21e7 F")
+        chip.add_css_class("shortcut-chip")
+        row.append(chip)
+        button = Gtk.Button(child=row)
+        button.add_css_class("search-pill")
+        button.set_tooltip_text("Search the vault (Ctrl+Shift+F)")
+        button.connect("clicked", lambda *_: self._show_search())
         return button
 
     def _choose_theme(self, key: str) -> None:
@@ -763,92 +794,219 @@ class ReaderWindow(Adw.ApplicationWindow):
         drop.connect("drop", lambda _t, value, _x, _y: self._open_gfile(value) or True)
         self.add_controller(drop)
 
-    # The shape of the chrome, shared by every theme; the colors it names are
-    # defined per theme in the registry, so a new theme is a palette and nothing else.
+    # The shape of the chrome, shared by every theme. Every colour in it names a
+    # token the theme defines, because Stone's rail is a light surface and a wash
+    # of white over it is invisible.
     _CHROME_STRUCTURE = """
-    headerbar windowtitle .title {
-        font-family: "Noto Serif", "Liberation Serif", Georgia, serif;
-        font-weight: 700;
+    /* One family, separated by hairlines rather than by value. */
+    headerbar {
+        background: @window_bg_color;
+        box-shadow: none;
+        border-bottom: 1px solid @hairline;
     }
-    headerbar { box-shadow: none; }
-    paned > separator { background: alpha(currentColor, 0.12); min-width: 1px; }
-    .hover-status { background: alpha(@window_bg_color, 0.9); border-radius: 6px;
-                    padding: 2px 8px; margin: 6px; font-size: 0.85em; }
-    .navigation-sidebar row:selected {
-        box-shadow: inset 3px 0 0 @accent_bg_color;
-        background: alpha(@accent_bg_color, 0.12);
-        color: @window_fg_color;
+    headerbar windowtitle .title { font-family: @display_face; font-weight: 600; }
+    headerbar windowtitle .subtitle { color: @canvas_muted; }
+    button, entry, .pill { border-radius: 10px; }
+    row, .chip { border-radius: 8px; }
+    .card, popover.menu > contents { border-radius: 12px; }
+    window.dialog, dialog { border-radius: 16px; }
+    paned > separator { background: @hairline; min-width: 1px; }
+    .hover-status {
+        background: @card_bg_color;
+        border: 1px solid @hairline;
+        border-radius: 8px;
+        padding: 2px 8px;
+        margin: 6px;
+        font-size: 0.85em;
     }
-    listview.navigation-sidebar > row { padding-top: 3px; padding-bottom: 3px; }
-    .quick-heading { font-size: 0.72em; font-weight: bold; letter-spacing: 0.12em;
-                     color: alpha(currentColor, 0.55); margin: 10px 12px 2px; }
-    .panel-heading { font-size: 0.72em; font-weight: bold; letter-spacing: 0.12em;
-                     color: alpha(currentColor, 0.55); }
-    .book-indicator { font-size: 0.72em; letter-spacing: 0.14em;
-                      color: alpha(currentColor, 0.5); }
 
-    /* The rail: one deep surface, its accent, everything on it made for it. */
-    .reader-rail { background: @rail_bg; color: @rail_fg; }
+    /* The path to the note, in the header: ancestors quiet, the leaf in ink. */
+    .crumb-path { font-family: @display_face; font-size: 0.92em; }
+    .crumb-path .crumb-step { color: @canvas_muted; }
+    .crumb-path .crumb-step:hover { color: @accent_color; }
+    .crumb-path .crumb-leaf { color: @window_fg_color; font-weight: 600; }
+    .crumb-path .crumb-sep { color: @canvas_muted; opacity: 0.6; }
+    .header-rule { background: @hairline; min-width: 1px; margin: 8px 6px; }
+
+    /* Search is a field you can see rather than an icon you have to know. */
+    .search-pill { background: @rail_bg; border: 1px solid @hairline; padding: 2px 4px 2px 8px; }
+    .search-pill:hover { border-color: @hairline_strong; }
+    .search-pill label { color: @canvas_muted; }
+    .shortcut-chip {
+        background: @window_bg_color;
+        border: 1px solid @hairline;
+        border-radius: 6px;
+        color: @canvas_muted;
+        font-size: 0.78em;
+        padding: 0 5px;
+    }
+    /* The one button that opens everything else is the one that is filled in. */
+    /* The class sits on the menubutton, whose own button child is what paints. */
+    .primary-menu, .primary-menu > button {
+        background: @accent_soft;
+        color: @accent_color;
+        border-radius: 10px;
+    }
+    .primary-menu:hover, .primary-menu > button:hover { background: @rail_soft; }
+
+    /* The tab strip sits on the rail tint; the tab you are on is a filled pill. */
+    tabbar { background: @rail_bg; border-bottom: 1px solid @hairline; }
+    tabbar tabbox > tab {
+        border-radius: 8px;
+        margin: 4px 2px;
+        color: @canvas_muted;
+        font-family: @display_face;
+        min-height: 30px;
+    }
+    tabbar tabbox > tab:hover { background: alpha(@window_fg_color, 0.05); }
+    tabbar tabbox > tab:checked {
+        background: @card_bg_color;
+        color: @window_fg_color;
+        box-shadow: 0 1px 2px alpha(@window_fg_color, 0.07);
+    }
+    tabbar tabbox > tab .indicator { color: @accent_color; }
+
+    /* The rail: one quiet surface, its rows drawn as chips rather than as bands. */
+    .reader-rail { background: @rail_bg; color: @rail_fg; border-right: 1px solid @hairline; }
     .reader-rail .rail-title {
-        font-family: "Noto Serif", "Liberation Serif", Georgia, serif;
-        font-size: 0.78em; font-weight: bold; letter-spacing: 0.18em;
-        color: @rail_accent;
+        font-family: @display_face;
+        font-size: 0.72em;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        color: @rail_muted;
     }
     .reader-rail scrolledwindow, .reader-rail viewport,
     .reader-rail listview, .reader-rail list { background: transparent; color: @rail_fg; }
-    .reader-rail row { color: @rail_fg; border-radius: 6px; margin-left: 4px; margin-right: 4px; }
-    .reader-rail row:hover { background: alpha(#ffffff, 0.05); }
-    .reader-rail row:selected {
-        background: alpha(@rail_accent, 0.16);
-        box-shadow: inset 3px 0 0 @rail_accent;
-        color: #f4ecd9;
-    }
-    .reader-rail image { color: @rail_muted; }
-    .reader-rail row:selected image { color: @rail_accent; }
-    .reader-rail .dim-label, .reader-rail .caption { color: @rail_muted; }
-    .reader-rail .quick-heading { color: alpha(@rail_accent, 0.75); }
-    .reader-rail entry {
-        background: alpha(#ffffff, 0.07);
+    .reader-rail row {
         color: @rail_fg;
-        border: 1px solid alpha(#ffffff, 0.08);
+        border-radius: 8px;
+        margin-left: 6px;
+        margin-right: 6px;
+    }
+    .reader-rail row:hover { background: alpha(@rail_fg, 0.07); }
+    .reader-rail row:selected {
+        background: @rail_soft;
+        box-shadow: inset 3px 0 0 @accent_bg_color;
+        color: @accent_color;
+    }
+    /* Adwaita states its own ground for a sidebar row, and does it with a
+       selector one class heavier than the rail's — so the rail says it again. */
+    .reader-rail listview.navigation-sidebar > row:selected,
+    .reader-rail listview > row:selected,
+    .reader-rail list > row:selected { background: @rail_soft; }
+    .reader-rail image { color: @rail_muted; }
+    .reader-rail row:selected image { color: @accent_color; }
+    .reader-rail .dim-label, .reader-rail .caption { color: @rail_muted; }
+    .reader-rail entry {
+        background: @rail_raised;
+        color: @rail_fg;
+        border: 1px solid @hairline;
         caret-color: @rail_fg;
     }
     .reader-rail entry image { color: @rail_muted; }
-    .reader-rail stackswitcher button { color: @rail_muted; min-width: 30px; }
-    .reader-rail stackswitcher button:hover { color: @rail_fg; }
     .reader-rail expander { color: @rail_muted; }
-    .reader-rail .rail-separator { background: alpha(#ffffff, 0.08); }
+    .reader-rail .rail-separator { background: @hairline; }
+
+    /* The switcher is a segmented control: one track, and the page you are on raised. */
+    .reader-rail stackswitcher {
+        background: alpha(@rail_fg, 0.07);
+        border-radius: 10px;
+        margin: 8px 6px 4px;
+        padding: 2px;
+    }
+    .reader-rail stackswitcher button {
+        color: @rail_muted;
+        border-radius: 8px;
+        font-family: @display_face;
+        min-width: 30px;
+        min-height: 26px;
+    }
+    .reader-rail stackswitcher button:hover { color: @rail_fg; }
     .reader-rail stackswitcher button:checked {
-        color: @rail_accent;
-        background: alpha(@rail_accent, 0.14);
+        background: @rail_raised;
+        color: @accent_color;
     }
 
-    /* The outline panel dresses in the canvas family: a card surface, a small-caps
-       label in the theme's accent, muted serif entries that answer in its link color. */
+    /* Section labels are the one small-caps style, wherever a label names a list. */
+    .panel-heading, .quick-heading {
+        font-family: @display_face;
+        font-size: 0.72em;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        color: @rail_muted;
+    }
+    .quick-heading { margin: 10px 12px 2px; }
+    .reader-rail .quick-heading { color: @rail_muted; }
+    .book-indicator {
+        font-family: @display_face;
+        font-size: 0.72em;
+        letter-spacing: 0.14em;
+        color: @canvas_muted;
+    }
+
+    /* The foot of the window: what this reader may do, and what is on the page. */
+    .reader-foot {
+        background: @rail_bg;
+        border-top: 1px solid @hairline;
+        padding: 3px 12px;
+    }
+    .reader-foot label { color: @canvas_muted; font-family: @display_face; font-size: 0.8em; }
+    .reader-foot image { color: @canvas_muted; }
+    .reader-foot .foot-sep { color: @canvas_muted; opacity: 0.5; }
+    .theme-dot {
+        min-width: 8px;
+        min-height: 8px;
+        border-radius: 4px;
+        background: @accent_bg_color;
+    }
+
+    /* The tree's rows are chips like the rail's, so the accent bar lands on the
+       chip rather than against the window's own edge. */
+    listview.navigation-sidebar > row {
+        padding-top: 3px;
+        padding-bottom: 3px;
+        margin-left: 6px;
+        margin-right: 6px;
+        border-radius: 8px;
+    }
+
+    /* The outline dresses in the canvas family: a card surface and muted entries. */
     .outline-panel { background: @card_bg_color; }
-    .outline-panel .panel-heading { color: @rail_accent; letter-spacing: 0.14em; }
+    .outline-panel .panel-heading { color: @canvas_muted; }
     .outline-panel scrolledwindow, .outline-panel viewport,
     .outline-panel list { background: transparent; }
     .outline-panel row {
-        border-radius: 6px;
+        border-radius: 8px;
         margin-left: 6px;
         margin-right: 6px;
         color: @canvas_muted;
     }
-    .outline-panel row label {
-        font-family: "Noto Serif", "Liberation Serif", Georgia, serif;
-        font-size: 0.92em;
-    }
-    .outline-panel row:hover { background: alpha(currentColor, 0.06); color: @accent_color; }
+    .outline-panel row label { font-family: @display_face; font-size: 0.92em; }
+    .outline-panel row:hover { background: alpha(@window_fg_color, 0.06); color: @accent_color; }
     .outline-panel row:selected {
-        background: alpha(@accent_bg_color, 0.12);
+        background: @accent_soft;
         box-shadow: none;
         color: @accent_color;
     }
     .outline-panel button.flat { color: @canvas_muted; }
     .outline-panel .outline-l1 { font-weight: 600; }
     .outline-panel .outline-l3 { font-size: 0.86em; }
-    """
+
+    /* The menu names both of its own colours: one popped from the rail is parented
+       inside it and would otherwise take the rail's foreground onto the canvas. */
+    popover.menu > arrow, popover.menu > contents {
+        background-color: @popover_bg_color;
+        color: @popover_fg_color;
+    }
+    popover.menu modelbutton {
+        border-radius: 8px;
+        min-height: 30px;
+        color: @popover_fg_color;
+        font-family: @display_face;
+    }
+    popover.menu modelbutton:hover { background: alpha(@popover_fg_color, 0.10); }
+    popover.menu separator { background: @hairline; }
+    """.replace("@display_face", DISPLAY_FACE) + THEME_CSS
 
     def _load_css(self) -> None:
         from gi.repository import Gdk
@@ -1583,6 +1741,8 @@ class ReaderWindow(Adw.ApplicationWindow):
             "breadcrumb": state.show_breadcrumb,
             "meta": state.show_note_meta,
             "backlinks": state.show_backlinks_footer,
+            # The header bar carries the path, so the page does not repeat it.
+            "crumbs": False,
         }
 
     def _on_context_toggle(self, action, value, key: str) -> None:
@@ -1853,6 +2013,8 @@ class ReaderWindow(Adw.ApplicationWindow):
                 self.store.state.book_progress[self.book["root"]] = reader.current_note
             title = reader.current_note.rsplit("/", 1)[-1].rsplit(".", 1)[0]
             self.title_widget.set_title(title)
+            self.title_widget.show_note(reader.current_note)
+            self.foot.say_note(_words_in(reader.last_render))
             self.tree.select_path(reader.current_note)
             rendered = reader.last_render
             outline = rendered.outline if rendered is not None and rendered.title else []
@@ -1861,7 +2023,8 @@ class ReaderWindow(Adw.ApplicationWindow):
                 self._watch_current_note(self.vault.root / reader.current_note)
         else:
             self._fill_outline([])
-            self.title_widget.set_title(APP_NAME)
+            self.title_widget.set_title("")
+            self.foot.say_note(0)
             self._watch_current_note(None)
         self._cancel_preview()
         self._update_links_panel()
@@ -2264,6 +2427,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._apply_chrome_css()
         self._reload_all_tabs()
         self.theme_chooser.show(self.store.state.theme)
+        self.foot.say_theme(theme_by_key(self.store.state.theme).label)
         self._toast(f"{theme_by_key(self.store.state.theme).label} theme")
 
     def _sync_mode_action(self) -> None:

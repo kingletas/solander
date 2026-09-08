@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### The window is one surface, and it says where you are
+
+- **The rail is no longer a dark slab beside a light page.** Stone is one warm family — canvas, a slightly deeper rail and foot, raised surfaces above both — separated by hairlines rather than by value. Every colour the chrome names is now a token the theme defines; the white washes that used to draw a hover were invisible the moment the rail stopped being black.
+- **The header bar says where the note lives.** The path to it, folders quiet and the note's own name in ink, with each folder a click into the tree. The page used to carry that line and no longer does, so it is stated once rather than twice, and a header with no room shortens the folders and keeps the name whole.
+- **Search is a field you can see** rather than an icon you have to know, carrying the shortcut that also opens it.
+- **The window has a foot.** What this reader may do and cannot do, how much is indexed, how long the open note is, and which theme is on with a dot in that theme's own colour. Everything in it is something the window already knew and never said. The lock in the header stays, because it opens the panel that explains the sentence the foot states.
+- **Rows are chips, the rail's page switcher is a segmented control, and the tab you are on is a filled pill.** Radii are one scale throughout: rows and chips, then buttons and fields, then cards and callouts, then dialogs.
+- **A callout is a tinted card** with its colour at the edge instead of a coloured bar down one side, and its title is set in the heading face. The icon stays: colour alone is still not allowed to mean anything.
+
 ### Stone: one design language, and every theme measured against it
 
 - **Stone replaces Atelier as the house identity**, in a light and a dark version — warm neutral greys with the sepia taken out, one deep pine accent, and a sans in the chrome against a serif on the page. It is built from a palette like every other theme, so the last hand-written block of colours is gone from the app.
