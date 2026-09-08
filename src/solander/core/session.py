@@ -13,6 +13,35 @@ FORMER_NAME = "obsidian-reader"
 """The app was released under this name; its state directories are still adopted."""
 
 
+def shown_path(path) -> str:
+    """A path as it should appear to a person: their home directory as `~`.
+
+    An absolute path carries the account name with it, and a message saying which
+    file is missing loses nothing by leaving that out.
+    """
+    text = str(path)
+    home = str(Path.home())
+    if text == home:
+        return "~"
+    if text.startswith(home + os.sep):
+        return "~" + text[len(home):]
+    return text
+
+
+def describe_run(version: str, notes: int | None, theme: str) -> str:
+    """This run as text, for pasting into a report.
+
+    It is written to leave the machine, so it says whether a vault is open and
+    how large it is and stops there. Neither the name of somebody's vault nor
+    where they keep it helps anybody read a bug report.
+    """
+    lines = [f"version: {version}", f"vault: {'open' if notes is not None else 'none'}"]
+    if notes is not None:
+        lines.append(f"notes: {notes}")
+    lines.append(f"theme: {theme}")
+    return "\n".join(lines)
+
+
 def adopt_former_state(directory: Path) -> Path:
     """Takes over the directory the app used under its former name, once.
 

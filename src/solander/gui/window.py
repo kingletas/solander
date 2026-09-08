@@ -27,7 +27,7 @@ from ..core.indexing import sync_indexes
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
 from ..core.resolver import resolve_note
 from ..core.search import VaultSearch, demote, parse_query, search_filenames
-from ..core.session import SessionStore, adopt_former_state
+from ..core.session import SessionStore, adopt_former_state, shown_path
 from ..core.store import open_index_store
 from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
 from ..core.vault import Vault, file_kind, hidden_under, vault_holding
@@ -1162,7 +1162,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             root = vault_holding(path.parent)
             self._open_vault(root, focus_note=path.relative_to(root).as_posix())
         else:
-            self._toast(f"No such file or folder: {path}")
+            self._toast(f"No such file or folder: {shown_path(path)}")
 
     def restore_or_welcome(self) -> None:
         """Restores the previous session when enabled, otherwise shows the welcome page."""
@@ -2276,7 +2276,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             if path.is_dir():
                 self._open_vault(path)
             else:
-                self._toast(f"Vault no longer exists: {path}")
+                self._toast(f"Vault no longer exists: {shown_path(path)}")
         elif action == "tag" and argument:
             self.search_entry.set_text(f"tag:{argument}")
             self._show_search()
