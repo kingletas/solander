@@ -31,6 +31,7 @@ from ..core.session import SessionStore, adopt_former_state
 from ..core.store import open_index_store
 from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
 from ..core.vault import Vault, file_kind, hidden_under, vault_holding
+from .about import AboutDialog
 from .appearance import CSS as THEME_CSS
 from .appearance import ThemeChooser
 from .bookpaged import BookPagedView
@@ -606,73 +607,36 @@ class ReaderWindow(Adw.ApplicationWindow):
         return box
 
     def _main_menu_button(self) -> Gtk.MenuButton:
+        """Everything the window offers, as one list and six drill-downs.
+
+        Flat, and in the order a person reaches for it: getting somewhere, then
+        what changes how the app behaves, then what acts on what is on screen. A
+        submenu is for a group whose entries only make sense once you are in it.
+        """
         menu = Gio.Menu()
-        appearance = Gio.Menu()
-        modes = Gio.Menu()
-        modes.append("Follow System", "win.appearance::system")
-        modes.append("Light", "win.appearance::light")
-        modes.append("Dark", "win.appearance::dark")
-        appearance.append_section("Mode", modes)
-        # The grid of swatches is a custom item: the popover builds its pages from
-        # this model, and whoever builds the popover puts the widget in by name.
-        swatches = Gio.Menu()
-        item = Gio.MenuItem.new(None, None)
-        item.set_attribute_value("custom", GLib.Variant.new_string(THEME_CUSTOM))
-        swatches.append_item(item)
-        appearance.append_section("Theme", swatches)
-        menu.append_submenu("Appearance", appearance)
-        typography = Gio.Menu()
-        fonts = Gio.Menu()
-        for label, value in (
-            ("Theme Default", "default"), ("Serif", "serif"), ("Sans", "sans"), ("Mono", "mono")
-        ):
-            fonts.append(label, f"win.reader-font::{value}")
-        typography.append_submenu("Font", fonts)
-        widths = Gio.Menu()
-        for label, value in (
-            ("Narrow", "narrow"), ("Normal", "normal"), ("Wide", "wide"), ("Full", "full")
-        ):
-            widths.append(label, f"win.line-width::{value}")
-        typography.append_submenu("Line Width", widths)
-        spacings = Gio.Menu()
-        for label, value in (
-            ("Compact", "compact"), ("Normal", "normal"), ("Relaxed", "relaxed")
-        ):
-            spacings.append(label, f"win.line-spacing::{value}")
-        typography.append_submenu("Line Spacing", spacings)
-        menu.append_submenu("Typography", typography)
-        context = Gio.Menu()
-        context.append("Note Title", "win.show-breadcrumb")
-        context.append("Metadata Line", "win.show-note-meta")
-        context.append("Linked Mentions", "win.show-backlinks")
-        view = Gio.Menu()
-        view.append("New Tab", "win.new-tab")
-        view.append("Reading Mode", "win.zen")
-        view.append("Raw Source View", "win.toggle-source")
-        view.append_submenu("Note Context", context)
-        view.append("Show Hidden Files", "win.show-hidden")
-        view.append("Markdown Files Only", "win.markdown-only")
-        view.append("Vault CSS Snippets", "win.css-snippets")
-        view.append("Unhide All Folders", "win.unhide-folders")
-        view.append("Restore Session on Launch", "win.restore-session")
-        menu.append_section(None, view)
-        note = Gio.Menu()
-        note.append("Pin / Unpin Note", "win.pin-note")
-        note.append("View as Mind Map", "win.mindmap")
-        note.append("Export as PDF…", "win.export-pdf")
-        note.append("Reveal in Files", "win.reveal")
-        note.append("Open Externally", "win.open-external")
-        note.append("Copy Markdown Source", "win.copy-source")
-        note.append("Copy Vault Path", "win.copy-path")
-        note.append("Copy as Wikilink", "win.copy-wikilink")
-        menu.append_section(None, note)
-        meta = Gio.Menu()
-        meta.append("Clear Index Cache", "win.clear-cache")
-        meta.append("Getting Started", "win.getting-started")
-        meta.append("User Guide", "win.user-guide")
-        meta.append("Keyboard Shortcuts", "win.shortcuts")
-        meta.append(f"About {APP_NAME}", "win.about")
-        menu.append_section(None, meta)
+
+        finding = Gio.Menu()
+        finding.append("Go to note…", "win.quick-open")
+        finding.append("Search the vault…", "win.search-vault")
+        menu.append_section(None, finding)
+
+        settings = Gio.Menu()
+        settings.append_submenu("Appearance…", self._appearance_page())
+        settings.append_submenu("Typography…", _typography_page())
+        settings.append_submenu("Preferences…", _preferences_page())
+        menu.append_section(None, settings)
+
+        drilling = Gio.Menu()
+        drilling.append_submenu("This note", _note_page())
+        drilling.append_submenu("Tabs", _tabs_page())
+        drilling.append_submenu("Show", _show_page())
+        menu.append_section(None, drilling)
+
+        about = Gio.Menu()
+        about.append("Keyboard shortcuts", "win.shortcuts")
+        about.append(f"About {APP_NAME}", "win.about")
+        menu.append_section(None, about)
+
         button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu)
         button.set_tooltip_text("Main menu")
         button.add_css_class("primary-menu")
@@ -680,6 +644,25 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.theme_chooser = ThemeChooser(self.store.state.theme, self._choose_theme)
         self.menu_popover.add_child(self.theme_chooser, THEME_CUSTOM)
         return button
+
+    def _appearance_page(self) -> Gio.Menu:
+        """The light/dark choice, then the themes as swatches of themselves.
+
+        The grid is a custom item: the popover builds its pages from this model,
+        and whoever builds the popover puts the widget in by name.
+        """
+        page = Gio.Menu()
+        modes = Gio.Menu()
+        modes.append("Follow System", "win.appearance::system")
+        modes.append("Light", "win.appearance::light")
+        modes.append("Dark", "win.appearance::dark")
+        page.append_section("Mode", modes)
+        swatches = Gio.Menu()
+        item = Gio.MenuItem.new(None, None)
+        item.set_attribute_value("custom", GLib.Variant.new_string(THEME_CUSTOM))
+        swatches.append_item(item)
+        page.append_section("Theme", swatches)
+        return page
 
     def _reveal_folder(self, rel: str) -> None:
         """A step of the path was clicked: show that folder in the tree."""
@@ -958,6 +941,20 @@ class ReaderWindow(Adw.ApplicationWindow):
         min-height: 8px;
         border-radius: 4px;
         background: @accent_bg_color;
+    }
+
+    /* About: what this reader promises, on a card, above where it is reading. */
+    .about-name { font-family: @display_face; font-size: 1.5em; font-weight: 700; }
+    .running-card { padding: 14px; background: @card_bg_color; }
+    .running-card .promise { font-weight: 700; color: @window_fg_color; }
+    .composition-path { font-family: monospace; font-size: 0.86em; }
+    /* Two of these open a page inside the app and two open a browser; they are
+       the same offer to the reader, so they are drawn the same way. */
+    .about-links button, .about-links button label {
+        color: @accent_color;
+        font-family: @display_face;
+        font-weight: 400;
+        text-decoration-line: underline;
     }
 
     /* The tree's rows are chips like the rail's, so the accent bar lands on the
@@ -2591,26 +2588,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         dialog.present(self)
 
     def _show_about(self) -> None:
-        about = Adw.AboutDialog(
-            application_name=APP_NAME,
-            application_icon=APP_ID,
-            version=__version__,
-            developer_name="Luis Tineo",
-            license_type=Gtk.License.MIT_X11,
-            website="https://github.com/kingletas/solander",
-            issue_url="https://github.com/kingletas/solander/issues",
-            # Short enough to stay on the dialog's front page, where the name is
-            # the first question anyone has.
-            comments=(
-                "A solander is the clamshell box an archive keeps its documents "
-                "in: open it to look at something, close it, and nothing has "
-                "changed. This does the same for a folder of Markdown — it reads "
-                "your vault in place, executes nothing the vault contains, never "
-                "touches the network, and never writes a byte back."
-            ),
-        )
-        about.add_link("User guide", "https://github.com/kingletas/solander#readme")
-        about.present(self)
+        """What this reader is, and what it promises about the vault it has open."""
+        AboutDialog(self, APP_NAME, APP_ID, __version__).present(self)
 
     def _toast(self, message: str) -> None:
         self.toasts.add_toast(Adw.Toast(title=message))
@@ -2664,3 +2643,75 @@ def _darken(hex_color: str, factor: float) -> str:
         value = "".join(char * 2 for char in value)
     red, green, blue = (int(value[i:i + 2], 16) for i in (0, 2, 4))
     return f"#{int(red * factor):02x}{int(green * factor):02x}{int(blue * factor):02x}"
+
+
+def _typography_page() -> Gio.Menu:
+    """How a note is set: the face, the measure, and the leading."""
+    page = Gio.Menu()
+    for title, action, choices in (
+        ("Font", "reader-font",
+         (("Theme Default", "default"), ("Serif", "serif"), ("Sans", "sans"), ("Mono", "mono"))),
+        ("Line Width", "line-width",
+         (("Narrow", "narrow"), ("Normal", "normal"), ("Wide", "wide"), ("Full", "full"))),
+        ("Line Spacing", "line-spacing",
+         (("Compact", "compact"), ("Normal", "normal"), ("Relaxed", "relaxed"))),
+    ):
+        group = Gio.Menu()
+        for label, value in choices:
+            group.append(label, f"win.{action}::{value}")
+        page.append_submenu(title, group)
+    return page
+
+
+def _preferences_page() -> Gio.Menu:
+    """What this reader remembers and which files it will look at."""
+    page = Gio.Menu()
+    context = Gio.Menu()
+    context.append("Note Title", "win.show-breadcrumb")
+    context.append("Metadata Line", "win.show-note-meta")
+    context.append("Linked Mentions", "win.show-backlinks")
+    page.append_submenu("Note Context", context)
+    files = Gio.Menu()
+    files.append("Show Hidden Files", "win.show-hidden")
+    files.append("Markdown Files Only", "win.markdown-only")
+    files.append("Unhide All Folders", "win.unhide-folders")
+    page.append_section(None, files)
+    keeping = Gio.Menu()
+    keeping.append("Vault CSS Snippets", "win.css-snippets")
+    keeping.append("Restore Session on Launch", "win.restore-session")
+    keeping.append("Clear Index Cache", "win.clear-cache")
+    page.append_section(None, keeping)
+    return page
+
+
+def _note_page() -> Gio.Menu:
+    """What can be done with the note that is open."""
+    page = Gio.Menu()
+    page.append("Pin / Unpin Note", "win.pin-note")
+    page.append("View as Mind Map", "win.mindmap")
+    page.append("Export as PDF…", "win.export-pdf")
+    page.append("Reveal in Files", "win.reveal")
+    page.append("Open Externally", "win.open-external")
+    copying = Gio.Menu()
+    copying.append("Markdown Source", "win.copy-source")
+    copying.append("Vault Path", "win.copy-path")
+    copying.append("As Wikilink", "win.copy-wikilink")
+    page.append_submenu("Copy", copying)
+    return page
+
+
+def _tabs_page() -> Gio.Menu:
+    page = Gio.Menu()
+    page.append("New Tab", "win.new-tab")
+    page.append("Close Tab", "win.close-tab")
+    page.append("Reload", "win.reload")
+    return page
+
+
+def _show_page() -> Gio.Menu:
+    page = Gio.Menu()
+    page.append("Reading Mode", "win.zen")
+    page.append("Vault Sidebar", "win.toggle-sidebar")
+    page.append("On This Page", "win.toggle-outline")
+    page.append("Raw Source View", "win.toggle-source")
+    return page

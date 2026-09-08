@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### The menu is a list, and About says what this reader promises
+
+- **Twenty-odd entries in five sections became eleven rows in four.** No headings: a heading is what a menu needs when it has stopped being a list you can read. Typography, preferences, this note, tabs and what to show are drill-downs; everything else is one row.
+- **About is now about this run rather than about the app.** A card says what the reader does and, in bold, what it cannot do; under it, the vault it has open and the system details behind a button. The getting-started and user-guide pages left the menu for the place a person looks when they want to be shown around.
+
 ### The window is one surface, and it says where you are
 
 - **The rail is no longer a dark slab beside a light page.** Stone is one warm family — canvas, a slightly deeper rail and foot, raised surfaces above both — separated by hairlines rather than by value. Every colour the chrome names is now a token the theme defines; the white washes that used to draw a hover were invisible the moment the rail stopped being black.
