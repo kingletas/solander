@@ -298,6 +298,7 @@ class NoteRenderer:
                 show_title=opts.get("breadcrumb", True),
                 show_meta=opts.get("meta", True),
                 bases=self._bases(),
+                show_crumbs=opts.get("crumbs", True),
             )
             footer = self._backlinks_footer(rel) if opts.get("backlinks", True) else ""
         # Obsidian's preview DOM, so cssclasses snippets written against
@@ -720,9 +721,14 @@ def note_header(
     show_title: bool = True,
     show_meta: bool = True,
     bases: dict | None = None,
+    show_crumbs: bool = True,
 ) -> str:
-    """Context before content: breadcrumb, inline title, and a compact metadata line."""
-    crumbs = _crumbs_html(rel, bases) if show_title else ""
+    """Context before content: the path, the inline title, and a metadata line.
+
+    A client whose own chrome says where the note lives asks for the path to be
+    left out, so it is not stated twice on the same screen.
+    """
+    crumbs = _crumbs_html(rel, bases) if show_title and show_crumbs else ""
     heading = f'<h1 class="inline-title">{html.escape(title)}</h1>' if show_title else ""
     meta = _meta_line_html(properties, body_text, mtime, bases) if show_meta else ""
     if not (crumbs or heading or meta):
