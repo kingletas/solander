@@ -5,11 +5,15 @@ one is the vault it is reading and the promise it can make about it, so that is
 the body of the dialog rather than a line at the bottom of it.
 """
 
+from pathlib import Path
+
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gtk
+
+from ..core.session import describe_run
 
 HOME = "https://github.com/kingletas/solander"
 """The same address the metainfo gives, so the two cannot say different things."""
@@ -114,9 +118,14 @@ def _running() -> Gtk.Widget:
 
 
 def _vault_label(window) -> Gtk.Widget:
-    """Which vault is open, which is the one thing that differs between two runs."""
+    """Which vault is open, by its name rather than by where it is kept.
+
+    The name answers the question; the path answers it and also says how somebody
+    files their own notes, which is theirs and not this dialog's to publish. The
+    recent-vaults menu has always named them this way.
+    """
     vault = getattr(window, "vault", None)
-    said = str(vault.root) if vault is not None else "No vault open"
+    said = Path(vault.root).name if vault is not None else "No vault open"
     label = Gtk.Label(label=said, xalign=0.0, wrap=True, selectable=True)
     label.add_css_class("dim-label")
     label.add_css_class("composition-path")
@@ -124,10 +133,7 @@ def _vault_label(window) -> Gtk.Widget:
 
 
 def _system_details(window, version: str) -> str:
-    """The state of this run as text, for pasting into a report."""
+    """What this run is, taken from the window and worded by the core."""
     vault = getattr(window, "vault", None)
-    lines = [f"version: {version}", f"vault: {vault.root if vault is not None else 'none'}"]
-    if vault is not None:
-        lines.append(f"notes: {len(vault.notes)}")
-    lines.append(f"theme: {window.store.state.theme}")
-    return "\n".join(lines)
+    notes = len(vault.notes) if vault is not None else None
+    return describe_run(version, notes, window.store.state.theme)

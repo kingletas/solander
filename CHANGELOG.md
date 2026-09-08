@@ -6,6 +6,7 @@
 
 - **Twenty-odd entries in five sections became eleven rows in four.** No headings: a heading is what a menu needs when it has stopped being a list you can read. Typography, preferences, this note, tabs and what to show are drill-downs; everything else is one row.
 - **About is now about this run rather than about the app.** A card says what the reader does and, in bold, what it cannot do; under it, the vault it has open and the system details behind a button. The getting-started and user-guide pages left the menu for the place a person looks when they want to be shown around.
+- **The About dialog was printing the vault's full path**, which says not only who the machine belongs to but how somebody files their own notes — and the same string is what **Copy system details** puts on the clipboard for pasting into an issue. The dialog names the vault the way the recent-vaults menu always has, and the copied details say whether a vault is open and how large it is and nothing else. The two messages that name a missing file abbreviate the home directory as well.
 
 ### The window is one surface, and it says where you are
 
