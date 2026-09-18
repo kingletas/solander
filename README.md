@@ -103,6 +103,7 @@ A second launch hands its path to the running instance instead of racing it for 
 - **[From nothing to reading a vault](docs/from-nothing.md)** — never used it, and not an Obsidian user either. Start here.
 - **[Getting started](docs/getting-started.md)** — install, the one-time sandbox step, first vault.
 - **[User guide](docs/user-guide.md)** — every feature, the Dataview surface, shortcuts, configuration, troubleshooting.
+- **[Why Solander exists](docs/why.md)** — the problem it was built for, and what that decided.
 - **[SECURITY.md](SECURITY.md)** — the threat model and reporting route.
 - **[CHANGELOG.md](CHANGELOG.md)** — release history.
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to build, test and send a change.
