@@ -8,6 +8,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, Gio, GObject, Gtk
 
+from ..core.listdiff import splices
 from ..core.vault import NOTE_EXTENSIONS
 
 
@@ -41,6 +42,8 @@ class VaultTree:
         self._on_open_new_tab = on_open_new_tab
         self._on_folder_menu = on_folder_menu
         self._root_store = Gio.ListStore(item_type=TreeNode)
+        # Every directory listing the tree has built, by vault-relative path, for refresh to reach.
+        self._stores: dict[str, Gio.ListStore] = {"": self._root_store}
         tree_model = Gtk.TreeListModel.new(
             self._root_store, passthrough=False, autoexpand=False, create_func=self._children
         )
@@ -54,17 +57,31 @@ class VaultTree:
         self.view.connect("activate", self._activated)
 
     def set_vault(self, root: Path | None) -> None:
-        """Points the tree at a vault root, or clears it."""
+        """Points the tree at a vault root, or clears it, starting from a collapsed tree."""
         self.root = root
+        self._root_store.remove_all()
+        self._stores = {"": self._root_store}
         self.refresh()
 
     def refresh(self) -> None:
-        """Relists the root level; expanded rows relist as they are reopened."""
-        self._root_store.remove_all()
+        """Brings every listed directory up to date in place, so expanded folders stay expanded."""
         if self.root is None:
+            self._root_store.remove_all()
             return
-        for node in self._list_directory(""):
-            self._root_store.append(node)
+        for rel, store in list(self._stores.items()):
+            if rel and not (self.root / rel).is_dir():
+                del self._stores[rel]
+                continue
+            self._sync(store, self._list_directory(rel))
+
+    @staticmethod
+    def _sync(store: Gio.ListStore, nodes: list[TreeNode]) -> None:
+        """Edits the store into the given listing, touching only the rows that differ."""
+        items = [store.get_item(i) for i in range(store.get_n_items())]
+        old = [(item.rel, item.is_dir) for item in items]
+        new = [(node.rel, node.is_dir) for node in nodes]
+        for position, removed, start, end in splices(old, new):
+            store.splice(position, removed, nodes[start:end])
 
     def _list_directory(self, rel: str) -> list[TreeNode]:
         directory = self.root / rel if rel else self.root
@@ -96,6 +113,7 @@ class VaultTree:
         store = Gio.ListStore(item_type=TreeNode)
         for child in self._list_directory(node.rel):
             store.append(child)
+        self._stores[node.rel] = store
         return store
 
     def _setup_row(self, _factory, item) -> None:

@@ -127,10 +127,30 @@ def run_checks(app):
 
         GLib.timeout_add(900, check_preview)
 
+    def tree_rows():
+        model = window.tree.selection.get_model()
+        return [model.get_item(i) for i in range(model.get_n_items())]
+
     def start_live():
+        # An expanded folder, so the check below can see whether a vault change collapses it.
+        (vault_path / "Folder").mkdir()
+        (vault_path / "Folder" / "Inside.md").write_text("# Inside\n")
+        window.tree.refresh()
+        folder = next((row for row in tree_rows() if row.get_item().rel == "Folder"), None)
+        check("the tree lists a new folder", folder is not None)
+        if folder is not None:
+            folder.set_expanded(True)
+        check("the folder expands", folder is not None and folder.get_expanded())
         (vault_path / "Live.md").write_text("Watched: [[Second Note]] and a #livetag here.\n")
 
         def check_live():
+            rows = {row.get_item().rel: row for row in tree_rows()}
+            check("the tree shows the new note", "Live.md" in rows)
+            check(
+                "a vault change leaves an expanded folder expanded",
+                "Folder" in rows and rows["Folder"].get_expanded(),
+            )
+            check("the expanded folder still lists its note", "Folder/Inside.md" in rows)
             graph = window.graph
             mentions = graph.backlinks.get("Second Note.md", []) if graph else []
             check("monitor picked up the new note", any(m.source == "Live.md" for m in mentions))
