@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### The app's own notes describe the app
+
+- **The shortcuts window left out keys the window answers to.** `F5` reloads, `Ctrl+=` zooms in, a book has its own page-turning keys, and a search result opens in a new tab on middle-click, `Ctrl+click` or right-click; none of these were listed, and the folder row pointed at a View menu that no longer exists. The list names all of them now. The keys the window binds live in one table beside that list, and a test fails when a bound key is missing from the list or a listed key is bound to nothing.
+
 ### A board fits the window
 
 - **A Kanban board's lanes now share the page instead of each taking a fixed 260 pixels.** Six lanes needed about 1,620 pixels, so at the window size and zoom this reader is used at, the board ran off the side and was never in view at once. Lanes now shrink together down to 8rem each, card text wraps rather than widening its lane, and only a board too wide even then scrolls sideways. Measured in the running window at 1872 pixels wide, 140% zoom and the sidebar open: a six-lane board went from 735 CSS pixels of overflow to none, with each lane 159 CSS pixels wide.
