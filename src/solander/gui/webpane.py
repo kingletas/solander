@@ -42,10 +42,12 @@ class ReaderView(GObject.Object):
         self.last_render = None
         if share_from is not None:
             self.page_provider = share_from.page_provider
+            self.page_later = share_from.page_later
             self.asset_provider = share_from.asset_provider
             self.context = share_from.context
         else:
             self.page_provider = None
+            self.page_later = None
             self.asset_provider = None
             self.context = WebKit.WebContext()
             self.context.register_uri_scheme("reader", self._serve_reader, None)
@@ -100,6 +102,11 @@ class ReaderView(GObject.Object):
         path = unquote(uri.path)
         if path.startswith("/font/"):
             self._serve_font(request, path[len("/font/"):])
+            return
+        def deliver(page: str) -> None:
+            self._finish(request, page.encode("utf-8"), "text/html")
+
+        if self.page_later is not None and self.page_later(path, request.get_web_view(), deliver):
             return
         page = ""
         if self.page_provider is not None:
