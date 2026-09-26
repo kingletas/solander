@@ -20,7 +20,7 @@ class ReaderApplication(Adw.Application):
 
     def __init__(self):
         # Wayland takes a toplevel's app id from the program name, and the desktop
-        # matches a window to its .desktop file — and therefore to its icon — by
+        # matches a window to its .desktop file, and therefore to its icon, by
         # exactly that. Launched as `python -m solander.cli` the program name is
         # "cli.py", which matches nothing, so the window draws a placeholder icon.
         GLib.set_prgname(APP_ID)
@@ -28,7 +28,7 @@ class ReaderApplication(Adw.Application):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_OPEN)
         Gtk.Window.set_default_icon_name(APP_ID)
         # Cyclic garbage can hold GTK and WebKit objects (a closed tab's web
-        # view), and WebKit aborts when finalized off the main thread — which is
+        # view), and WebKit aborts when finalized off the main thread, which is
         # exactly where the collector lands once the index sync thread exists.
         # So automatic collection is off, and the main loop collects instead.
         gc.disable()

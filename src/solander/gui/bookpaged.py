@@ -1,7 +1,7 @@
 """The paged reading surface: a chapter printed to real pages, turned like leaves.
 
-WebKit's print pipeline does the pagination — exact line breaks, no JavaScript —
-and Poppler draws each page. This widget shows one page at a time, slides
+WebKit's print pipeline does the pagination, with exact line breaks and no
+JavaScript, and Poppler draws each page. This widget shows one page at a time, slides
 between them, and asks the window for the neighboring chapter at either cover.
 """
 
@@ -18,7 +18,7 @@ class BookPagedView(Gtk.Box):
     """One printed page at a time, with e-reader turning.
 
     The page sits on an opaque desk with the place indicator in its own strip
-    below — the indicator can never overlap the page's text.
+    below, so the indicator can never overlap the page's text.
     """
 
     __gsignals__ = {

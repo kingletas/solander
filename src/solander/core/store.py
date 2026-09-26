@@ -1,6 +1,6 @@
 """The persistent index: note scans and an FTS5 name-and-body index, stored outside the vault.
 
-The store is a cache of derived data, never a source of truth — corruption or a
+The store is a cache of derived data, never a source of truth. Corruption or a
 schema change means it is deleted and rebuilt from the vault, silently.
 """
 
@@ -89,7 +89,7 @@ class IndexStore:
         )
         db = self.db
         # The fts rel column is unindexed, so deletion goes through the stored
-        # rowid — a WHERE rel=? there is a full-table scan, O(n²) over a build.
+        # rowid; a WHERE rel=? there is a full-table scan, O(n²) over a build.
         self._drop_body(rel)
         cursor = db.execute(
             "INSERT INTO fts (rel, name, body) VALUES (?, ?, ?)", (rel, _note_name(rel), text)

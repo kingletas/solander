@@ -87,7 +87,7 @@ install -m 0644 "$HERE/data/$APP_ID.svg" \
 install -m 0644 "$HERE/data/$APP_ID.metainfo.xml" \
   "$STAGE/usr/share/metainfo/$APP_ID.metainfo.xml"
 # The window chrome reads a family name through fontconfig, which cannot see
-# what is inside the wheel — so the same files the page loads over its own
+# what is inside the wheel. So the same files the page loads over its own
 # scheme are also installed where fontconfig will find them.
 install -m 0644 "$HERE"/src/solander/assets/fonts/*.ttf \
   "$STAGE/usr/share/fonts/truetype/solander/"

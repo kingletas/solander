@@ -40,7 +40,7 @@ def render_base(graph, text: str) -> str:
         if kind != "table":
             sections.append(
                 f'<div class="dataview-note">View “{html.escape(name)}” is a '
-                f"{html.escape(kind)} plugin view — not rendered</div>"
+                f"{html.escape(kind)} plugin view, which is not rendered</div>"
             )
             continue
         try:

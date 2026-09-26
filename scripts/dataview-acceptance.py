@@ -1,7 +1,7 @@
 """Runs every Dataview block and inline expression in a real vault through the engine.
 
 Usage: uv run python scripts/dataview-acceptance.py /path/to/vault
-Prints evaluated/failed counts and a histogram of failure reasons — the honest
+Prints evaluated/failed counts and a histogram of failure reasons: the honest
 coverage number for the changelog.
 """
 

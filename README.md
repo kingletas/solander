@@ -3,9 +3,9 @@
 [![CI](https://github.com/kingletas/solander/actions/workflows/ci.yml/badge.svg)](https://github.com/kingletas/solander/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A reading application for Ubuntu that opens a folder of Markdown **in place** and never writes into it — no caches, no plugins, no scripts, no network. It's fluent in [Obsidian](https://obsidian.md)'s dialect: wikilinks, embeds, callouts, frontmatter, tags, canvases, kanban boards, `.base` views and Dataview queries all render as themselves.
+A reading application for Ubuntu that opens a folder of Markdown **in place** and never writes into it: no caches, no plugins, no scripts, no network. It's fluent in [Obsidian](https://obsidian.md)'s dialect: wikilinks, embeds, callouts, frontmatter, tags, canvases, kanban boards, `.base` views and Dataview queries all render as themselves.
 
-A solander is the clamshell box an archive keeps its documents in. That's the job: present the record, and leave it exactly as it was found — whether Obsidian is closed, not installed, or simply not something you want pointed at a vault you only mean to inspect.
+A solander is the clamshell box an archive keeps its documents in. That's the job: present the record, and leave it exactly as it was found, whether Obsidian is closed, not installed, or simply not something you want pointed at a vault you only mean to inspect.
 
 > This project isn't affiliated with or endorsed by Obsidian.md / Dynalist Inc. "Obsidian" here names the vault format the reader understands.
 
@@ -13,9 +13,9 @@ A solander is the clamshell box an archive keeps its documents in. That's the jo
 
 ## The name
 
-A **solander** is the clamshell box an archive keeps its documents in — a hinged case, made to the size of what it holds, that you open to look at a thing and close to leave it as it was. Named for Daniel Solander, the botanist who devised it for Joseph Banks's specimens so they could be examined without being handled.
+A **solander** is the clamshell box an archive keeps its documents in: a hinged case, made to the size of what it holds, that you open to look at a thing and close to leave it as it was. Named for Daniel Solander, the botanist who devised it for Joseph Banks's specimens so they could be examined without being handled.
 
-That's the whole design brief of this application, in one object. It presents the record and changes nothing: it never writes into your vault, never runs anything the vault contains, and never opens a network connection. A reader, not an editor — a case, not a workshop.
+That's the whole design brief of this application, in one object. It presents the record and changes nothing: it never writes into your vault, never runs anything the vault contains, and never opens a network connection. A reader, not an editor; a case, not a workshop.
 
 It's also deliberately **not** named after the format it reads. The app understands Obsidian's dialect fluently, but that's a property of the reader rather than its identity, and borrowing another project's name for your own is a bad habit whichever way the trademark points.
 
@@ -23,9 +23,9 @@ It's also deliberately **not** named after the format it reads. The app understa
 
 Never used it? **[From nothing to reading a vault](docs/from-nothing.md)** takes you from an empty folder to a vault open in front of you. The full walkthrough is the **[user guide](docs/user-guide.md)**; installation on its own is **[getting started](docs/getting-started.md)**. In summary:
 
-- **Renders the whole vault, not just the markdown.** CommonMark/GFM plus the Obsidian layer — wikilinks with Obsidian's own resolution order, embeds, callouts, highlights, comments, tags, footnotes, frontmatter properties, syntax-highlighted code — and TeX math as native MathML, `.canvas` pages, kanban boards as boards, Excalidraw drawings as SVG, `.base` table views, and **Dataview queries and inline expressions evaluated in pure Python**, live against the index. Anything unsupported degrades to labeled source with the reason.
+- **Renders the whole vault, not just the markdown.** CommonMark/GFM plus the Obsidian layer (wikilinks with Obsidian's own resolution order, embeds, callouts, highlights, comments, tags, footnotes, frontmatter properties, syntax-highlighted code), and TeX math as native MathML, `.canvas` pages, kanban boards as boards, Excalidraw drawings as SVG, `.base` table views, and **Dataview queries and inline expressions evaluated in pure Python**, live against the index. Anything unsupported degrades to labeled source with the reason.
 - **Finds things like a launcher.** Fuzzy quick-open, relevance-ranked full-text search with `path:`/`file:`/`tag:` operators and highlighted hits, backlinks with context, a tag browser, the vault's bookmarks, a local graph, and hover previews.
-- **Stays current and starts warm.** The vault is watched — outside edits appear in seconds — and the index persists per vault, so a 10,000-note vault opens in about a second after its first build.
+- **Stays current and starts warm.** The vault is watched, so outside edits appear in seconds, and the index persists per vault, so a 10,000-note vault opens in about a second after its first build.
 - **Reads comfortably.** Fourteen themes: **Stone**, warm neutral greys with one deep pine accent, in light and dark, and the thirteen dark themes of the **Archive** family, from *Blood Record* to *Cold Iron*. Each note opens with its title and metadata line under a header bar that shows where it lives, linked mentions follow the content, and the outline is a real panel with a visible toggle (`F8`). Tabs, a mind-map view of any note, reading (zen) mode, typography controls, pinned notes, the vault's own CSS snippets (sanitized), folder hiding, and PDF export through a proper print stylesheet, plus an in-app PDF viewer when Poppler's bindings are present.
 
 ## What it will never do
@@ -38,7 +38,7 @@ Never used it? **[From nothing to reading a vault](docs/from-nothing.md)** takes
 
 ### Flatpak
 
-The simplest route, and the only one with **no sandbox step at all** — Flatpak's own bubblewrap already has the permission WebKit needs, so nothing has to be installed into `/etc`.
+The simplest route, and the only one with **no sandbox step at all**: Flatpak's own bubblewrap already has the permission WebKit needs, so nothing has to be installed into `/etc`.
 
 The bundle is 3 MB and doesn't contain the GNOME 50 runtime it runs on, so a remote that provides it has to be configured. If you have ever installed anything from Flathub, it already is:
 
@@ -52,7 +52,7 @@ Then take the bundle from the [latest release](https://github.com/kingletas/sola
 flatpak install --user solander_*.flatpak
 ```
 
-The first install also pulls the runtime — about a gigabyte, once, shared with every other Flatpak. A Flatpak install puts no `solander` on your `PATH`; `flatpak run com.kingletas.Solander` is the terminal equivalent.
+The first install also pulls the runtime, about a gigabyte, once, shared with every other Flatpak. A Flatpak install puts no `solander` on your `PATH`; `flatpak run com.kingletas.Solander` is the terminal equivalent.
 
 ### Debian package
 
@@ -86,7 +86,7 @@ That creates the virtualenv against the system Python (so the GI bindings are vi
 
 ## Run
 
-Launch **Solander** from your applications grid — it restores your last session, and the welcome page opens a vault from there. Markdown files and folders also offer it under *Open With* in your file manager. On a stock Ubuntu the very first launch shows a **one-time setup window** (the sandbox step below) with a single copy-paste command; after that it just opens.
+Launch **Solander** from your applications grid. It restores your last session, and the welcome page opens a vault from there. Markdown files and folders also offer it under *Open With* in your file manager. On a stock Ubuntu the very first launch shows a **one-time setup window** (the sandbox step below) with a single copy-paste command; after that it just opens.
 
 The terminal works too:
 
@@ -100,17 +100,17 @@ A second launch hands its path to the running instance instead of racing it for 
 
 ## Documentation
 
-- **[From nothing to reading a vault](docs/from-nothing.md)** — never used it, and not an Obsidian user either. Start here.
-- **[Getting started](docs/getting-started.md)** — install, the one-time sandbox step, first vault.
-- **[User guide](docs/user-guide.md)** — every feature, the Dataview surface, shortcuts, configuration, troubleshooting.
-- **[Why Solander exists](docs/why.md)** — the problem it was built for, and what that decided.
-- **[SECURITY.md](SECURITY.md)** — the threat model and reporting route.
-- **[CHANGELOG.md](CHANGELOG.md)** — release history.
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to build, test and send a change.
+- **[From nothing to reading a vault](docs/from-nothing.md)**: never used it, and not an Obsidian user either. Start here.
+- **[Getting started](docs/getting-started.md)**: install, the one-time sandbox step, first vault.
+- **[User guide](docs/user-guide.md)**: every feature, the Dataview surface, shortcuts, configuration, troubleshooting.
+- **[Why Solander exists](docs/why.md)**: the problem it was built for, and what that decided.
+- **[SECURITY.md](SECURITY.md)**: the threat model and reporting route.
+- **[CHANGELOG.md](CHANGELOG.md)**: release history.
+- **[CONTRIBUTING.md](CONTRIBUTING.md)**: how to build, test and send a change.
 
 ## Themes
 
-Fourteen, and the theme is remembered. **Stone** is the default — warm neutral greys and one deep pine accent, light by day and dark by night. 
+Fourteen, and the theme is remembered. **Stone** is the default: warm neutral greys and one deep pine accent, light by day and dark by night. 
 
 The **Archive** family is thirteen dark themes over one design language: a dark ground, bone text, an accent for what is important, and one hot colour held back for what actually matters. The semantics hold across all of them, so danger, warning, verified and information mean the same thing in every one, and every colour that carries text is checked against WCAG AA on the ground it sits on.
 
@@ -124,7 +124,7 @@ All thirteen, on the same note:
 
 WebKitGTK wraps its rendering processes in a bubblewrap sandbox, and that sandbox needs to create an unprivileged user namespace. Ubuntu 24.04+ restricts those by default (`kernel.apparmor_restrict_unprivileged_userns=1`), so on a stock system the app would abort with `bwrap: setting up uid map: Permission denied`. The launcher detects this before WebKit crashes: **started from the desktop, it opens a setup window with a single copy-paste command and a “check again” button that relaunches the app once the profile is in**; started from a terminal with no display, it prints the same fix.
 
-The fix is a one-time AppArmor profile granting the permission to this app's interpreter alone — `make install` gives the venv a private interpreter copy, so the profile names a path nothing else uses. `--sandbox` prints that profile and nothing else, so it pipes:
+The fix is a one-time AppArmor profile granting the permission to this app's interpreter alone. `make install` gives the venv a private interpreter copy, so the profile names a path nothing else uses. `--sandbox` prints that profile and nothing else, so it pipes:
 
 ```bash
 solander --sandbox | sudo tee /etc/apparmor.d/solander
@@ -138,9 +138,9 @@ sudo apparmor_parser -r /etc/apparmor.d/solander
 solander --sandbox-status
 ```
 
-The last one reports whether the profile is installed, whether it attached to this interpreter, and whether the sandbox actually starts — it exits non-zero while anything is still wrong. Then start the app again. This is the same mechanism Ubuntu itself ships for browsers: the profile is `flags=(unconfined)` — it confines nothing — plus a single `userns,` grant, and it keeps WebKit's sandbox *on*, which is strictly better than the workaround of disabling user-namespace restrictions system-wide.
+The last one reports whether the profile is installed, whether it attached to this interpreter, and whether the sandbox actually starts, and it exits non-zero while anything is still wrong. Then start the app again. This is the same mechanism Ubuntu itself ships for browsers: the profile is `flags=(unconfined)`, which confines nothing, plus a single `userns,` grant, and it keeps WebKit's sandbox *on*, which is strictly better than the workaround of disabling user-namespace restrictions system-wide.
 
-One subtlety the launcher handles for you: AppArmor attaches the profile by interpreter path, and a `#!` shebang launch (such as running the venv's console script directly) bypasses attachment. The `solander` launcher execs the interpreter directly for exactly this reason — start the app through it.
+One subtlety the launcher handles for you: AppArmor attaches the profile by interpreter path, and a `#!` shebang launch (such as running the venv's console script directly) bypasses attachment. The `solander` launcher execs the interpreter directly for exactly this reason, so start the app through it.
 
 ## Development
 
@@ -150,7 +150,7 @@ make test     # test suite only
 make run      # run from the working tree
 ```
 
-The core (vault model, link resolution, Markdown transforms, sanitizer, search) is pure Python with no GTK dependency, and the test suite covers it directly — including a zero-write test that hashes a fixture vault before and after a full index-and-render pass. The GTK/WebKit layer stays thin and is exercised by running the app.
+The core (vault model, link resolution, Markdown transforms, sanitizer, search) is pure Python with no GTK dependency, and the test suite covers it directly, including a zero-write test that hashes a fixture vault before and after a full index-and-render pass. The GTK/WebKit layer stays thin and is exercised by running the app.
 
 ## Security model
 
@@ -158,8 +158,8 @@ The vault is treated as attacker-controlled input. The trust boundary is the san
 
 On top of that, the WebKit surface runs with JavaScript disabled (and refuses to start if it can't be), vault assets are served through a `vault:` URI scheme handler that refuses any path resolving outside the vault root, and the navigation policy blocks every load that isn't an internal page, a vault asset, or a user-initiated external link. 
 
-Resource use is bounded too: note size, frontmatter size, embed depth, and embeds per page are capped, and YAML aliases in frontmatter are refused — each bound proven against a payload that previously froze the renderer. See [SECURITY.md](SECURITY.md) for the model and the reporting route.
+Resource use is bounded too: note size, frontmatter size, embed depth, and embeds per page are capped, and YAML aliases in frontmatter are refused, each bound proven against a payload that previously froze the renderer. See [SECURITY.md](SECURITY.md) for the model and the reporting route.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT; see [LICENSE](LICENSE).

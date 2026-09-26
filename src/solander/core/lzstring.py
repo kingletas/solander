@@ -1,4 +1,4 @@
-"""Decompresses LZ-String base64 payloads — the encoding Excalidraw notes use.
+"""Decompresses LZ-String base64 payloads, the encoding Excalidraw notes use.
 
 A pure-Python port of lz-string's decompressFromBase64, decode side only; this
 reader never writes the format. Malformed input returns None, never raises.

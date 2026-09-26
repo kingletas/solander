@@ -1,6 +1,6 @@
 """Parses Dataview's query language: expressions, sources, and query commands.
 
-This is a parser only — evaluation lives in `dataview.py`. Anything outside the
+This is a parser only; evaluation lives in `dataview.py`. Anything outside the
 implemented grammar raises `DqlError` with a reason the renderer shows verbatim.
 """
 
@@ -84,7 +84,7 @@ class SourceTag:
 
 @dataclass(frozen=True)
 class SourceLink:
-    """`FROM [[]]` — the pages that link to the query's own note."""
+    """`FROM [[]]`: the pages that link to the query's own note."""
 
     target: str = ""
 
@@ -309,7 +309,7 @@ class _Parser:
         raise DqlError(f"unexpected {token.text or 'end of input'!r}")
 
     def _duration_call(self):
-        """`dur(14 days)` — the argument is its own tiny grammar, not an expression."""
+        """`dur(14 days)`, whose argument is its own tiny grammar, not an expression."""
         self.advance()
         amount = self.advance()
         if amount.kind != "number":

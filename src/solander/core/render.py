@@ -110,7 +110,7 @@ def link_bases(options: dict | None) -> dict:
     """The prefixes a client wants its links written with, filling in the window's.
 
     An empty string is a client saying it has no such destination, which is a
-    different statement from not mentioning it — so a key that is present and
+    different statement from not mentioning it. So a key that is present and
     empty is kept rather than defaulted, and the label is written as plain text.
     """
     given = options or {}
@@ -345,7 +345,7 @@ class NoteRenderer:
         book = self._book_context(rel)
         if book:
             # A book page is the chapter alone: title, prose, and the way to
-            # the next chapter — no vault machinery around it.
+            # the next chapter, with no vault machinery around it.
             display = split.properties.get("title") if isinstance(split.properties, dict) else None
             title_text = display.strip() if isinstance(display, str) and display.strip() else title
             header = (
@@ -421,7 +421,7 @@ class NoteRenderer:
         if len(mentions) > MAX_FOOTER_BACKLINKS:
             more = (
                 f'<div class="backlink-more">…and {len(mentions) - MAX_FOOTER_BACKLINKS} more '
-                "— the Links panel lists them all</div>"
+                "in the Links panel</div>"
             )
         label = "1 note links here" if len(mentions) == 1 else f"{len(mentions)} notes link here"
         return (
@@ -438,7 +438,7 @@ class NoteRenderer:
         graph = self._graph()
         if graph is None:
             return build_message_page(
-                title, "The index is still building — reload shortly.", theme
+                title, "The index is still building. Reload shortly.", theme
             )
         body = f"<h1>{html.escape(title)}</h1>{render_base(graph, note.text)}"
         return build_page(
@@ -451,7 +451,7 @@ class NoteRenderer:
         )
 
     def render_text(self, text: str, title: str, theme: str = "light") -> str:
-        """Renders standalone markdown text — the in-app documentation pages."""
+        """Renders standalone markdown text, such as the in-app documentation pages."""
         env = self._env(f"__document__/{title}")
         body = sanitize(self._render_markdown(split_frontmatter(text).body, env))
         return build_page(body, title, theme, typography=self._typo(), bases=self._bases())
@@ -517,12 +517,12 @@ class NoteRenderer:
     def _dataview_html(self, code: str, env: dict) -> str:
         graph = self._graph()
         if graph is None:
-            return _inert_dataview(code, "dataview — the index is still building")
+            return _inert_dataview(code, "dataview: the index is still building")
         try:
             engine = DataviewEngine(graph, self._bases()["note"])
             return engine.run_query(code, env.get("source", ""))
         except DqlError as error:
-            return _inert_dataview(code, f"dataview — not evaluated: {error}")
+            return _inert_dataview(code, f"dataview, not evaluated: {error}")
 
     def _inline_dataview_html(self, content: str, env: dict) -> str | None:
         graph = self._graph()
@@ -684,7 +684,7 @@ class NoteRenderer:
             count = len(resolved.candidates)
             return (
                 f'<a class="wikilink ambiguous" href="{href}" '
-                f'title="{count} notes match — choose one">{label}</a>'
+                f'title="{count} notes match; choose one">{label}</a>'
             )
         title = html.escape(f"No note named “{link.target}”", quote=True)
         return f'<span class="wikilink missing" title="{title}">{label}</span>'
@@ -695,7 +695,7 @@ class NoteRenderer:
             return _embed_error(f"Missing embed: {link.target or link.label}")
         if resolved.kind == "ambiguous":
             count = len(resolved.candidates)
-            return _embed_error(f"Ambiguous embed “{link.target}” — {count} matches")
+            return _embed_error(f"Ambiguous embed “{link.target}”: {count} matches")
         if resolved.kind == "note":
             return self._note_embed_html(resolved, link, env)
         return _media_embed_html(resolved, link, self._bases())
@@ -767,16 +767,16 @@ class NoteRenderer:
         if info in INERT_FENCES:
             return (
                 f'<div class="inert-block"><div class="inert-label">'
-                f"{html.escape(info)} — not executed in read-only mode</div>"
+                f"{html.escape(info)}: not executed in read-only mode</div>"
                 f"<pre><code>{html.escape(code)}</code></pre></div>"
             )
         if info == "mermaid":
             try:
                 svg = render_mermaid(code)
             except MermaidUnsupported as error:
-                return _inert_dataview(code, f"mermaid — {error}; shown as source")
+                return _inert_dataview(code, f"mermaid: {error}; shown as source")
             except MermaidError as error:
-                return _inert_dataview(code, f"mermaid — not drawn: {error}")
+                return _inert_dataview(code, f"mermaid, not drawn: {error}")
             return f'<div class="mermaid-diagram">{svg}</div>'
         if info:
             try:
@@ -820,7 +820,7 @@ def _titled(body: str, filename: str) -> tuple[str, str]:
     """Decides what the header calls this note, and hands back the body without it.
 
     A note that opens with an H1 has already said what it is called, and the name
-    of the file it is stored in is a different question — a vault of folder
+    of the file it is stored in is a different question: a vault of folder
     indexes is a vault of notes all called README. That heading becomes the
     title and leaves the body, so it is shown once rather than twice.
 
@@ -946,7 +946,7 @@ def _math_html(tex: str, display: bool) -> str:
         return fallback
     try:
         markup = latex_to_mathml(tex, display="block" if display else "inline")
-    except Exception:  # noqa: S110 — the converter raises library-specific errors on bad TeX
+    except Exception:  # noqa: S110 - the converter raises library-specific errors on bad TeX
         return fallback
     if display:
         return f'<div class="math-block">{markup}</div>\n'
@@ -1096,7 +1096,7 @@ def build_page(
     )
     theme_class = variant_for(theme).body_classes
     # The faces are the app's own rather than the vault's, so they are served on
-    # their own route — and addressed the way this client can follow, because a
+    # their own route, and addressed the way this client can follow, because a
     # client with no `reader:` scheme cannot load a font written in one.
     base = (bases or DEFAULT_BASES)["font"]
     faces = font_css(base)

@@ -1,6 +1,6 @@
 """The first-run setup window, shown when WebKit's sandbox cannot start.
 
-This runs plain GTK only — no WebKit — so it works exactly in the situation the
+This runs plain GTK only, without WebKit, so it works exactly in the situation the
 reader itself cannot. It explains the one-time step, hands over a single
 copy-paste command, and relaunches the app once the system says yes. The app
 never runs privileged commands itself; the user pastes them into a terminal.
@@ -21,7 +21,7 @@ INTRO = (
     "Ubuntu's security policy blocks the sandbox this app uses to render your "
     "notes safely. A one-time system change fixes it: copy the command below, "
     "paste it into a Terminal, and enter your password when asked. It installs "
-    "a security profile that only lets this app's sandbox start — it grants "
+    "a security profile that only lets this app's sandbox start. It grants "
     "nothing else, to nothing else."
 )
 
@@ -29,7 +29,7 @@ SHEBANG_INTRO = (
     "The security profile for this app is already installed, but it did not "
     "attach to this process because the app was started around its launcher. "
     "Start it from your applications grid, or run `solander` in a "
-    "terminal — the launcher starts the app in the way the profile covers."
+    "terminal: the launcher starts the app in the way the profile covers."
 )
 
 
@@ -37,7 +37,7 @@ class SetupWindow(Adw.ApplicationWindow):
     """Explains the sandbox situation and walks the user through the fix."""
 
     def __init__(self, application, command: str, shebang: bool, recheck, relaunch):
-        super().__init__(application=application, title="Solander — Setup")
+        super().__init__(application=application, title="Solander Setup")
         self.set_default_size(680, 560)
         self._recheck = recheck
         self._relaunch = relaunch
@@ -73,7 +73,7 @@ class SetupWindow(Adw.ApplicationWindow):
                 xalign=0.5,
             )
             terminal_hint.add_css_class("dim-label")
-            done_button = Gtk.Button(label="I ran it — check again")
+            done_button = Gtk.Button(label="I ran it, check again")
             done_button.connect("clicked", self._check_again)
             buttons = Gtk.Box(spacing=12, halign=Gtk.Align.CENTER)
             buttons.append(copy_button)
@@ -94,15 +94,15 @@ class SetupWindow(Adw.ApplicationWindow):
 
     def _copy(self, _button, command: str) -> None:
         self.get_clipboard().set(command)
-        self.toasts.add_toast(Adw.Toast(title="Copied — paste it into a Terminal"))
+        self.toasts.add_toast(Adw.Toast(title="Copied. Paste it into a Terminal"))
 
     def _check_again(self, _button) -> None:
         if self._recheck():
-            self.toasts.add_toast(Adw.Toast(title="Sandbox ready — starting the reader"))
+            self.toasts.add_toast(Adw.Toast(title="Sandbox ready, starting the reader"))
             GLib.timeout_add(600, self._relaunch)
         else:
             self.toasts.add_toast(
-                Adw.Toast(title="Still blocked — did the command run without errors?")
+                Adw.Toast(title="Still blocked. Did the command run without errors?")
             )
 
 
@@ -112,7 +112,7 @@ def run_setup(command: str, shebang: bool, recheck) -> int:
     def relaunch() -> bool:
         # A fresh exec of our own interpreter, no shell involved: the AppArmor
         # profile attaches at exec time, which is the entire point of restarting.
-        os.execv(  # noqa: S606 — fixed argv, own interpreter, no shell
+        os.execv(  # noqa: S606 - fixed argv, own interpreter, no shell
             sys.executable, [sys.executable, "-m", "solander.cli", *sys.argv[1:]]
         )
         return False

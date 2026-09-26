@@ -20,7 +20,7 @@ You don't need Obsidian. You don't need to have used a markdown reader before. A
 
 ## What this is, and what it refuses to do
 
-Suppose somebody sends you a folder of notes. Or you have an Obsidian vault and you want to read it on a machine where Obsidian isn't installed — or you'd rather not point a full editor at notes you only mean to look at.
+Suppose somebody sends you a folder of notes. Or you have an Obsidian vault and you want to read it on a machine where Obsidian isn't installed. Or you'd rather not point a full editor at notes you only mean to look at.
 
 You could open the files in a text editor. That works, and `[[Recipes]]` stays `[[Recipes]]`, a callout looks like a block quote with stray text on top, and a `.canvas` file is a wall of JSON.
 
@@ -30,11 +30,11 @@ Solander renders all of it, and **never writes into the folder**. That's the who
 - **Nothing in a note is executed.** JavaScript is off in the rendering surface, raw HTML is escaped, and Templater or `dataviewjs` blocks render as labelled inert source rather than running.
 - **It doesn't touch the network.** Remote images, scripts, stylesheets and fonts are blocked. A web link opens in your normal browser and a `mailto` link in your mail app; a link with any other scheme does nothing.
 
-A solander is the clamshell box an archive keeps documents in — you open it to look at something and close it to leave it as it was. That's the design brief in one object.
+A solander is the clamshell box an archive keeps documents in: you open it to look at something and close it to leave it as it was. That's the design brief in one object.
 
 ## Step 1: install it
 
-Three routes. **If you're not sure, take the Flatpak** — it's the only one with no sandbox step at all.
+Three routes. **If you're not sure, take the Flatpak**: it's the only one with no sandbox step at all.
 
 ### Flatpak, the simplest
 
@@ -50,7 +50,7 @@ Then take the bundle from the [latest release](https://github.com/kingletas/sola
 flatpak install --user solander_*.flatpak
 ```
 
-The first install also pulls the runtime — about a gigabyte, once, shared with every other Flatpak you ever install. **A Flatpak install puts no `solander` on your `PATH`**; the terminal equivalent is `flatpak run com.kingletas.Solander`.
+The first install also pulls the runtime, about a gigabyte, once, shared with every other Flatpak you ever install. **A Flatpak install puts no `solander` on your `PATH`**; the terminal equivalent is `flatpak run com.kingletas.Solander`.
 
 ### Debian package
 
@@ -90,7 +90,7 @@ solander 2.3.0
 
 Skip this if you used the Flatpak or the deb. They handle it.
 
-**Here's the part that surprises people.** WebKit — the thing that draws your notes — wraps its rendering processes in a sandbox of its own, and that sandbox needs to create an unprivileged user namespace. Ubuntu 24.04 restricts those by default. So on a stock Ubuntu the app would abort with `bwrap: setting up uid map: Permission denied`, which tells you nothing useful.
+**Here's the part that surprises people.** WebKit, the thing that draws your notes, wraps its rendering processes in a sandbox of its own, and that sandbox needs to create an unprivileged user namespace. Ubuntu 24.04 restricts those by default. So on a stock Ubuntu the app would abort with `bwrap: setting up uid map: Permission denied`, which tells you nothing useful.
 
 Solander checks for this **before** WebKit crashes. Started from your applications grid, it opens a small setup window with one command to copy and a *check again* button. Started from a terminal, it prints the same fix.
 
@@ -124,7 +124,7 @@ That last command exits non-zero while anything is still wrong, so it's the one 
 
 ## Step 3: make a vault
 
-A vault is a folder with markdown in it. Nothing else is required — no config file, no hidden directory, no Obsidian.
+A vault is a folder with markdown in it. Nothing else is required: no config file, no hidden directory, no Obsidian.
 
 ```bash
 mkdir -p ~/first-vault
@@ -167,7 +167,7 @@ Two files. That's a vault.
 solander ~/first-vault
 ```
 
-The window opens on the vault. Click through to **Recipes** and back — `[[Welcome]]` and `[[Recipes]]` resolve to each other by name, the table is a table, and the tip is a callout with its own colour rather than a quote with the word "tip" stuck on the front.
+The window opens on the vault. Click through to **Recipes** and back. `[[Welcome]]` and `[[Recipes]]` resolve to each other by name, the table is a table, and the tip is a callout with its own colour rather than a quote with the word "tip" stuck on the front.
 
 Three other ways in, all equivalent:
 
@@ -194,11 +194,11 @@ Two notes don't need finding. Ten thousand do, and this is where a reader earns 
 - **Backlinks** show every note pointing at this one, with the sentence around each link rather than a bare list.
 - There's a **tag browser**, your vault's own **bookmarks**, a **local graph**, and hover previews on links.
 
-**The index is built once per vault and kept**, so a ten-thousand-note vault opens in about a second after its first build. The folder is watched too — edit a note in another program and the change appears in seconds.
+**The index is built once per vault and kept**, so a ten-thousand-note vault opens in about a second after its first build. The folder is watched too: edit a note in another program and the change appears in seconds.
 
 ## Make it comfortable
 
-Fourteen themes, and the one you pick is remembered. **Stone** is the default: warm neutral greys and one deep pine accent, in a light version by day and a dark one after it. The **Archive** family is thirteen dark themes over one design language, and the meanings hold across all of them — danger, warning, verified and information look like themselves in every one.
+Fourteen themes, and the one you pick is remembered. **Stone** is the default: warm neutral greys and one deep pine accent, in a light version by day and a dark one after it. The **Archive** family is thirteen dark themes over one design language, and the meanings hold across all of them: danger, warning, verified and information look like themselves in every one.
 
 Beyond that: tabs, an outline panel (`F8`), reading mode, typography controls, pinned notes, a mind-map view of any note, your vault's own CSS snippets (sanitized first), folder hiding, and PDF export through a real print stylesheet.
 
@@ -223,7 +223,7 @@ Nothing in your vault. Two directories, both yours to delete:
 
 | | |
 |---|---|
-| `~/.config/solander/` | Your session — last vault, last note, theme, pinned notes, hidden folders |
+| `~/.config/solander/` | Your session: last vault, last note, theme, pinned notes, hidden folders |
 | `~/.cache/solander/` | The per-vault index, which is what makes the second open fast |
 
 Delete either and you lose convenience, never content.
@@ -232,15 +232,15 @@ Delete either and you lose convenience, never content.
 
 **It refuses to start and mentions `bwrap` or a sandbox.** Step 2. Run `solander --sandbox-status` and it will tell you which part isn't in place.
 
-**It says it needs the system GTK bindings.** The `apt install` line in step 1 — these can't come from a virtualenv, which is why the source install asks for them separately.
+**It says it needs the system GTK bindings.** The `apt install` line in step 1. These can't come from a virtualenv, which is why the source install asks for them separately.
 
 **A note renders as labelled source.** That's deliberate, and the label says why. Something in it isn't supported, or is something we won't execute.
 
-**Something looks wrong in the rendering.** It's a reader, so the worst case is that it looks wrong — your files are untouched. Open an issue with the note that did it.
+**Something looks wrong in the rendering.** It's a reader, so the worst case is that it looks wrong; your files are untouched. Open an issue with the note that did it.
 
 ## Where to go next
 
-- [Getting started](getting-started.md) — the short version of installing
-- [User guide](user-guide.md) — every view and every key
-- [README](../README.md) — what it is, in one page
-- [SECURITY.md](../SECURITY.md) — the model, and where to report something
+- [Getting started](getting-started.md): the short version of installing
+- [User guide](user-guide.md): every view and every key
+- [README](../README.md): what it is, in one page
+- [SECURITY.md](../SECURITY.md): the model, and where to report something

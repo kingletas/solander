@@ -2,7 +2,7 @@
 
 Flowcharts, sequence diagrams, and pies cover ~98% of the corpus; anything else
 raises MermaidUnsupported and renders as labeled source. Nothing here executes
-note content — the source is parsed as data and drawn as static SVG.
+note content: the source is parsed as data and drawn as static SVG.
 """
 
 import html
@@ -750,11 +750,11 @@ def _pie(header: str, lines: list[str]) -> str:
         item_y = top + 10 + index * 22
         body += (f'<rect x="{legend_x}" y="{item_y - 7}" width="12" height="12" rx="2" '
                  f'fill="{color}" />')
-        share = f"{label} — {value:g} ({value / total * 100:.0f}%)"
+        share = f"{label}: {value:g} ({value / total * 100:.0f}%)"
         body += (f'<text class="mermaid-text" font-size="12" x="{legend_x + 20}" '
                  f'y="{item_y + 3}">{html.escape(share)}</text>')
         angle = end
-    longest = max(len(f"{label} — {value:g} (00%)") for label, value in slices)
+    longest = max(len(f"{label}: {value:g} (00%)") for label, value in slices)
     width = legend_x + 26 + longest * CHAR_WIDTH + PADDING
     height = max(cy + radius, top + 10 + len(slices) * 22) + PADDING
     return _svg(width, height, body)

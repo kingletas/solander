@@ -260,7 +260,7 @@ li.task-question::before { content: "?"; }
 li.task-important::before { content: "!"; color: var(--missing); }
 li.task-star::before { content: "★"; }
 
-/* Callouts: a tinted card, its own colour at the edge — and an icon glyph, never colour alone. */
+/* Callouts: a tinted card, its own colour at the edge, and an icon glyph, never colour alone. */
 .callout {
   margin: 1.1em 0;
   border-radius: 12px;
@@ -353,7 +353,7 @@ body.theme-dark .callout-quote    { --callout-color: #a29a8b; }
 }
 .inert-block pre { margin-top: 0; border-radius: 0 0 8px 8px; }
 
-/* Frontmatter properties — the note's colophon. */
+/* Frontmatter properties: the note's colophon. */
 details.properties {
   border: 1px solid transparent;
   border-radius: 8px;
@@ -419,7 +419,7 @@ section.footnotes {
   opacity: 0.85;
 }
 
-/* The welcome page — the app's frontispiece. */
+/* The welcome page: the app's frontispiece. */
 .welcome {
   max-width: 34rem;
   margin: 8vh auto 0;
@@ -529,7 +529,7 @@ section.footnotes {
 .math-block math { font-size: 1.15em; }
 code.math-source { color: var(--muted); }
 
-/* Print — the PDF exporter renders through this. Paper scrolls nothing and has
+/* Print: the PDF exporter renders through this. Paper scrolls nothing and has
    no dark mode, so wide content wraps instead of clipping, boxes refuse to be
    sliced across page boundaries, and the palette is forced light. */
 @media print {

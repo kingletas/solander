@@ -1,4 +1,4 @@
-"""Renders a note's structure — headings and nested bullets — as a mind-map SVG.
+"""Renders a note's structure, its headings and nested bullets, as a mind-map SVG.
 
 The layout is a right-growing tidy tree: leaves claim rows, parents center on
 their children, and each depth gets a column sized to its longest label. All

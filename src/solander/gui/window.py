@@ -248,7 +248,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.sidebar_widget.set_visible(self.store.state.sidebar_visible)
 
         # The rail runs the full window height beside a content pane that owns
-        # the header bar — two surfaces, not one tinted sheet.
+        # the header bar: two surfaces, not one tinted sheet.
         self.toolbar_view = Adw.ToolbarView()
         self.toolbar_view.add_top_bar(header)
         self.toolbar_view.set_content(self._build_reading_area())
@@ -312,7 +312,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         search_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         search_box.set_margin_top(6)
         self.search_entry = Gtk.SearchEntry(
-            placeholder_text="Search notes (Ctrl+P) — path:, file:, tag:"
+            placeholder_text="Search notes (Ctrl+P); try path:, file:, tag:"
         )
         _name(self.search_entry, "Search notes")
         self.search_entry.set_margin_start(6)
@@ -483,7 +483,7 @@ class ReaderWindow(Adw.ApplicationWindow):
                 self.links_list.append(self._panel_row(title, link.path, "", link.path))
             else:
                 state = "ambiguous" if link.kind == "ambiguous" else "not found"
-                self.links_list.append(self._panel_note(f"{link.target} — {state}"))
+                self.links_list.append(self._panel_note(f"{link.target} ({state})"))
         if not outgoing:
             self.links_list.append(self._panel_note("No outgoing links"))
 
@@ -756,7 +756,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             icon_name="changes-prevent-symbolic", popover=Gtk.Popover(child=content)
         )
         badge.add_css_class("flat")
-        badge.set_tooltip_text("Read-only — why, and what to do instead")
+        badge.set_tooltip_text("Read-only: why, and what to do instead")
         return badge
 
     def _build_reading_area(self) -> Gtk.Widget:
@@ -906,7 +906,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         color: @accent_color;
     }
     /* Adwaita states its own ground for a sidebar row, and does it with a
-       selector one class heavier than the rail's — so the rail says it again. */
+       selector one class heavier than the rail's, so the rail says it again. */
     .reader-rail listview.navigation-sidebar > row:selected,
     .reader-rail listview > row:selected,
     .reader-rail list > row:selected { background: @rail_soft; }
@@ -1298,7 +1298,7 @@ class ReaderWindow(Adw.ApplicationWindow):
     # -- the live index ----------------------------------------------------
 
     def _cache_path(self, root: Path) -> Path:
-        """One index file per vault, in the app's own cache dir — never the vault."""
+        """One index file per vault, in the app's own cache dir and never the vault."""
         base = os.environ.get("XDG_CACHE_HOME", "") or str(Path.home() / ".cache")
         directory = adopt_former_state(Path(base) / "solander")
         directory.mkdir(parents=True, exist_ok=True)
@@ -1370,7 +1370,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._update_local_graph()
         if first_sync:
             # The first render happened before the graph existed, so any
-            # dataview blocks showed "index is still building" — render again.
+            # dataview blocks showed "index is still building", so render again.
             self._reload_all_tabs()
         return False
 
@@ -1440,7 +1440,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         obsidian = len(self.vault.ignore_filters)
         message = f"Unhid {len(removed)} folder(s)"
         if obsidian:
-            message += f" — {obsidian} stay hidden by Obsidian's own excluded-files setting"
+            message += f"; {obsidian} stay hidden by Obsidian's own excluded-files setting"
         self._toast(message)
 
     def _visible_hits(self, hits):
@@ -1510,9 +1510,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         if poppler_available():
             self._enter_paged()
             self._queue_pagination(target, direction=1, at_end=False)
-            self._toast(f"Reading “{name}” — N and P turn pages, Esc closes the book")
+            self._toast(f"Reading “{name}”. N and P turn pages, Esc closes the book")
         else:
-            self._toast(f"Reading “{name}” — N and P turn chapters, Esc closes the book")
+            self._toast(f"Reading “{name}”. N and P turn chapters, Esc closes the book")
         self.reader.load_note(target)
 
     def _end_book(self) -> None:
@@ -1808,7 +1808,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.search_index = VaultSearch(self.index_store)
         self.graph = None
         self._schedule_sync()
-        self._toast("Index cache cleared — rebuilding")
+        self._toast("Index cache cleared, rebuilding")
 
     def _open_file_dialog(self) -> None:
         dialog = Gtk.FileDialog(title="Open Markdown file")
@@ -1957,7 +1957,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         return renderer.render_text(text, title, theme)
 
     def _fallback_renderer(self, docs: Path) -> NoteRenderer:
-        """A renderer that exists before any vault is open — the docs folder stands in."""
+        """A renderer that exists before any vault is open; the docs folder stands in."""
         if getattr(self, "_docs_renderer", None) is None:
             self._docs_renderer = NoteRenderer(Vault.open(docs), self._typography)
         return self._docs_renderer
@@ -2169,7 +2169,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         elif file_kind(node.rel) in ("image", "audio", "video", "pdf"):
             self._launch_file(self.vault.root / node.rel)
         else:
-            self._toast(f"{node.name} is not a text note — use Open Externally")
+            self._toast(f"{node.name} is not a text note. Use Open Externally")
 
     def _on_tree_open_new_tab(self, node) -> None:
         if node.is_note:
@@ -2206,9 +2206,9 @@ class ReaderWindow(Adw.ApplicationWindow):
             return
         hits = self._quick_hits(search_filenames(self.vault, query))
         self.search_status.set_text(
-            f"{len(hits)} filename matches — press Enter for full-text search"
+            f"{len(hits)} filename matches. Press Enter for full-text search"
             if hits
-            else "No filename matches — press Enter for full-text search"
+            else "No filename matches. Press Enter for full-text search"
         )
         for hit in hits[:50]:
             self._add_result(hit.path, "")
@@ -2220,10 +2220,10 @@ class ReaderWindow(Adw.ApplicationWindow):
         if not query:
             return
         if self.search_index is None or not self.search_index.ready:
-            self.search_status.set_text("Still indexing — try again shortly")
+            self.search_status.set_text("Still indexing. Try again shortly")
             return
         if parse_query(query).tags and (self.graph is None or not self.graph.ready):
-            self.search_status.set_text("The tag index is still building — try again shortly")
+            self.search_status.set_text("The tag index is still building. Try again shortly")
             return
         self._clear_results()
         note_tags = self.graph.note_tags if self.graph is not None else None
@@ -2539,7 +2539,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             reader.webview.reload()
 
     def _apply_appearance(self, appearance: str) -> None:
-        """Applies the mode, unless the theme has only one — then that one wins."""
+        """Applies the mode, unless the theme has only one, in which case that one wins."""
         manager = Adw.StyleManager.get_default()
         if theme_by_key(self.store.state.theme).dark_only:
             manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
@@ -2586,7 +2586,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             self.tab_bar.set_visible(False)
             self.toolbar_view.set_reveal_top_bars(False)
             self.fullscreen()
-            self._toast("Reading mode — press Esc or F11 to leave")
+            self._toast("Reading mode. Press Esc or F11 to leave")
         else:
             self.unfullscreen()
             self.toolbar_view.set_reveal_top_bars(True)
@@ -2617,7 +2617,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         """Prints the current page to a PDF outside the vault; inside it is refused."""
         path = Path(gfile.get_path())
         if self.vault is not None and self.vault.contains(path):
-            self._toast("Refusing to write inside the vault — choose a folder outside it")
+            self._toast("Refusing to write inside the vault. Choose a folder outside it")
             return
         operation = WebKit.PrintOperation.new(self.reader.webview)
         settings = Gtk.PrintSettings()
@@ -2801,7 +2801,7 @@ class ReaderWindow(Adw.ApplicationWindow):
 
 
 def _darken(hex_color: str, factor: float) -> str:
-    """A deeper shade of a hex color — the desk a book page sits on."""
+    """A deeper shade of a hex color: the desk a book page sits on."""
     value = hex_color.lstrip("#")
     if len(value) == 3:
         value = "".join(char * 2 for char in value)

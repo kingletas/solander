@@ -42,7 +42,7 @@ def record_crash(kind, value, trace) -> None:
     """Turns an exception in a GLib callback into a failure instead of a silence.
 
     GLib prints an unhandled callback exception and carries on, so the chain of
-    timeouts that drives this run simply stops — and every check after the crash
+    timeouts that drives this run simply stops, and every check after the crash
     reads the same as a check that was never written. A run that ended early used
     to print PASS.
     """
@@ -276,7 +276,7 @@ def run_checks(app):
             from solander import APP_ID
 
             # Wayland names a toplevel by the program name, and the desktop matches
-            # a window to its .desktop file — and its icon — by exactly that.
+            # a window to its .desktop file, and so to its icon, by exactly that.
             check("the process identifies itself as the app id",
                   GLib.get_prgname() == APP_ID)
             railed = "reader-rail" in window.sidebar_widget.get_css_classes()
@@ -913,7 +913,7 @@ def run_checks(app):
         data = bytes(surface.get_data())
         # Backgrounds are not printed, so a dark-theme export means light-gray
         # text on white paper. Sample the pixels of one known word, not the whole
-        # page — borders are dark in every theme and would mask pale text.
+        # page, since borders are dark in every theme and would mask pale text.
         rects = page.find_text("ENDOFLONGLINE")
         darkest = 255
         for rect in rects:
@@ -1045,7 +1045,7 @@ def main() -> int:
 
         A fixed delay is a bet on how loaded the machine is, and it flapped: the
         first two checks failed on a run that was otherwise identical to a pass.
-        Waiting on the condition removes the flap without hiding a real failure —
+        Waiting on the condition removes the flap without hiding a real failure:
         past the bound the checks run anyway and report what they find.
         """
         window = application.get_active_window()

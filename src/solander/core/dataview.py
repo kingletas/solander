@@ -1,4 +1,4 @@
-"""Evaluates Dataview queries in pure Python — no JavaScript, ever.
+"""Evaluates Dataview queries in pure Python, and never runs JavaScript.
 
 The engine executes the parsed DQL from `dql.py` against the vault graph's
 metadata (frontmatter, file facts, links, tags, tasks) and renders app-authored,

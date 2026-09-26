@@ -1,8 +1,8 @@
 """Every theme's colours, and nothing per theme but colours.
 
 Stone is the house identity and the reference the rest are measured against. The
-Archive family below it shares one design language — a dark ground, bone text, an
-accent for what is important and a hot colour held back for what matters — so a
+Archive family below it shares one design language: a dark ground, bone text, an
+accent for what is important and a hot colour held back for what matters. So a
 member of it is sixteen colours. The shared rules live in `assets/theme-archive.css`;
 the tokens those rules consume are generated from these palettes.
 """
@@ -83,7 +83,7 @@ class Palette:
     """The 1%. Hover, an active state, the document under your hand."""
 
     ornament: str
-    """Rules, blockquote edges, section breaks — the theme's quieter metal."""
+    """Rules, blockquote edges and section breaks: the theme's quieter metal."""
 
     text: str
     muted: str
