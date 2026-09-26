@@ -2,6 +2,7 @@
 
 import re
 import sys
+import time
 from pathlib import Path
 
 import gi
@@ -427,12 +428,49 @@ def run_checks(app):
                     print(f"   Blocks.md restored to {where:.3f} of the way down")
                     check("a restored note opens where it was read to", abs(where - 0.5) < 0.05)
                     check("a restored position is used once", window._pending_scroll == {})
-                    window.reader.load_note("A.md")
-                    GLib.timeout_add(1000, back_to_a)
+                    check_responsive()
 
                 webview = window.reader.webview
                 webview.evaluate_javascript(script, -1, "smoke", None, None, restored)
                 return False
+
+            def check_responsive():
+                """Opens a 1 MB note and times the window's own loop while it renders.
+
+                The note is written here rather than with the other fixtures, so the
+                first index pass is not slowed by it, and it is removed afterwards.
+                """
+                section = (
+                    "## Section\n\n"
+                    + ("Words with **bold**, a [[A]] link, a #tag and `code`. " * 6 + "\n\n") * 5
+                    + "| a | b |\n|---|---|\n" + "| 1 | [[Second Note]] |\n" * 40 + "\n"
+                    + "```python\n" + "def f(x):\n    return x * 2\n" * 30 + "```\n\n"
+                )
+                huge = vault_path / "Huge.md"
+                huge.write_text(section * (1024 * 1024 // len(section) + 1))
+                window.reader.last_render = None
+                started = time.monotonic()
+                ticks = {"last": started, "gap": 0.0}
+
+                def tick() -> bool:
+                    now = time.monotonic()
+                    ticks["gap"] = max(ticks["gap"], now - ticks["last"])
+                    ticks["last"] = now
+                    rendered = window.reader.last_render
+                    if rendered is None and now - started < 60:
+                        return True
+                    took = now - started
+                    worst = ticks["gap"] * 1000
+                    print(f"   Huge.md rendered in {took:.1f} s; longest stall {worst:.0f} ms")
+                    check("a 1 MB note renders", rendered is not None)
+                    check("the window keeps answering while it renders", worst < 250)
+                    huge.unlink(missing_ok=True)
+                    window.reader.load_note("A.md")
+                    GLib.timeout_add(1000, back_to_a)
+                    return False
+
+                window.reader.load_note("Huge.md")
+                GLib.timeout_add(20, tick)
 
             def back_to_a():
                 window._show_mindmap()

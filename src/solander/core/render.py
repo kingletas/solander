@@ -260,6 +260,21 @@ class NoteRenderer:
         self.md.core.ruler.before("inline", "obsidian_block_ids", block_ids_rule)
         self._install_render_rules()
 
+    def copy(self) -> "NoteRenderer":
+        """A renderer over the same vault and settings, with a parser of its own.
+
+        A render on another thread uses one of these, so no parser or engine is
+        ever shared between two renders at once.
+        """
+        return NoteRenderer(
+            self.vault,
+            self.typography,
+            self.graph_provider,
+            self.snippets,
+            options=self.options,
+            book=self.book,
+        )
+
     def _typo(self) -> dict | None:
         return self.typography() if callable(self.typography) else None
 

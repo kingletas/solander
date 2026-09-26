@@ -1,6 +1,7 @@
 """Watches every vault directory and reports changes, debounced, on the main loop."""
 
 import os
+import threading
 from pathlib import Path
 
 import gi
@@ -25,7 +26,9 @@ class VaultMonitor:
 
     The callback fires on the GLib main loop after the vault has been quiet for
     the debounce window; the monitor set refreshes itself after each firing so
-    newly created directories are watched too.
+    newly created directories are watched too. Finding the directories walks the
+    whole vault, so it runs on a worker thread: on the main loop, every call in
+    the walk would wait its turn behind a note rendering on another thread.
     """
 
     def __init__(self, root: Path, on_change):
@@ -34,7 +37,7 @@ class VaultMonitor:
         self._monitors: dict[str, Gio.FileMonitor] = {}
         self._timeout = 0
         self._cancelled = False
-        self._watch_all()
+        self._rewatch()
 
     def cancel(self) -> None:
         """Stops every monitor and any pending callback."""
@@ -46,11 +49,22 @@ class VaultMonitor:
             monitor.cancel()
         self._monitors.clear()
 
-    def _watch_all(self) -> None:
-        wanted = {str(self.root)}
-        for dirpath, dirnames, _filenames in os.walk(self.root, followlinks=False):
-            dirnames[:] = [d for d in dirnames if not d.startswith(".")]
-            wanted.update(str(Path(dirpath) / d) for d in dirnames)
+    def _rewatch(self) -> None:
+        """Finds the vault's directories on a worker, then watches them on the main loop."""
+
+        def walk() -> None:
+            wanted = {str(self.root)}
+            for dirpath, dirnames, _filenames in os.walk(self.root, followlinks=False):
+                dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+                wanted.update(str(Path(dirpath) / d) for d in dirnames)
+            GLib.idle_add(self._watch, wanted)
+
+        threading.Thread(target=walk, daemon=True).start()
+
+    def _watch(self, wanted: set[str]) -> bool:
+        """Makes the set of watched directories exactly `wanted`."""
+        if self._cancelled:
+            return False
         for path in set(self._monitors) - wanted:
             self._monitors.pop(path).cancel()
         for path in wanted - set(self._monitors):
@@ -61,6 +75,7 @@ class VaultMonitor:
                 continue
             monitor.connect("changed", self._on_event)
             self._monitors[path] = monitor
+        return False
 
     def _on_event(self, _monitor, gfile, _other, event) -> None:
         if event not in _RELEVANT or self._cancelled:
@@ -76,6 +91,6 @@ class VaultMonitor:
     def _fire(self) -> bool:
         self._timeout = 0
         if not self._cancelled:
-            self._watch_all()
+            self._rewatch()
             self.on_change()
         return False

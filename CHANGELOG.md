@@ -6,6 +6,11 @@
 
 - **The tree listed files by name and nothing else.** Preferences → Sort Files By now offers **Newest First**, which puts the note you last changed at the top of its folder, and **Type**, which groups notes, canvases, bases and attachments. Folders stay first and in name order whatever the choice, the tree keeps your expanded folders when it changes, and the choice is remembered.
 
+### A long note no longer freezes the window
+
+- **The window stopped answering while a note rendered.** The page was built on the thread that draws the window, so a 1 MB note held everything, from the sidebar to the close button, for several seconds. A note now renders on a worker thread with a renderer of its own, and the page is handed to the reading pane when it is ready. Measured in the running window while a 1 MB note rendered for about four seconds, the window's longest wait went from 3.2 seconds to under a tenth of a second.
+- **A change to the vault could freeze the window for as long.** After every change, the watcher walked every folder of the vault on that same thread to find new ones, and while a note rendered alongside, each step of the walk waited its turn. The walk now runs on its own thread too.
+
 ### A long note opens sooner
 
 - **A note full of links rendered a third slower than it needed to.** Every `[[link]]` first looked for a file with the bare name, which can never be a note, and each miss resolved the whole path on disk, twice per link. The bare name is no longer tried, and a lookup that finds nothing now costs one check rather than a walk of the path. On a generated test note of 200 KB with about 3,800 links, rendering went from 0.89 to 0.63 seconds, and at 1 MB from 6.0 to 3.7 seconds. A note still renders while the window waits, so a very large one still pauses it.

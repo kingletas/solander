@@ -2,6 +2,7 @@
 
 import html
 import threading
+import traceback
 from contextlib import suppress
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
@@ -136,6 +137,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         reader = ReaderView(share_from=self._first_reader)
         if self._first_reader is None:
             reader.page_provider = self._provide_page
+            reader.page_later = self._provide_page_later
             reader.asset_provider = self._provide_asset
             self._first_reader = reader
         reader.connect("open-external-uri", self._on_external_uri)
@@ -1814,6 +1816,46 @@ class ReaderWindow(Adw.ApplicationWindow):
         """The page style identifier: the active theme, in the mode currently in force."""
         dark = Adw.StyleManager.get_default().get_dark()
         return page_id(self.store.state.theme, dark)
+
+    def _provide_page_later(self, path: str, webview, deliver) -> bool:
+        """Renders a note on a worker thread and delivers its page on the main loop.
+
+        The window keeps answering while a long note renders. Anything else, and a
+        note shown as source, canvas or base, returns False for `_provide_page`.
+        """
+        segments = [part for part in path.split("/") if part]
+        if not segments or segments[0] != "note" or self.renderer is None or self.source_view:
+            return False
+        rel = "/".join(segments[1:])
+        if rel.casefold().endswith((".canvas", ".base")):
+            return False
+        theme = self._theme()
+        renderer = self.renderer.copy()
+        terms: list[str] = []
+        if self._pending_highlight and webview is self.reader.webview:
+            terms, self._pending_highlight = self._pending_highlight, []
+
+        def build() -> None:
+            try:
+                rendered = renderer.render(rel, theme)
+                page = mark_terms(rendered.page, terms)[0] if terms else rendered.page
+            except Exception:  # the request must be answered, whatever failed
+                traceback.print_exc()
+                rendered = None
+                page = build_message_page(
+                    "This note could not be shown", "Rendering it failed.", theme
+                )
+            GLib.idle_add(finish, rendered, page)
+
+        def finish(rendered, page: str) -> bool:
+            reader = self._readers.get(webview)
+            if reader is not None:
+                reader.last_render = rendered
+            deliver(page)
+            return False
+
+        threading.Thread(target=build, daemon=True).start()
+        return True
 
     def _provide_page(self, path: str, webview=None) -> str:
         theme = self._theme()
