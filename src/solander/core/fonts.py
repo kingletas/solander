@@ -25,6 +25,23 @@ MIME = "font/ttf"
 """One format rather than two: fontconfig cannot read WOFF2, and these are local."""
 
 
+STANDARD_DPI = 96
+BASE_FONT_PX = 16
+BASE_MONOSPACE_PX = 13
+"""WebKit's own defaults, which the page's rem and em sizes are measured against."""
+
+
+def text_scale(xft_dpi: int) -> float:
+    """The desktop's text scaling as a factor, from GTK's font DPI in 1024ths.
+
+    GNOME's Large Text and text-scaling-factor reach applications only as this
+    DPI, and WebKit does not read it, so the reader sizes its page by it.
+    """
+    if xft_dpi <= 0:
+        return 1.0
+    return min(max(xft_dpi / 1024 / STANDARD_DPI, 0.5), 3.0)
+
+
 def font_css(prefix: str) -> str:
     """The `@font-face` rules, with each file addressed the way this client serves it."""
     rules = []

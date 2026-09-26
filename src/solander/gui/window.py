@@ -46,7 +46,7 @@ from .localgraph import LocalGraphView
 from .monitor import VaultMonitor
 from .panes import SplitPane
 from .pdfview import PdfWindow, poppler_available
-from .webpane import ReaderView
+from .webpane import ReaderView, desktop_text_scale
 
 
 def _words_in(rendered) -> int:
@@ -187,6 +187,9 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _build_ui(self) -> None:
         self._readers: dict = {}
         self._first_reader = None
+        settings = Gtk.Settings.get_default()
+        if settings is not None:
+            settings.connect("notify::gtk-xft-dpi", self._on_text_scale)
         self._pending_scroll: dict[str, float] = {}
         self._scroll_read = False
         self.tab_view = Adw.TabView()
@@ -2399,6 +2402,13 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     def _on_pointer_motion(self, _controller, x: float, y: float) -> None:
         self._pointer = (x, y)
+
+    def _on_text_scale(self, *_args) -> None:
+        """Follows a change to the desktop's text scaling in every open page."""
+        factor = desktop_text_scale()
+        for reader in list(self._readers.values()) + [self._preview_reader]:
+            if reader is not None:
+                reader.set_text_scale(factor)
 
     def _ensure_preview(self) -> None:
         if self._preview_reader is not None:

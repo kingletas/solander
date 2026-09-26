@@ -6,10 +6,10 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("WebKit", "6.0")
-from gi.repository import Gdk, Gio, GLib, GObject, WebKit
+from gi.repository import Gdk, Gio, GLib, GObject, Gtk, WebKit
 
+from ..core.fonts import BASE_FONT_PX, BASE_MONOSPACE_PX, font_bytes, text_scale
 from ..core.fonts import MIME as FONT_MIME
-from ..core.fonts import font_bytes
 from ..core.render import build_message_page
 
 ASSET_MIME_ALLOWLIST = {
@@ -22,6 +22,12 @@ ASSET_MIME_ALLOWLIST = {
     ".ttf": "font/ttf", ".otf": "font/otf", ".woff": "font/woff", ".woff2": "font/woff2",
 }
 
+
+
+def desktop_text_scale() -> float:
+    """The text scaling the desktop asks for right now, 1.0 without a display."""
+    settings = Gtk.Settings.get_default()
+    return text_scale(settings.get_property("gtk-xft-dpi")) if settings is not None else 1.0
 
 class ReaderView(GObject.Object):
     """Owns the WebView, its URI schemes, and its navigation policy."""
@@ -77,9 +83,16 @@ class ReaderView(GObject.Object):
         for name, value in best_effort.items():
             if settings.find_property(name) is not None:
                 settings.set_property(name, value)
+        self.set_text_scale(desktop_text_scale())
         self.webview.connect("decide-policy", self._decide_policy)
         self.webview.connect("mouse-target-changed", self._on_hover)
         self.webview.connect("context-menu", self._trim_context_menu)
+
+    def set_text_scale(self, factor: float) -> None:
+        """Sizes the page's text by the desktop's text scaling; the page sets type in rem."""
+        settings = self.webview.get_settings()
+        settings.set_default_font_size(round(BASE_FONT_PX * factor))
+        settings.set_default_monospace_font_size(round(BASE_MONOSPACE_PX * factor))
 
     def load_note(self, rel: str, anchor: str = "") -> None:
         """Navigates the surface to a vault note, letting WebKit keep the history."""
