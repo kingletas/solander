@@ -244,7 +244,8 @@ def build_parser() -> MarkdownIt:
     md = MarkdownIt("commonmark", {"html": False, "linkify": True, "typographer": False})
     md.enable(["table", "strikethrough", "linkify"])
     md.use(footnote_plugin)
-    md.use(tasklists_plugin, enabled=False)
+    # The label gives each checkbox its task's text as the name a screen reader reads.
+    md.use(tasklists_plugin, enabled=False, label=True)
     md.inline.ruler.before("link", "obsidian_wikilink", _wikilink_rule)
     md.inline.ruler.before("obsidian_wikilink", "obsidian_comment", _comment_rule)
     md.inline.ruler.before("emphasis", "obsidian_highlight", _highlight_rule)

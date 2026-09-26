@@ -399,3 +399,12 @@ def test_a_mind_map_follows_the_client_too(vault):
     page = renderer.render_mindmap("Index.md")
     assert "reader:///" not in page
     assert "/note/" in page
+
+
+def test_a_task_checkbox_is_labelled_by_its_task(vault, vault_dir):
+    (vault_dir / "Tasks.md").write_text("- [ ] open one\n- [x] done one\n")
+    vault.reindex()
+    body = NoteRenderer(vault).render("Tasks.md").body
+    box = '<input class="task-list-item-checkbox" disabled type="checkbox" />'
+    assert f"<label>{box} open one</label>" in body
+    assert "checked disabled" in body and "done one</label>" in body
