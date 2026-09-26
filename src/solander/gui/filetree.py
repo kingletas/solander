@@ -56,6 +56,9 @@ class VaultTree:
         self.view = Gtk.ListView(model=self.selection, factory=factory)
         self.view.add_css_class("navigation-sidebar")
         self.view.set_single_click_activate(True)
+        # One Tab stop for the whole tree, with the arrow keys inside it, rather than
+        # one per row: a folder of a hundred notes was a hundred presses to get past.
+        self.view.set_tab_behavior(Gtk.ListTabBehavior.ITEM)
         self.view.connect("activate", self._activated)
 
     def set_vault(self, root: Path | None) -> None:

@@ -476,6 +476,51 @@ def run_checks(app):
                 check_text_scale()
                 return False
 
+            def check_tab_chain(tries: int = 0):
+                """Walks Tab's focus chain from the page, the way the key does, until it closes.
+
+                Tab is bound to the window's move-focus signal, so emitting it is the
+                key's own path. A window that is not active cannot hold focus, and
+                every step then re-grabs the same row, so the walk needs one.
+                """
+                from gi.repository import Gtk, WebKit
+
+                if not window.is_active() and tries < 15:
+                    window.present()
+                    GLib.timeout_add(200, check_tab_chain, tries + 1)
+                    return False
+                if not window.is_active():
+                    print("SKIP  Tab order: the window is not the active one, so focus cannot move")
+                    window._show_mindmap()
+                    GLib.timeout_add(1000, check_map_toggle_on)
+                    return False
+                window.sidebar_widget.set_visible(True)
+                window.sidebar_stack.set_visible_child_name("files")
+                window.reader.webview.grab_focus()
+                stops = []
+                for _ in range(80):
+                    window.emit("move-focus", Gtk.DirectionType.TAB_FORWARD)
+                    focus = window.get_focus()
+                    if stops and focus is stops[0]:
+                        break
+                    stops.append(focus)
+                closed = bool(stops) and window.get_focus() is stops[0]
+                in_tree = [w for w in stops if w.get_ancestor(Gtk.ListView) is window.tree.view]
+                tabs = [w for w in stops if (w.get_tooltip_text() or "") in PANEL_NAMES]
+                page = [
+                    w for w in stops
+                    if isinstance(w, WebKit.WebView) or w.get_ancestor(WebKit.WebView)
+                ]
+                print(f"   Tab visits {len(stops)} stops: {len(tabs)} panel tabs, "
+                      f"{len(in_tree)} in the file tree, {len(page)} in the page")
+                check("Tab comes back round to where it started", closed)
+                check("Tab reaches every sidebar panel", len(tabs) == len(PANEL_NAMES))
+                check("Tab reaches the page", len(page) >= 1)
+                check("the file tree is one Tab stop, not one per row", len(in_tree) == 1)
+                window._show_mindmap()
+                GLib.timeout_add(1000, check_map_toggle_on)
+                return False
+
             def check_text_scale():
                 """Raises the desktop's text scaling by half and reads the page's type size."""
                 from gi.repository import Gtk
@@ -500,8 +545,7 @@ def run_checks(app):
                     print(f"   page type {before_size[0]} at the standard DPI, {after} at 1.5x")
                     check("the page follows the desktop's text scaling", after == "24px")
                     settings.set_property("gtk-xft-dpi", standard)
-                    window._show_mindmap()
-                    GLib.timeout_add(1000, check_map_toggle_on)
+                    GLib.timeout_add(500, check_tab_chain)
 
                 before_size = []
 
@@ -934,6 +978,9 @@ def check_setup_window() -> None:
     if alive:
         process.send_signal(signal.SIGTERM)
         process.wait(timeout=5)
+
+
+PANEL_NAMES = {"Files", "Search", "Links", "Tags", "Bookmarks", "Graph"}
 
 
 def check_saved_session() -> None:
