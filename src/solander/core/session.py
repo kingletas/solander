@@ -91,6 +91,7 @@ class SessionState:
     restore_session: bool = True
     show_hidden: bool = False
     markdown_only: bool = True
+    tree_sort: str = "name"
     appearance: str = "system"
     theme: str = "stone"
     zoom: float = 1.0

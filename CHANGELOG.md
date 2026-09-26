@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### The file tree sorts by date or type
+
+- **The tree listed files by name and nothing else.** Preferences → Sort Files By now offers **Newest First**, which puts the note you last changed at the top of its folder, and **Type**, which groups notes, canvases, bases and attachments. Folders stay first and in name order whatever the choice, the tree keeps your expanded folders when it changes, and the choice is remembered.
+
 ### A long note opens sooner
 
 - **A note full of links rendered a third slower than it needed to.** Every `[[link]]` first looked for a file with the bare name, which can never be a note, and each miss resolved the whole path on disk, twice per link. The bare name is no longer tried, and a lookup that finds nothing now costs one check rather than a walk of the path. On a generated test note of 200 KB with about 3,800 links, rendering went from 0.89 to 0.63 seconds, and at 1 MB from 6.0 to 3.7 seconds. A note still renders while the window waits, so a very large one still pauses it.

@@ -32,6 +32,7 @@ from ..core.search import VaultSearch, demote, parse_query, search_filenames
 from ..core.session import SessionStore, adopt_former_state, reading_fraction, shown_path
 from ..core.store import open_index_store
 from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
+from ..core.treeorder import tree_sort
 from ..core.vault import Vault, file_kind, hidden_under, vault_holding
 from ..shortcuts import ACCELERATORS, SHORTCUTS
 from .about import AboutDialog
@@ -262,6 +263,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         )
         self.tree.show_hidden = self.store.state.show_hidden
         self.tree.markdown_only = self.store.state.markdown_only
+        self.tree.sort = tree_sort(self.store.state.tree_sort)
         files_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.quick_heading = Gtk.Label(label="PINNED & RECENT", xalign=0.0)
         self.quick_heading.add_css_class("quick-heading")
@@ -1103,6 +1105,12 @@ class ReaderWindow(Adw.ApplicationWindow):
             "markdown-only",
             self._on_markdown_only,
             state=GLib.Variant.new_boolean(self.store.state.markdown_only),
+        )
+        add(
+            "tree-sort",
+            self._on_tree_sort,
+            parameter=GLib.VariantType.new("s"),
+            state=GLib.Variant.new_string(tree_sort(self.store.state.tree_sort)),
         )
         add(
             "restore-session",
@@ -2399,6 +2407,13 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.tree.markdown_only = self.store.state.markdown_only
         self.tree.refresh()
 
+    def _on_tree_sort(self, action, value) -> None:
+        sort = tree_sort(value.get_string())
+        action.set_state(GLib.Variant.new_string(sort))
+        self.store.state.tree_sort = sort
+        self.tree.sort = sort
+        self.tree.refresh()
+
     def _on_restore_session(self, action, value) -> None:
         action.set_state(value)
         self.store.state.restore_session = value.get_boolean()
@@ -2741,6 +2756,10 @@ def _preferences_page() -> Gio.Menu:
     files = Gio.Menu()
     files.append("Show Hidden Files", "win.show-hidden")
     files.append("Markdown Files Only", "win.markdown-only")
+    order = Gio.Menu()
+    for label, value in (("Name", "name"), ("Newest First", "modified"), ("Type", "type")):
+        order.append(label, f"win.tree-sort::{value}")
+    files.append_submenu("Sort Files By", order)
     files.append("Unhide All Folders", "win.unhide-folders")
     page.append_section(None, files)
     keeping = Gio.Menu()
