@@ -973,7 +973,9 @@ def _media_embed_html(resolved: Resolution, link: WikiLink, bases: dict) -> str:
     name = html.escape(resolved.path.rsplit("/", 1)[-1])
     if resolved.kind == "image":
         size = f' width="{link.size.split("x")[0]}"' if link.size else ""
-        return f'<img src="{uri}" alt="{name}"{size} />'
+        # The caption in `![[image.png|caption]]` is what the author wrote for it.
+        alt = html.escape(link.alias, quote=True) if link.alias else name
+        return f'<img src="{uri}" alt="{alt}"{size} />'
     if resolved.kind == "audio":
         return f'<audio controls src="{uri}"></audio>'
     if resolved.kind == "video":

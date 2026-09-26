@@ -60,6 +60,10 @@ class VaultTree:
         # one per row: a folder of a hundred notes was a hundred presses to get past.
         self.view.set_tab_behavior(Gtk.ListTabBehavior.ITEM)
         self.view.connect("activate", self._activated)
+        # The folder menu opens from the keyboard too: the Menu key or Shift+F10.
+        keys = Gtk.EventControllerKey()
+        keys.connect("key-pressed", self._on_key)
+        self.view.add_controller(keys)
 
     def set_vault(self, root: Path | None) -> None:
         """Points the tree at a vault root, or clears it, starting from a collapsed tree."""
@@ -176,6 +180,21 @@ class VaultTree:
 
         secondary.connect("pressed", secondary_pressed)
         expander.add_controller(secondary)
+
+    def _on_key(self, _controller, keyval, _keycode, state) -> bool:
+        wants_menu = keyval == Gdk.KEY_Menu or (
+            keyval == Gdk.KEY_F10 and state & Gdk.ModifierType.SHIFT_MASK
+        )
+        if not wants_menu or self._on_folder_menu is None:
+            return False
+        row_widget = self.view.get_focus_child()
+        expander = row_widget.get_first_child() if row_widget is not None else None
+        row = expander.get_list_row() if isinstance(expander, Gtk.TreeExpander) else None
+        node = row.get_item() if row is not None else None
+        if node is None or not node.is_dir:
+            return False
+        self._on_folder_menu(node, expander)
+        return True
 
     def _bind_row(self, _factory, item) -> None:
         row = item.get_item()
