@@ -26,13 +26,13 @@ Never used it? **[From nothing to reading a vault](docs/from-nothing.md)** takes
 - **Renders the whole vault, not just the markdown.** CommonMark/GFM plus the Obsidian layer — wikilinks with Obsidian's own resolution order, embeds, callouts, highlights, comments, tags, footnotes, frontmatter properties, syntax-highlighted code — and TeX math as native MathML, `.canvas` pages, kanban boards as boards, Excalidraw drawings as SVG, `.base` table views, and **Dataview queries and inline expressions evaluated in pure Python**, live against the index. Anything unsupported degrades to labeled source with the reason.
 - **Finds things like a launcher.** Fuzzy quick-open, relevance-ranked full-text search with `path:`/`file:`/`tag:` operators and highlighted hits, backlinks with context, a tag browser, the vault's bookmarks, a local graph, and hover previews.
 - **Stays current and starts warm.** The vault is watched — outside edits appear in seconds — and the index persists per vault, so a 10,000-note vault opens in about a second after its first build.
-- **Reads comfortably.** Fourteen themes — **Stone**, warm neutral greys with one deep pine accent, in light and dark, and the thirteen dark themes of the **Archive** family, from *Blood Record* to *Cold Iron* — and each note opens with a breadcrumb, title, and metadata line, linked mentions follow the content, and the outline is a real panel with a visible toggle (`F8`). Tabs, a mind-map view of any note, reading (zen) mode, typography controls, pinned notes, the vault's own CSS snippets (sanitized), folder hiding, and PDF export through a proper print stylesheet — plus an in-app PDF viewer when Poppler's bindings are present.
+- **Reads comfortably.** Fourteen themes: **Stone**, warm neutral greys with one deep pine accent, in light and dark, and the thirteen dark themes of the **Archive** family, from *Blood Record* to *Cold Iron*. Each note opens with its title and metadata line under a header bar that shows where it lives, linked mentions follow the content, and the outline is a real panel with a visible toggle (`F8`). Tabs, a mind-map view of any note, reading (zen) mode, typography controls, pinned notes, the vault's own CSS snippets (sanitized), folder hiding, and PDF export through a proper print stylesheet, plus an in-app PDF viewer when Poppler's bindings are present.
 
 ## What it will never do
 
 - **Write into the vault.** No caches, indexes, locks, conflict files, or thumbnails. All application state lives under `~/.config/solander/` and `~/.cache/solander/`.
 - **Execute anything from a note.** JavaScript is disabled in the rendering surface; raw HTML in notes is escaped, and the generated HTML passes through an allowlist sanitizer before display. Templater and `dataviewjs` render as labeled inert source.
-- **Touch the network.** Remote images, scripts, stylesheets, and fonts are blocked; `http`/`https` links open in your system browser, and every other URI scheme is refused.
+- **Touch the network.** Remote images, scripts, stylesheets, and fonts are blocked; `http`/`https` links open in your system browser, `mailto` links open your mail app, and every other URI scheme is refused.
 
 ## Install
 
@@ -145,7 +145,7 @@ One subtlety the launcher handles for you: AppArmor attaches the profile by inte
 ## Development
 
 ```bash
-make check    # ruff + the test suite — everything a commit has to pass
+make check    # ruff, the test suite, and the desktop entry and metainfo: everything a commit has to pass
 make test     # test suite only
 make run      # run from the working tree
 ```

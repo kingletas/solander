@@ -1132,7 +1132,7 @@ class ReaderWindow(Adw.ApplicationWindow):
     # -- opening things ----------------------------------------------------
 
     def open_path(self, path: Path) -> None:
-        """Opens a directory as a vault, or a note file via its parent directory."""
+        """Opens a directory as a vault, or a note file inside the vault that holds it."""
         path = path.expanduser().resolve()
         if path.is_dir():
             self._open_vault(path)
@@ -1711,7 +1711,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         }
 
     def _page_options(self) -> dict:
-        """Which note-context elements are switched on under View → Note Context."""
+        """Which note-context elements are switched on under Preferences → Note Context."""
         state = self.store.state
         return {
             "breadcrumb": state.show_breadcrumb,

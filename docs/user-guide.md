@@ -1,16 +1,16 @@
 # User guide
 
-Everything the reader does, and the exact boundaries of what it won't. Installation and first launch are in [getting started](getting-started.md). This guide is also available inside the app — press `F1`, or find it in the menu.
+Everything the reader does, and the exact boundaries of what it won't. Installation and first launch are in [getting started](getting-started.md). This guide is also available inside the app: press `F1`, or open it from the welcome page or the About dialog.
 
 The three promises frame every feature below: the vault is **never written**, note content is **never executed**, and the network is **never touched**.
 
 ## The window
 
-A full-height rail on the left — a deep sepia surface against the reading canvas, crowned with the vault's name — resizable by its divider, with six pages switched by the icons under the name:
+A full-height rail on the left, a shade deeper than the reading canvas and set off from it by a hairline, crowned with the vault's name and resizable by its divider, with six pages switched by the icons under the name:
 
 | Page | What it holds |
 |---|---|
-| **Files** | A collapsible Pinned & recent section (Note menu → Pin/Unpin Note), then the folder tree under its own label. Single click opens a note or expands a folder; middle-click or `Ctrl+click` opens a note in a new tab; right-click a folder hides it. |
+| **Files** | A collapsible Pinned & recent section (This note → Pin / Unpin Note), then the folder tree under its own label. Single click opens a note or expands a folder; middle-click or `Ctrl+click` opens a note in a new tab; right-click a folder to read it as a book or hide it. |
 | **Search** | Quick-open and full-text search (below). |
 | **Links** | For the current note: every note that links to it, each with the line of context around the mention, then its outgoing links with missing and ambiguous targets named. |
 | **Tags** | Every tag in the vault — inline and frontmatter — with counts and a filter box. Activating a tag runs a `tag:` search. |
@@ -19,13 +19,13 @@ A full-height rail on the left — a deep sepia surface against the reading canv
 
 Every panel has a visible switch: the sidebar toggles from the button at the far left of the header (or `F9`), and the **outline panel** — the current note's headings, docked on the right with its own close button — from the list button on the right (or `F8`). Both toggles remember their state.
 
- The header also carries back/forward (WebKit's real history), search, and a quiet lock icon: click it for the read-only reason (the app can't write by design, not by permission) and the next action — view raw source, open the note in your default editor, or reveal it in Files.
+The header also carries the open note's folder path, each folder a click into the file tree, then back/forward (WebKit's real history), search, and a quiet lock icon: click it for the read-only reason (the app can't write by design, not by permission) and the next action: view raw source, open the note in your default editor, or reveal it in Files.
 
 ## Opening things
 
-- `solander ~/vault` opens a folder; `solander note.md` opens a single file via its parent folder; bare `solander` restores the last session (toggleable in the menu).
+- `solander ~/vault` opens a folder; `solander note.md` opens a single note inside the vault that holds it, which is the nearest folder above it with an `.obsidian` directory, looking no higher than your home directory, or the note's own folder when there is none; bare `solander` restores the last session (Preferences → Restore Session on Launch).
 - A second launch hands its path to the running instance rather than racing it.
-- Drag a folder or file onto the window; recent vaults live under the folder button.
+- Drag a folder or file onto the window; recent vaults live under the open button in the header and on the welcome page.
 
 ## Navigation
 
@@ -33,32 +33,36 @@ Every panel has a visible switch: the sidebar toggles from the button at the far
 - **Hover previews**: rest the pointer on a wikilink for a moment and a popover shows the opening of the target, rendered through the same pipeline. The popover takes no input — clicks always land on the page.
 - **Tabs**: `Ctrl+T` new, `Ctrl+W` close (the last tab shows the welcome page instead of closing the window). Middle-click or `Ctrl+click` on tree notes and in-page wikilinks opens tabs; each tab keeps its own history and outline; open tabs restore with the session.
 - **Outline**: the panel on the right (`F8`) jumps to any heading of the current note.
+- **Links out of the vault**: `http` and `https` links open in your browser and `mailto` links in your mail app. A link with any other scheme does nothing.
 
 ## Search
 
-Two searches share the Search page:
+Two searches share the Search page. `Ctrl+P` and `Ctrl+Shift+F` both open it, and what you do in the box decides which one runs:
 
-- **As you type — fuzzy quick-open** over filenames (`Ctrl+P`). Subsequences match, word starts and filename hits rank higher, and an empty query lists your twenty most recent notes.
-- **On Enter — full-text search** (`Ctrl+Shift+F`), ranked by relevance with prefix matching (`ship` finds "Ships"). Opening a result highlights its matches in the note.
+- **As you type: fuzzy quick-open** over filenames. Subsequences match, word starts and filename hits rank higher, and an empty query lists your twenty most recent notes.
+- **On Enter: full-text search**, ranked by relevance with prefix matching (`ship` finds "Ships"). Opening a result highlights its matches in the note.
 
-Three operators narrow full-text queries, combinable with plain words:
+Middle-click, `Ctrl+click` or right-click a result to open it in a new tab.
+
+Three operators narrow full-text queries, combinable with plain words. Operators and terms are case-insensitive, and a note has to match every one of them:
 
 | Operator | Meaning |
 |---|---|
 | `path:journal` | The note's path contains the term |
 | `file:meeting` | The filename contains the term |
-| `tag:project` | The note carries the tag — nested children match, so `tag:project` finds `project/alpha` |
+| `tag:project` | The note carries the tag; nested children match, so `tag:project` finds `project/alpha` |
+
+Quotation marks are ignored, so there is no phrase search: `"harbour light"` finds notes with both words anywhere in them.
 
 ## The note page
 
 Every note opens with its context before its content:
 
-- **Breadcrumb** — the note's folder path above the title; clicking an ancestor reveals that folder in the file tree.
-- **Inline title** — the filename as a large serif title. When the note opens with an identical `#` heading, the body's copy yields, so the title appears exactly once.
+- **Inline title**: when the note opens with a `#` heading, that heading is the title and leaves the body, so it appears exactly once; otherwise the filename is. The note's folder path is not repeated on the page, because the header bar already shows it.
 - **Metadata line** — updated date, word count, an approximate read time on longer notes, and the note's frontmatter tags as clickable chips (a chip runs a `tag:` search).
 - **Linked mentions** — notes that link to the current one are listed after the content, collapsed, each with the line of context around the mention. The Links panel carries the full list either way.
 
-**Every one of these is a choice, not a fixture.** View → Note Context toggles Title & Breadcrumb, the Metadata Line, and Linked Mentions individually — persisted across sessions, applied to every open tab at once. The note's headings live in the outline panel (`F8`), which is a real panel with a real close button, not something printed into the page.
+**Every one of these is a choice, not a fixture.** Preferences → Note Context toggles the Note Title, the Metadata Line, and Linked Mentions individually, persisted across sessions and applied to every open tab at once. The note's headings live in the outline panel (`F8`), which is a real panel with a real close button, not something printed into the page.
 
 ## What renders
 
@@ -92,23 +96,25 @@ Right-click a folder of chapters — a manuscript's `Chapters/`, say — and cho
 
 ## Hidden folders
 
-Right-click a folder in the tree to hide it from the tree, quick-open, and search results. The toast offers Unhide; View → Unhide All Folders clears the reader's list for this vault. Two boundaries:
+Right-click a folder in the tree to hide it from the tree, quick-open, and search results. The toast offers Unhide; Preferences → Unhide All Folders clears the reader's list for this vault. Two boundaries:
 
 - Obsidian's own excluded-files setting (`userIgnoreFilters` in `.obsidian/app.json`) is honored read-only on top and isn't affected by Unhide All. It's honored the way Obsidian honors it: those folders leave the tree and quick-open, and in full-text search they rank behind everything else rather than disappearing — a note only an archive holds is still the answer when nothing else matches.
 - The Links, Tags, Graph panes and Dataview results stay complete: they answer explicit questions, and a query that silently omits rows would be lying.
 
 The hidden list is stored in the reader's config, never in the vault.
 
+Two more switches under Preferences decide what the tree lists. **Markdown Files Only**, on by default, lists notes, canvases and bases and leaves out everything else; turn it off to see images, PDFs and other attachments. **Show Hidden Files**, off by default, lists files and folders whose names start with a dot.
+
 ## Mind map
 
-`Ctrl+M` (or Note menu → View as Mind Map) lays the current note's headings and nested bullets out as a tree — colors by depth, heading nodes linking to their place in the note. `Ctrl+M` again, the link at the top of the map, or Back returns to the markdown.
+`Ctrl+M` (or This note → View as Mind Map) lays the current note's headings and nested bullets out as a tree, colored by depth, with heading nodes linking to their place in the note. `Ctrl+M` again, the link at the top of the map, or Back returns to the markdown.
 
 ## Reading comfort
 
 - **Reading mode**: `F11` removes every piece of chrome; `Esc` or `F11` restores.
 - **Typography** (menu): font (the default is a book serif; sans and mono are one click away), line width (narrow to full), line spacing (compact to relaxed) — persisted, applied everywhere.
-- **Appearance** (menu) → **Theme**, then **Mode**. **Stone** is the default — warm neutral greys with one deep pine accent, light by day and dark by night — and takes follow system, light, or dark. The **Archive** family is thirteen dark themes sharing one design language: a dark ground, bone text, an accent for what is important, and one hot colour held back for what actually matters — *Blood Record* (forensic archive), *Ember Archive* (dark academia), *Blackout* (classified terminal), *Corrosion* (industrial decay), *Bruise* (occult), *Drowned* (abyssal), *Sepulcher* (stone, where red is earned), *Cold Iron* (engineering and incident response), *Hazard* (containment facility), *Velvet Knife* (gothic luxury), *Ash* (a burned archive), *Null* (black box), and *Black Blood* (almost nothing, until something matters). Semantics hold across all of them: danger, warning, verified and information mean the same thing in each. None has a light mode, so choosing one greys the mode choice out rather than ignoring it; the mode you had comes back with Stone. Your choice is remembered. **Zoom**: `Ctrl` `+`/`-`/`0`.
-- **Vault CSS snippets**: the snippets your vault enables apply, reduced by a strict sanitizer (anything network-reaching or escaped is dropped). Pages carry the `markdown-preview-view` class and the note's `cssclasses`, so class-scoped snippets match. Toggle under View.
+- **Appearance** (menu) → **Mode**, then **Theme**, each theme shown as a swatch of its own colours. **Stone** is the default: warm neutral greys with one deep pine accent, light by day and dark by night, and it takes follow system, light, or dark. The **Archive** family is thirteen dark themes sharing one design language: a dark ground, bone text, an accent for what is important, and one hot colour held back for what actually matters: *Blood Record* (forensic archive), *Ember Archive* (dark academia), *Blackout* (classified terminal), *Corrosion* (industrial decay), *Bruise* (occult), *Drowned* (abyssal), *Sepulcher* (stone, where red is earned), *Cold Iron* (engineering and incident response), *Hazard* (containment facility), *Velvet Knife* (gothic luxury), *Ash* (a burned archive), *Null* (black box), and *Black Blood* (almost nothing, until something matters). Semantics hold across all of them: danger, warning, verified and information mean the same thing in each. None has a light mode, so choosing one greys the mode choice out rather than ignoring it; the mode you had comes back with Stone. Your choice is remembered. **Zoom**: `Ctrl` `+`/`-`/`0`, and `Ctrl+=` zooms in as well.
+- **Vault CSS snippets**: the snippets your vault enables apply, reduced by a strict sanitizer (anything network-reaching or escaped is dropped). Pages carry the `markdown-preview-view` class and the note's `cssclasses`, so class-scoped snippets match. Toggle under Preferences → Vault CSS Snippets.
 
 ## The sandbox
 
@@ -119,32 +125,35 @@ The hidden list is stored in the reader's config, never in the vault.
 
 - **Export as PDF** (`Ctrl+Shift+E`) prints the current rendered note through a print stylesheet: wide code and tables wrap instead of clipping, boxes are kept whole across page breaks, headings stay with their content, and the palette prints light. A target inside the vault is refused — the zero-write promise covers exports.
 - **Viewing PDFs**: with `gir1.2-poppler-0.18` installed, clicking a PDF opens an in-app viewer (fit-to-width, zoom, Open Externally, `Esc` closes). Without it, PDFs open in your system viewer.
-- **Raw source** (`Ctrl+U`) shows any note's markdown verbatim; Copy Markdown Source / Copy Vault Path / Copy as Wikilink live in the menu.
+- **Raw source** (`Ctrl+U`) shows any note's markdown verbatim; This note → Copy takes the Markdown source, the vault path, or a wikilink to the note.
 
 ## The live index
 
-The vault is watched while open: creations, edits, deletions, and renames re-index in the background after a two-second quiet period, refreshing the tree, search, link panels, and any visible Dataview results. The index persists per vault under `~/.cache/solander/` — cold builds are tens of seconds on a very large vault, warm launches about a second. The cache is derived data: corruption rebuilds it silently, and Clear Index Cache in the menu does so on demand. Expect it to cost disk roughly proportional to the vault's text.
+The vault is watched while open: creations, edits, deletions, and renames re-index in the background after a two-second quiet period, refreshing the tree, search, link panels, and any visible Dataview results. The index persists per vault under `~/.cache/solander/`. Cold builds are tens of seconds on a very large vault, warm launches about a second. The cache is derived data: corruption rebuilds it silently, and Preferences → Clear Index Cache does so on demand. Expect it to cost disk roughly proportional to the vault's text.
 
 ## Keyboard shortcuts
 
 | Keys | Action |
 |---|---|
-| `Ctrl+P` | Quick open |
-| `Ctrl+Shift+F` | Search the vault |
+| `Ctrl+P` or `Ctrl+Shift+F` | Search: names as you type, full text on Enter |
 | `Ctrl+F` | Find within the note |
 | `Ctrl+O` / `Ctrl+Shift+O` | Open file / vault folder |
 | `Alt+Left` / `Alt+Right` | Back / forward |
 | `Ctrl+T` / `Ctrl+W` | New tab / close tab |
-| Middle-click or `Ctrl+click` | Open note or link in a new tab |
+| Middle-click or `Ctrl+click` | Open a note, link or search result in a new tab |
+| Right-click a search result | Open it in a new tab |
 | `Ctrl+M` | Toggle the mind map |
 | `F11` / `Esc` | Reading mode in / out |
-| `N` / `P`, arrows, Space | Turn the page (book mode) |
+| `N`, Space, Right, Down, PageDown | Book: turn forward |
+| `P`, Left, Up, PageUp | Book: turn back |
+| `Esc` | Book: close it |
 | `F8` | Toggle the outline panel |
 | `F9` | Toggle the sidebar |
-| `Ctrl+R` | Reload |
+| `Ctrl+R` or `F5` | Reload |
 | `Ctrl+U` | Raw source view |
 | `Ctrl+Shift+E` | Export as PDF |
-| `Ctrl` `+` / `-` / `0` | Zoom in / out / reset |
+| `Ctrl` `+` or `Ctrl+=` / `Ctrl` `-` / `Ctrl` `0` | Zoom in / out / reset |
+| `F1` | This guide |
 | `Ctrl+?` | Shortcut list |
 
 ## Configuration reference
@@ -175,4 +184,4 @@ State lives outside every vault: `~/.config/solander/` (session, preferences, hi
 - **A mermaid block shows its source with a reason** — the diagram kind is outside the supported three (flowchart, sequence, pie), or a line couldn't be read; the label says which.
 - **A CSS snippet has no visible effect** — snippets written against Obsidian's own interface (sidebars, tabs, editor) target elements that don't exist here; note-content snippets (callouts, checkboxes, `cssclasses`-scoped styling) are the ones that carry over. Declarations using `url()` are removed by the sanitizer regardless.
 - **Search misses a brand-new note** — wait a moment; the debounce is two seconds plus the re-index. `Ctrl+R` forces it.
-- **The index seems wrong** — Clear Index Cache in the menu rebuilds from scratch.
+- **The index seems wrong**: Preferences → Clear Index Cache rebuilds from scratch.
