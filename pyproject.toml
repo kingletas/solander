@@ -60,6 +60,8 @@ ignore = [
 # S603: this one runs packaging/version.sh, which is in this repository. The
 # point of the test is that the real script is what answers.
 "tests/test_versioning.py" = ["S603"]
+# S603: the audit starts this app on a vault it has just written to its own scratch directory.
+"scripts/a11y-audit.py" = ["S603"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

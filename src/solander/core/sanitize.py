@@ -8,7 +8,7 @@ from io import StringIO
 ALLOWED_TAGS = {
     "a", "aside", "audio", "blockquote", "br", "caption", "code", "dd", "del", "details",
     "div", "dl", "dt", "em", "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6",
-    "hr", "img", "input", "li", "mark", "ol", "p", "pre", "s", "section", "source", "span",
+    "hr", "img", "input", "label", "li", "mark", "ol", "p", "pre", "s", "section", "source", "span",
     "strong", "sub", "summary", "sup", "table", "tbody", "td", "th", "thead", "tr", "ul",
     "video",
 }

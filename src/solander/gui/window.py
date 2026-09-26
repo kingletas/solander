@@ -82,6 +82,21 @@ SCROLL_READ_TIMEOUT_MS = 500
 """How long closing waits for the tabs to say where they were before it gives up."""
 
 
+def _name(widget, label: str, description: str = "") -> None:
+    """Gives a widget the name a screen reader announces, where nothing visible supplies one.
+
+    A placeholder is not a name: it disappears as soon as someone types. An entry
+    passes its typing to an inner text widget, which is what a screen reader
+    lands on, so that is named too.
+    """
+    widget.update_property([Gtk.AccessibleProperty.LABEL], [label])
+    if description:
+        widget.update_property([Gtk.AccessibleProperty.DESCRIPTION], [description])
+    delegate = widget.get_delegate() if isinstance(widget, Gtk.Editable) else None
+    if delegate is not None:
+        delegate.update_property([Gtk.AccessibleProperty.LABEL], [label])
+
+
 def _not_under(hits, hidden):
     """The hits that sit outside every one of these folders."""
     return [hit for hit in hits if not hidden_under(hit.path, hidden)]
@@ -278,6 +293,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.quick_expander.set_label_widget(self.quick_heading)
         self.quick_expander.set_child(self.quick_list)
         self.quick_expander.connect("notify::expanded", self._on_quick_expanded)
+        # Without its own name the expander is read as its heading and first row run together.
+        _name(self.quick_expander, "Pinned and recent notes")
         files_box.append(self.quick_expander)
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
         separator.set_margin_top(6)
@@ -294,6 +311,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.search_entry = Gtk.SearchEntry(
             placeholder_text="Search notes (Ctrl+P) — path:, file:, tag:"
         )
+        _name(self.search_entry, "Search notes")
         self.search_entry.set_margin_start(6)
         self.search_entry.set_margin_end(6)
         self.search_entry.connect("search-changed", self._on_search_typed)
@@ -319,6 +337,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         tags_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         tags_box.set_margin_top(6)
         self.tag_filter = Gtk.SearchEntry(placeholder_text="Filter tags…")
+        _name(self.tag_filter, "Filter tags")
         self.tag_filter.set_margin_start(6)
         self.tag_filter.set_margin_end(6)
         self.tag_filter.connect("search-changed", self._refresh_tags_panel)
@@ -393,12 +412,15 @@ class ReaderWindow(Adw.ApplicationWindow):
         label.add_css_class("heading")
         label.set_margin_top(8)
         row = Gtk.ListBoxRow(child=label, activatable=False, selectable=False)
+        _name(row, text)
         return row
 
     def _panel_note(self, text: str) -> Gtk.ListBoxRow:
         label = Gtk.Label(label=text, xalign=0.0, wrap=True)
         label.add_css_class("dim-label")
-        return Gtk.ListBoxRow(child=label, activatable=False, selectable=False)
+        row = Gtk.ListBoxRow(child=label, activatable=False, selectable=False)
+        _name(row, text)
+        return row
 
     def _panel_row(
         self, title: str, caption: str = "", snippet: str = "", note_path: str = ""
@@ -417,6 +439,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         box.set_margin_top(4)
         box.set_margin_bottom(4)
         row = Gtk.ListBoxRow(child=box)
+        _name(row, f"{title}, {caption}" if caption else title, snippet)
         row.note_path = note_path
         if not note_path:
             row.set_activatable(False)
@@ -488,6 +511,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             box.set_margin_top(3)
             box.set_margin_bottom(3)
             row = Gtk.ListBoxRow(child=box)
+            _name(row, f"#{display}, {count} note{'' if count == 1 else 's'}")
             row.tag_value = display
             self.tags_list.append(row)
             shown += 1
@@ -574,6 +598,8 @@ class ReaderWindow(Adw.ApplicationWindow):
             box.set_margin_top(2)
             box.set_margin_bottom(2)
             row = Gtk.ListBoxRow(child=box)
+            kind = "Pinned" if icon == "view-pin-symbolic" else "Recent"
+            _name(row, f"{kind}: {name}", rel)
             row.note_path = rel
             row.set_tooltip_text(rel)
             self.quick_list.append(row)
@@ -583,6 +609,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.tab_bar = Adw.TabBar(view=self.tab_view, autohide=True)
         self.find_bar = Gtk.SearchBar()
         self.find_entry = Gtk.SearchEntry(placeholder_text="Find in note…")
+        _name(self.find_entry, "Find in note")
         self.find_entry.connect("search-changed", self._on_find_changed)
         self.find_entry.connect("activate", self._on_find_next)
         self.find_entry.connect("stop-search", lambda *_: self.find_bar.set_search_mode(False))
@@ -2118,12 +2145,14 @@ class ReaderWindow(Adw.ApplicationWindow):
             label.set_margin_bottom(2)
             label.add_css_class(f"outline-l{min(heading.level, 3)}")
             row = Gtk.ListBoxRow(child=label)
+            _name(row, heading.text)
             row.anchor = heading.anchor
             listbox.append(row)
         if not outline:
             placeholder = Gtk.Label(label="No headings in this note", xalign=0.0, wrap=True)
             placeholder.add_css_class("dim-label")
             row = Gtk.ListBoxRow(child=placeholder, activatable=False, selectable=False)
+            _name(row, "No headings in this note")
             listbox.append(row)
 
     def _on_outline_row(self, _list, row) -> None:
@@ -2223,6 +2252,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         box.set_margin_top(4)
         box.set_margin_bottom(4)
         row = Gtk.ListBoxRow(child=box)
+        _name(row, f"{name}, {path}", snippet)
         row.note_path = path
         self._open_in_new_tab_on(row, path)
         self.search_results.append(row)

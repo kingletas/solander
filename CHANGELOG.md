@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### A screen reader can name what it lands on
+
+- **Sidebar rows, search boxes and task checkboxes were announced by their role alone.** A result, a link, a bookmark, a tag or a heading in the sidebar was read as "list item", the three search boxes as a blank text field once their placeholder went, a checkbox in a note as "check box, not checked" with no task, and the pinned and recent list as its heading and first row run together. Each now has a name: a note row its title and path with the snippet as its description, a tag its count, a quick-list row whether it is pinned or recent, and a checkbox the text of its task. `make a11y` reads the running window over AT-SPI, the bus Orca reads, opens each sidebar panel as assistive technology would, and fails on any control on screen with no name or any button, tab or entry that cannot take keyboard focus. It does not press keys, so the order Tab takes is still unchecked.
+
 ### The file tree sorts by date or type
 
 - **The tree listed files by name and nothing else.** Preferences → Sort Files By now offers **Newest First**, which puts the note you last changed at the top of its folder, and **Type**, which groups notes, canvases, bases and attachments. Folders stay first and in name order whatever the choice, the tree keeps your expanded folders when it changes, and the choice is remembered.
