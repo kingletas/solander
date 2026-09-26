@@ -2,6 +2,7 @@
 
 import html
 import threading
+from contextlib import suppress
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
 
@@ -28,7 +29,7 @@ from ..core.indexing import sync_indexes
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
 from ..core.resolver import resolve_note
 from ..core.search import VaultSearch, demote, parse_query, search_filenames
-from ..core.session import SessionStore, adopt_former_state, shown_path
+from ..core.session import SessionStore, adopt_former_state, reading_fraction, shown_path
 from ..core.store import open_index_store
 from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
 from ..core.vault import Vault, file_kind, hidden_under, vault_holding
@@ -62,6 +63,21 @@ MAX_AMBIGUOUS_CHOICES = 8
 MAX_PANEL_ROWS = 200
 HOVER_PREVIEW_DELAY_MS = 600
 OUTLINE_MIN_WIDTH = 200
+
+SCROLL_WORLD = "solander"
+"""The script world the window reads and sets a page's scroll position in.
+
+The page's own scripts stay off; a world of the window's own sees the same
+document without giving anything in the note a way to run.
+"""
+
+READ_SCROLL = (
+    "(() => { const room = document.documentElement.scrollHeight - window.innerHeight;"
+    " return String(room > 0 ? window.scrollY / room : 0); })()"
+)
+
+SCROLL_READ_TIMEOUT_MS = 500
+"""How long closing waits for the tabs to say where they were before it gives up."""
 
 
 def _not_under(hits, hidden):
@@ -153,6 +169,8 @@ class ReaderWindow(Adw.ApplicationWindow):
     def _build_ui(self) -> None:
         self._readers: dict = {}
         self._first_reader = None
+        self._pending_scroll: dict[str, float] = {}
+        self._scroll_read = False
         self.tab_view = Adw.TabView()
         self.tab_view.connect("notify::selected-page", lambda *_: self._sync_chrome())
         self.tab_view.connect("close-page", self._on_close_page)
@@ -1224,6 +1242,11 @@ class ReaderWindow(Adw.ApplicationWindow):
         else:
             self.reader.load_note(vault.notes[0])
         if restore_tabs:
+            self._pending_scroll = {
+                rel: fraction
+                for rel, value in self.store.state.scroll_positions.items()
+                if (fraction := reading_fraction(value))
+            }
             current = self.store.state.last_note
             for rel in self.store.state.open_tabs:
                 if rel != current and vault.has_file(rel):
@@ -1947,6 +1970,7 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     def _on_load_changed(self, webview, event) -> None:
         if event == WebKit.LoadEvent.FINISHED:
+            self._restore_scroll(webview)
             if self._print_after_load and self.reader.webview is webview:
                 GLib.timeout_add(120, lambda: (self._maybe_print_loaded_chapter(), False)[1])
             return
@@ -2593,7 +2617,70 @@ class ReaderWindow(Adw.ApplicationWindow):
             action.connect("activate", open_recent)
             self.add_action(action)
 
+    def _restore_scroll(self, webview) -> None:
+        """Puts a note restored from the last session back where it was read to."""
+        reader = self._readers.get(webview)
+        if reader is None or not reader.current_note:
+            return
+        fraction = self._pending_scroll.pop(reader.current_note, None)
+        if fraction is None:
+            return
+        script = (
+            "window.scrollTo(0, "
+            f"{fraction:.5f} * (document.documentElement.scrollHeight - window.innerHeight))"
+        )
+        webview.evaluate_javascript(script, -1, SCROLL_WORLD, None, None, None)
+
+    def _read_scroll_positions(self, done) -> None:
+        """Asks every tab showing a note how far down it is, then calls `done` once.
+
+        A tab that does not answer within the timeout is left out rather than
+        holding the window open.
+        """
+        readers = [
+            reader
+            for reader in self._readers.values()
+            if reader.current_note
+            and urlparse(reader.webview.get_uri() or "").path.startswith("/note/")
+        ]
+        positions: dict[str, float] = {}
+        waiting = {"left": len(readers), "done": False}
+
+        def finish() -> bool:
+            if not waiting["done"]:
+                waiting["done"] = True
+                done(positions)
+            return False
+
+        def answered(webview, result, rel) -> None:
+            with suppress(GLib.Error):
+                fraction = reading_fraction(webview.evaluate_javascript_finish(result).to_string())
+                if fraction is not None:
+                    positions[rel] = fraction
+            waiting["left"] -= 1
+            if waiting["left"] <= 0:
+                finish()
+
+        if not readers:
+            finish()
+            return
+        for reader in readers:
+            reader.webview.evaluate_javascript(
+                READ_SCROLL, -1, SCROLL_WORLD, None, None, answered, reader.current_note
+            )
+        GLib.timeout_add(SCROLL_READ_TIMEOUT_MS, finish)
+
     def _on_close(self, _window) -> bool:
+        if not self._scroll_read:
+            # Reading a page is asynchronous, so the first close waits for the
+            # answers and then closes the window again.
+            def close_with(positions: dict[str, float]) -> None:
+                self.store.state.scroll_positions = positions
+                self._scroll_read = True
+                GLib.idle_add(lambda: (self.close(), False)[1])
+
+            self._read_scroll_positions(close_with)
+            return True
         if self.vault_monitor is not None:
             self.vault_monitor.cancel()
         if self.index_store is not None:

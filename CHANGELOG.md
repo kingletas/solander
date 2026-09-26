@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### A restored session opens each note where you left it
+
+- **Reopening Solander put every note back at the top.** The session remembered the vault, the note and the open tabs, but not how far down each one you had read. Closing the window now records, for every open note, how far down it was, as a share of the note's length rather than a pixel count, so a window of another size or zoom still lands on the same passage. The window reads that position through a script world of its own; the note's own scripts stay off.
+
 ### A link to a block lands on the block
 
 - **`[[Note#^id]]` opens the note at the block, not at the top.** The link dropped the block id, and the page removed the `^id` marker without giving the block anything to scroll to, so every block link opened at the first line and `[[#^id]]` pointed at nothing. A block now carries its id: a paragraph or list item that ends in `^id`, and a table, list, quote or callout followed by a line holding only `^id`. That lone line used to show on the page as text; it is hidden now. A heading keeps its own anchor, and a note embedded in another gives its blocks no id, so no id appears twice on a page.
