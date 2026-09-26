@@ -382,11 +382,41 @@ def run_checks(app):
                     check("the linked block is on the page", answer != "none")
                     scrolled = answer == "true,true"
                     check("the note opens scrolled to the block, not at the top", scrolled)
+                    window._read_scroll_positions(check_scroll_read)
+
+                webview = window.reader.webview
+                webview.evaluate_javascript(script, -1, "smoke", None, None, placed)
+                return False
+
+            def check_scroll_read(positions) -> None:
+                where = positions.get("Blocks.md", 0.0)
+                print(f"   Blocks.md read at {where:.3f} of the way down")
+                check("closing would remember how far down a note was read", where > 0.5)
+                window._pending_scroll = {"Blocks.md": 0.5}
+                window.reader.load_note("A.md")
+                GLib.timeout_add(1000, reopen_blocks)
+
+            def reopen_blocks():
+                window.reader.load_note("Blocks.md")
+                GLib.timeout_add(1500, measure_restore)
+                return False
+
+            def measure_restore():
+                script = (
+                    "(() => { const room = document.documentElement.scrollHeight"
+                    " - window.innerHeight; return String(window.scrollY / room); })()"
+                )
+
+                def restored(webview, result) -> None:
+                    where = float(webview.evaluate_javascript_finish(result).to_string())
+                    print(f"   Blocks.md restored to {where:.3f} of the way down")
+                    check("a restored note opens where it was read to", abs(where - 0.5) < 0.05)
+                    check("a restored position is used once", window._pending_scroll == {})
                     window.reader.load_note("A.md")
                     GLib.timeout_add(1000, back_to_a)
 
                 webview = window.reader.webview
-                webview.evaluate_javascript(script, -1, "smoke", None, None, placed)
+                webview.evaluate_javascript(script, -1, "smoke", None, None, restored)
                 return False
 
             def back_to_a():
@@ -641,9 +671,13 @@ def run_checks(app):
             toggle = window.lookup_action("toggle-source")
             window._on_toggle_source(toggle, GLib.Variant.new_boolean(True))
             def done() -> bool:
-                """The last callback in the chain: the run got all the way here."""
+                """The last callback in the chain: the run got all the way here.
+
+                It closes the window as a person would, so the run also covers
+                the session being saved on the way out.
+                """
                 finished.append(True)
-                app.quit()
+                window.close()
                 return False
 
             def check_board_width() -> bool:
@@ -808,6 +842,21 @@ def check_setup_window() -> None:
         process.wait(timeout=5)
 
 
+def check_saved_session() -> None:
+    """Closing the window wrote how far down each open note was read."""
+    import json
+    import os
+
+    config = Path(os.environ.get("XDG_CONFIG_HOME", "")) / "solander" / "session.json"
+    try:
+        saved = json.loads(config.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        saved = {}
+    positions = saved.get("scroll_positions")
+    print(f"   saved scroll positions: {len(positions or {})}")
+    check("closing the window saves each open note's reading position", bool(positions))
+
+
 def main() -> int:
     write_extra_fixtures()
     sys.excepthook = record_crash
@@ -853,6 +902,7 @@ def main() -> int:
     # A chain that stopped early leaves every check after it unwritten, which is
     # indistinguishable from a run that had less to do.
     check("the run reached its last check", bool(finished))
+    check_saved_session()
     print("RESULT:", "FAIL" if failures else "PASS")
     return 1 if failures else 0
 

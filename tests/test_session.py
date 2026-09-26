@@ -1,6 +1,6 @@
 """Session persistence lives outside the vault and survives corruption."""
 
-from solander.core.session import SessionStore
+from solander.core.session import SessionStore, reading_fraction
 
 
 def test_state_round_trips(tmp_path):
@@ -83,3 +83,22 @@ def test_adoption_never_overwrites_state_that_already_exists(tmp_path):
     store = SessionStore(current)
     assert store.state.last_vault == "/current"
     assert former.is_dir()
+
+
+def test_scroll_positions_round_trip(tmp_path):
+    store = SessionStore(tmp_path / "conf")
+    store.state.scroll_positions = {"Projects/Alpha.md": 0.42}
+    store.save()
+    assert SessionStore(tmp_path / "conf").state.scroll_positions == {"Projects/Alpha.md": 0.42}
+
+
+def test_a_reading_fraction_is_a_number_between_top_and_bottom():
+    assert reading_fraction("0.5") == 0.5
+    assert reading_fraction(0.25) == 0.25
+    assert reading_fraction("1.7") == 1.0
+    assert reading_fraction("-3") == 0.0
+
+
+def test_anything_that_is_not_a_position_is_no_position():
+    for value in ("", "none", "nan", "inf", None, [], {"y": 1}):
+        assert reading_fraction(value) is None

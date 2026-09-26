@@ -1,6 +1,7 @@
 """Application state stored outside every vault: recent vaults, session, preferences."""
 
 import json
+import math
 import os
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field
@@ -58,6 +59,21 @@ def adopt_former_state(directory: Path) -> Path:
     return directory
 
 
+def reading_fraction(value) -> float | None:
+    """How far down a note someone was, from 0 at the top to 1 at the end, or None.
+
+    A fraction rather than a pixel offset, so a note reopened in a window of another
+    width or zoom still opens near the same passage.
+    """
+    try:
+        fraction = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(fraction):
+        return None
+    return min(max(fraction, 0.0), 1.0)
+
+
 def default_state_dir() -> Path:
     """Returns the XDG config directory the reader owns; never a path inside a vault."""
     base = os.environ.get("XDG_CONFIG_HOME", "") or str(Path.home() / ".config")
@@ -89,6 +105,7 @@ class SessionState:
     hidden_folders: dict[str, list[str]] = field(default_factory=dict)
     pinned_notes: dict[str, list[str]] = field(default_factory=dict)
     book_progress: dict[str, str] = field(default_factory=dict)
+    scroll_positions: dict[str, float] = field(default_factory=dict)
     reader_font: str = "default"
     line_width: str = "normal"
     line_spacing: str = "normal"
