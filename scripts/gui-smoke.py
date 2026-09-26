@@ -152,6 +152,21 @@ def run_checks(app):
                 "Folder" in rows and rows["Folder"].get_expanded(),
             )
             check("the expanded folder still lists its note", "Folder/Inside.md" in rows)
+            sort = window.lookup_action("tree-sort")
+            sort.activate(GLib.Variant.new_string("modified"))
+            items = [row.get_item() for row in tree_rows()]
+            top_files = [item.rel for item in items if not item.is_dir and "/" not in item.rel]
+            newest = top_files[:1] == ["Live.md"]
+            check("newest first puts the note just written at the top", newest)
+            resorted = {row.get_item().rel: row for row in tree_rows()}
+            check(
+                "changing the sort leaves an expanded folder expanded",
+                "Folder" in resorted and resorted["Folder"].get_expanded(),
+            )
+            sort.activate(GLib.Variant.new_string("name"))
+            items = [row.get_item() for row in tree_rows()]
+            top_files = [item.rel for item in items if not item.is_dir and "/" not in item.rel]
+            check("name order is back", top_files == sorted(top_files, key=str.casefold))
             graph = window.graph
             mentions = graph.backlinks.get("Second Note.md", []) if graph else []
             check("monitor picked up the new note", any(m.source == "Live.md" for m in mentions))

@@ -103,7 +103,7 @@ Right-click a folder in the tree to hide it from the tree, quick-open, and searc
 
 The hidden list is stored in the reader's config, never in the vault.
 
-Two more switches under Preferences decide what the tree lists. **Markdown Files Only**, on by default, lists notes, canvases and bases and leaves out everything else; turn it off to see images, PDFs and other attachments. **Show Hidden Files**, off by default, lists files and folders whose names start with a dot.
+Two more switches under Preferences decide what the tree lists. **Markdown Files Only**, on by default, lists notes, canvases and bases and leaves out everything else; turn it off to see images, PDFs and other attachments. **Show Hidden Files**, off by default, lists files and folders whose names start with a dot. **Sort Files By** orders each folder's files by **Name**, **Newest First** or **Type**; folders always come first, by name, and the choice is remembered.
 
 ## Mind map
 

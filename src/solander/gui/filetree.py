@@ -9,6 +9,7 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, Gio, GObject, Gtk
 
 from ..core.listdiff import splices
+from ..core.treeorder import Entry, tree_order
 from ..core.vault import NOTE_EXTENSIONS
 
 
@@ -37,6 +38,7 @@ class VaultTree:
         self.root: Path | None = None
         self.show_hidden = False
         self.markdown_only = True
+        self.sort = "name"
         self.hidden_folders: set[str] = set()
         self._on_activate = on_activate
         self._on_open_new_tab = on_open_new_tab
@@ -85,10 +87,9 @@ class VaultTree:
 
     def _list_directory(self, rel: str) -> list[TreeNode]:
         directory = self.root / rel if rel else self.root
-        directories: list[TreeNode] = []
-        files: list[TreeNode] = []
+        listed: list[Entry] = []
         try:
-            entries = sorted(os.scandir(directory), key=lambda e: e.name.casefold())
+            entries = list(os.scandir(directory))
         except OSError:
             return []
         for entry in entries:
@@ -98,14 +99,26 @@ class VaultTree:
             if entry.is_dir(follow_symlinks=False):
                 if child_rel in self.hidden_folders:
                     continue
-                directories.append(TreeNode(self.root, child_rel, True))
+                listed.append(Entry(entry.name, True))
             elif entry.is_file(follow_symlinks=False):
                 name = entry.name.casefold()
                 readable = name.endswith(NOTE_EXTENSIONS) or name.endswith((".canvas", ".base"))
                 if self.markdown_only and not readable:
                     continue
-                files.append(TreeNode(self.root, child_rel, False))
-        return directories + files
+                listed.append(Entry(entry.name, False, self._mtime(entry)))
+        return [
+            TreeNode(self.root, f"{rel}/{item.name}" if rel else item.name, item.is_dir)
+            for item in tree_order(listed, self.sort)
+        ]
+
+    def _mtime(self, entry) -> float:
+        """A file's modified time, read only when the tree is sorted by it."""
+        if self.sort != "modified":
+            return 0.0
+        try:
+            return entry.stat(follow_symlinks=False).st_mtime
+        except OSError:
+            return 0.0
 
     def _children(self, node: TreeNode):
         if not node.is_dir:
