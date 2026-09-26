@@ -64,8 +64,13 @@ class VaultSearch:
         parsed = parse_query(query)
         if parsed.empty:
             return []
-        if parsed.words:
-            candidates = self.store.search_body(list(parsed.words), MAX_RESULTS * 5)
+        filtered = bool(parsed.paths or parsed.files or parsed.tags)
+        if parsed.words and not filtered:
+            candidates = self.store.search_body(list(parsed.words), MAX_RESULTS)
+        elif parsed.words:
+            # Filters run outside the index, so every match is filtered first and only the
+            # notes kept are given snippets; a cap before the filter would lose what it wants.
+            candidates = [(rel, "") for rel in self.store.match_rels(list(parsed.words))]
         else:
             candidates = [(rel, "") for rel in self.store.all_rels()]
         hits: list[SearchHit] = []
@@ -81,6 +86,9 @@ class VaultSearch:
             hits.append(SearchHit(path=rel, snippet=snippet))
             if len(hits) >= MAX_RESULTS:
                 break
+        if parsed.words and filtered:
+            snippets = self.store.snippets_for(list(parsed.words), [hit.path for hit in hits])
+            hits = [SearchHit(path=hit.path, snippet=snippets.get(hit.path, "")) for hit in hits]
         return hits
 
 
@@ -113,4 +121,6 @@ def _tags_match(terms: tuple[str, ...], tags: set[str]) -> bool:
 
 
 def _fold(text: str) -> str:
-    return unicodedata.normalize("NFC", text).casefold()
+    """Case and accents removed, as the index removes them, so filters match the same way."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(char for char in decomposed if not unicodedata.combining(char)).casefold()
