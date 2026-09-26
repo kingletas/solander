@@ -12,8 +12,6 @@ over a literal one.
 import unicodedata
 from dataclasses import dataclass
 
-from .vault import NOTE_EXTENSIONS
-
 # How a match was made, best first. The class decides the order; the score only
 # separates matches of the same class.
 WORD_IN_NAME = 0
@@ -31,6 +29,9 @@ BOUNDARY_BONUS = 10
 NAME_START_BONUS = 25
 NAME_MATCH_BONUS = 8
 _BOUNDARY_CHARS = " -_./([{"
+# A note's own extension, which says nothing about which note is meant. Kept here rather than
+# imported, so this module stays identical in every app that carries it.
+_NOTE_EXTENSIONS = (".md", ".markdown")
 
 
 @dataclass(frozen=True)
@@ -135,7 +136,7 @@ def _fold(text: str) -> str:
     """Case, accents and a note's own extension removed, so none of them decides a match."""
     decomposed = unicodedata.normalize("NFKD", text)
     folded = "".join(char for char in decomposed if not unicodedata.combining(char)).casefold()
-    for extension in NOTE_EXTENSIONS:
+    for extension in _NOTE_EXTENSIONS:
         if folded.endswith(extension):
             return folded[: -len(extension)]
     return folded
