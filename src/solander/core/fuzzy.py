@@ -1,6 +1,6 @@
 """Fuzzy filename matching for quick-open: matches ranked by kind, then by score.
 
-Scoring alone put `Brie Moffett` above `order-fulfilment-executive-brief` for the
+Scoring alone put `Brielle Oakfield` above `lighthouse-survey-executive-brief` for the
 query `brief`, because four letters landing consecutively at the start of a name
 outscored the same five letters landing whole, thirty characters in. No weighting
 fixes that: a run of the right letters in the wrong word is a different *kind* of

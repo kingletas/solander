@@ -1,4 +1,4 @@
-"""Pure-Python rendering for the Mermaid diagrams this vault actually writes.
+"""Pure-Python rendering for the Mermaid diagrams real vaults actually write.
 
 Flowcharts, sequence diagrams, and pies cover ~98% of the corpus; anything else
 raises MermaidUnsupported and renders as labeled source. Nothing here executes

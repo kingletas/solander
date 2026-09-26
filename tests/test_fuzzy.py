@@ -44,11 +44,11 @@ def test_empty_query_matches_nothing():
 
 
 def test_a_word_in_the_name_beats_the_same_letters_scattered():
-    """`brief` put `Brie Moffett` above `…-executive-brief` until matches were classed."""
+    """`brief` put `Brielle Oakfield` above `…-executive-brief` until matches were classed."""
     paths = [
-        "People/Brie Moffett.md",
-        "Personal/Bloodborne Advice for Soulsborne Veterans.md",
-        "Briefs/order-fulfilment-and-demand-executive-brief.md",
+        "People/Brielle Oakfield.md",
+        "Kitchen/Bread Rising Times for Beginners.md",
+        "Briefs/lighthouse-survey-and-keeper-executive-brief.md",
     ]
     ranked = [match.path for match in fuzzy_filenames(paths, "brief")]
     assert ranked[0].endswith("executive-brief.md")
@@ -57,9 +57,9 @@ def test_a_word_in_the_name_beats_the_same_letters_scattered():
 def test_a_date_in_a_filename_finds_the_note_named_after_it():
     """Every note mentioning 2026-09-04 matched `26904` as a subsequence, and outscored it."""
     paths = [
-        "Features/2026-09-04-web-and-portable.md",
-        "Features/2026-09-04-reading-companion.md",
-        "Journal/2026/09/26904-notes.md",
+        "Log/2026-09-04-lamp-trimmed.md",
+        "Log/2026-09-04-tide-table.md",
+        "Log/2026/09/26904-notes.md",
     ]
     assert fuzzy_filenames(paths, "26904")[0].path.endswith("26904-notes.md")
 
@@ -68,7 +68,7 @@ def test_how_a_match_was_made_is_what_orders_it():
     whole = "notes/executive-brief.md"
     inside = "notes/briefing.md"
     folder = "brief/notes/something.md"
-    scattered = "notes/Brie Moffett.md"
+    scattered = "notes/Brielle Oakfield.md"
     assert match_kind("brief", whole) == WORD_IN_NAME
     assert match_kind("brief", inside) == INSIDE_NAME
     assert match_kind("brief", folder) == INSIDE_PATH
