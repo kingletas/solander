@@ -133,6 +133,8 @@ The vault is watched while open: creations, edits, deletions, and renames re-ind
 
 ## Keyboard shortcuts
 
+Everything can be reached without a pointer. `Tab` moves between the sidebar's panel tabs, the lists, the header buttons and the page, and comes back round; inside the file tree, the arrow keys move between rows, and `Enter` opens a note or opens and closes a folder. The whole tree is a single `Tab` stop, however many notes it lists.
+
 | Keys | Action |
 |---|---|
 | `Ctrl+P` or `Ctrl+Shift+F` | Search: names as you type, full text on Enter |

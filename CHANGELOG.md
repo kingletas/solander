@@ -6,6 +6,10 @@
 
 - **Large Text made the menus bigger and left the note as it was.** GNOME's text scaling reaches an application only as GTK's font DPI, which WebKit does not read, so the reading page stayed at its standard size. The page now sizes its type by that DPI, and follows it when it changes while the window is open: at a scaling of 1.5, measured in the running window, the page's base size went from 16 to 24 pixels. Zoom still works on top of it, and an exported PDF keeps the standard size whatever the screen was set to.
 
+### Tab gets past the file tree
+
+- **Every row of the file tree was its own stop for `Tab`.** In a vault with a hundred notes at the top level, reaching the header or the page from the sidebar took a hundred presses. The tree is now one stop, with the arrow keys moving inside it, as a list is everywhere else on the desktop. The smoke run walks the whole `Tab` cycle from the page and back, the way the key does, and checks that it reaches every panel tab, the page and the tree once: 23 stops, where the old tree alone added 20 on the test vault.
+
 ### A screen reader can name what it lands on
 
 - **Sidebar rows, search boxes and task checkboxes were announced by their role alone.** A result, a link, a bookmark, a tag or a heading in the sidebar was read as "list item", the three search boxes as a blank text field once their placeholder went, a checkbox in a note as "check box, not checked" with no task, and the pinned and recent list as its heading and first row run together. Each now has a name: a note row its title and path with the snippet as its description, a tag its count, a quick-list row whether it is pinned or recent, and a checkbox the text of its task. `make a11y` reads the running window over AT-SPI, the bus Orca reads, opens each sidebar panel as assistive technology would, and fails on any control on screen with no name or any button, tab or entry that cannot take keyboard focus. It does not press keys, so the order Tab takes is still unchecked.
