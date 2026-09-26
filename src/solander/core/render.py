@@ -56,7 +56,8 @@ MAX_FOOTER_BACKLINKS = 50
 MAX_HEADER_TAGS = 5
 READING_WORDS_PER_MINUTE = 220
 
-_BLOCK_ID_TAIL = re.compile(r"[ \t]+\^[A-Za-z0-9-]+[ \t]*$")
+# A block id closes a block's text, or stands alone on the line after the block.
+_BLOCK_ID = re.compile(r"(?:^|\s)\^([A-Za-z0-9-]+)[ \t]*$")
 _FENCE_LINE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 
 
@@ -130,23 +131,61 @@ def vault_uri(rel: str, bases: dict | None = None) -> str:
     return f"{(bases or DEFAULT_BASES)['asset']}{quote(rel)}"
 
 
-def strip_block_ids(text: str) -> str:
-    """Removes trailing `^block-id` markers from lines outside fenced code."""
-    lines = text.split("\n")
-    output = []
-    fence = ""
-    for line in lines:
-        match = _FENCE_LINE.match(line)
-        if match:
-            marker = match.group(1)
-            if not fence:
-                fence = marker
-            elif marker[0] == fence[0] and len(marker) >= len(fence):
-                fence = ""
-            output.append(line)
+def block_anchor(block_id: str) -> str:
+    """The element id a `^block-id` renders as, and a link to it points at."""
+    return f"block-{block_id}"
+
+
+def _link_anchor(link: WikiLink) -> str:
+    """The fragment a link to another note carries: its heading or its block."""
+    if link.anchor:
+        return slugify(link.anchor.split("#")[-1])
+    return block_anchor(link.block_id) if link.block_id else ""
+
+
+def _opening_token(tokens: list, index: int, level: int) -> int:
+    """The index of the nearest block opened at `level` before `index`, or -1."""
+    for position in range(index - 1, -1, -1):
+        if tokens[position].level == level and tokens[position].nesting == 1:
+            return position
+    return -1
+
+
+def block_ids_rule(state) -> None:
+    """Moves each `^block-id` marker off the page and onto its block as an id.
+
+    A marker ends a paragraph or a heading, or stands as a paragraph of its own
+    after a table, list or quote, which it then names. A heading keeps its own
+    anchor, and an embedded note's blocks get no id, so the page has one of each.
+    """
+    tokens = state.tokens
+    anchored = state.env.get("depth", 0) == 0
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        opener = tokens[index - 1] if index else None
+        match = _BLOCK_ID.search(token.content) if token.type == "inline" else None
+        if not match or opener.type not in ("paragraph_open", "heading_open"):
+            index += 1
             continue
-        output.append(line if fence else _BLOCK_ID_TAIL.sub("", line))
-    return "\n".join(output)
+        target = None
+        if match.start() == 0 and opener.type == "paragraph_open" and not opener.hidden:
+            before = tokens[index - 2] if index >= 2 else None
+            if before is not None and before.nesting == -1 and before.level == opener.level:
+                position = _opening_token(tokens, index - 2, opener.level)
+                target = tokens[position] if position >= 0 else None
+            del tokens[index - 1 : index + 2]
+            index -= 1
+        else:
+            token.content = token.content[: match.start()].rstrip()
+            if opener.type == "paragraph_open" and opener.hidden:
+                position = _opening_token(tokens, index - 1, opener.level - 1)
+                target = tokens[position] if position >= 0 else None
+            elif opener.type == "paragraph_open":
+                target = opener
+            index += 1
+        if target is not None and anchored:
+            target.attrSet("id", block_anchor(match.group(1)))
 
 
 def _find_section(body: str, anchor: str) -> str:
@@ -218,6 +257,7 @@ class NoteRenderer:
         self.book = book
         self.md = build_parser()
         self.md.core.ruler.before("inline", "obsidian_callouts", callouts_rule)
+        self.md.core.ruler.before("inline", "obsidian_block_ids", block_ids_rule)
         self._install_render_rules()
 
     def _typo(self) -> dict | None:
@@ -497,7 +537,7 @@ class NoteRenderer:
         }
 
     def _render_markdown(self, body: str, env: dict) -> str:
-        prepared = strip_block_ids(strip_html_comments(strip_block_comments(body)))
+        prepared = strip_html_comments(strip_block_comments(body))
         tokens = self.md.parse(prepared, env)
         self._assign_heading_anchors(tokens, env)
         return self.md.renderer.render(tokens, self.md.options, env)
@@ -534,9 +574,11 @@ class NoteRenderer:
 
         def render_blockquote_open(self_r, tokens, idx, options, env):
             meta = tokens[idx].meta or {}
+            block_id = tokens[idx].attrGet("id")
+            id_attr = f' id="{html.escape(block_id, quote=True)}"' if block_id else ""
             if "callout" not in meta:
                 env["callout_stack"].append("")
-                return "<blockquote>\n"
+                return f"<blockquote{id_attr}>\n"
             palette = meta["callout"]
             title = md.renderInline(meta["title"], env)
             icon = '<span class="callout-icon" aria-hidden="true"></span>'
@@ -547,13 +589,13 @@ class NoteRenderer:
                 opened = " open" if meta["fold"] == "+" else ""
                 return (
                     f'<details class="{classes}" data-callout="{html.escape(meta["callout_kind"])}"'
-                    f'{opened}><summary class="callout-title">{heading}</summary>'
+                    f'{id_attr}{opened}><summary class="callout-title">{heading}</summary>'
                     f'<div class="callout-body">\n'
                 )
             env["callout_stack"].append("div")
             return (
-                f'<div class="{classes}" data-callout="{html.escape(meta["callout_kind"])}">'
-                f'<div class="callout-title">{heading}</div><div class="callout-body">\n'
+                f'<div class="{classes}" data-callout="{html.escape(meta["callout_kind"])}"'
+                f'{id_attr}><div class="callout-title">{heading}</div><div class="callout-body">\n'
             )
 
         def render_blockquote_close(self_r, tokens, idx, options, env):
@@ -614,12 +656,11 @@ class NoteRenderer:
     def _wikilink_html(self, link: WikiLink, env: dict) -> str:
         label = html.escape(link.label)
         if not link.target and (link.anchor or link.block_id):
-            anchor = slugify(link.anchor) if link.anchor else f"block-{link.block_id}"
+            anchor = slugify(link.anchor) if link.anchor else block_anchor(link.block_id)
             return f'<a class="wikilink internal" href="#{anchor}">{label}</a>'
         resolved = resolve_note(self.vault, env["source"], link.target)
         if resolved.kind == "note":
-            anchor = slugify(link.anchor.split("#")[-1]) if link.anchor else ""
-            href = note_uri(resolved.path, anchor, self._bases())
+            href = note_uri(resolved.path, _link_anchor(link), self._bases())
             title = html.escape(resolved.path, quote=True)
             return f'<a class="wikilink" href="{href}" title="{title}">{label}</a>'
         if resolved.kind == "ambiguous":
@@ -668,9 +709,7 @@ class NoteRenderer:
         inner_env = self._env(resolved.path, env["depth"] + 1, env["ancestors"], budget)
         inner = self._render_markdown(body, inner_env)
         title = html.escape(link.label)
-        href = note_uri(
-            resolved.path, slugify(link.anchor) if link.anchor else "", self._bases()
-        )
+        href = note_uri(resolved.path, _link_anchor(link), self._bases())
         return (
             f'<div class="embed embed-note"><div class="embed-title">'
             f'<a class="wikilink" href="{href}">{title}</a></div>'
