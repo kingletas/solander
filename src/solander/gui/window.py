@@ -31,6 +31,7 @@ from ..core.session import SessionStore, adopt_former_state, shown_path
 from ..core.store import open_index_store
 from ..core.themes import DEFAULT_THEME, THEMES, page_id, theme_by_key
 from ..core.vault import Vault, file_kind, hidden_under, vault_holding
+from ..shortcuts import ACCELERATORS, SHORTCUTS
 from .about import AboutDialog
 from .appearance import CSS as THEME_CSS
 from .appearance import ThemeChooser
@@ -60,28 +61,6 @@ MAX_AMBIGUOUS_CHOICES = 8
 MAX_PANEL_ROWS = 200
 HOVER_PREVIEW_DELAY_MS = 600
 OUTLINE_MIN_WIDTH = 200
-
-SHORTCUTS = [
-    ("Ctrl+O", "Open file"),
-    ("Ctrl+Shift+O", "Open vault folder"),
-    ("Ctrl+F", "Find within note"),
-    ("Ctrl+Shift+F", "Search the vault"),
-    ("Ctrl+P", "Quick open"),
-    ("Ctrl+R", "Reload current note"),
-    ("Ctrl+U", "Toggle raw source view"),
-    ("Alt+Left / Alt+Right", "Back / Forward"),
-    ("Ctrl+T / Ctrl+W", "New tab / Close tab"),
-    ("Middle-click or Ctrl+click", "Open note or link in a new tab"),
-    ("F8", "Toggle the outline panel"),
-    ("F9", "Toggle sidebar"),
-    ("F11", "Reading mode (Esc leaves)"),
-    ("Ctrl+M", "View the note as a mind map"),
-    ("Right-click a folder", "Hide it (View menu unhides)"),
-    ("Ctrl+Shift+E", "Export as PDF"),
-    ("Ctrl++ / Ctrl+- / Ctrl+0", "Zoom in / out / reset"),
-    ("F1", "User guide"),
-    ("Ctrl+?", "This window"),
-]
 
 
 def _not_under(hits, hidden):
@@ -1037,7 +1016,7 @@ class ReaderWindow(Adw.ApplicationWindow):
     # -- actions -----------------------------------------------------------
 
     def _install_actions(self) -> None:
-        def add(name, callback, accels=(), parameter=None, state=None):
+        def add(name, callback, parameter=None, state=None):
             if state is not None:
                 action = Gio.SimpleAction.new_stateful(name, parameter, state)
                 action.connect("change-state", callback)
@@ -1045,45 +1024,45 @@ class ReaderWindow(Adw.ApplicationWindow):
                 action = Gio.SimpleAction.new(name, parameter)
                 action.connect("activate", callback)
             self.add_action(action)
-            if accels:
-                self.get_application().set_accels_for_action(f"win.{name}", list(accels))
+            if name in ACCELERATORS:
+                self.get_application().set_accels_for_action(
+                    f"win.{name}", list(ACCELERATORS[name])
+                )
             return action
 
-        add("open-file", lambda *_: self._open_file_dialog(), ["<Control>o"])
-        add("open-vault", lambda *_: self._open_vault_dialog(), ["<Control><Shift>o"])
-        add("find", lambda *_: self._show_find(), ["<Control>f"])
-        add("quick-open", lambda *_: self._show_search(), ["<Control>p"])
-        add("search-vault", lambda *_: self._show_search(), ["<Control><Shift>f"])
-        add("reload", lambda *_: self._reload(), ["<Control>r", "F5"])
-        add("back", lambda *_: self.reader.webview.go_back(), ["<Alt>Left"])
-        add("forward", lambda *_: self.reader.webview.go_forward(), ["<Alt>Right"])
-        add("toggle-sidebar", lambda *_: self._toggle_sidebar(), ["F9"])
+        add("open-file", lambda *_: self._open_file_dialog())
+        add("open-vault", lambda *_: self._open_vault_dialog())
+        add("find", lambda *_: self._show_find())
+        add("quick-open", lambda *_: self._show_search())
+        add("search-vault", lambda *_: self._show_search())
+        add("reload", lambda *_: self._reload())
+        add("back", lambda *_: self.reader.webview.go_back())
+        add("forward", lambda *_: self.reader.webview.go_forward())
+        add("toggle-sidebar", lambda *_: self._toggle_sidebar())
         add(
             "toggle-outline",
             lambda *_: self._set_outline_visible(not self.outline_split.get_show_sidebar()),
-            ["F8"],
         )
-        add("new-tab", lambda *_: self._new_tab(), ["<Control>t"])
-        add("close-tab", lambda *_: self._close_current_tab(), ["<Control>w"])
+        add("new-tab", lambda *_: self._new_tab())
+        add("close-tab", lambda *_: self._close_current_tab())
         add(
             "zen",
             self._on_zen,
-            ["F11"],
             state=GLib.Variant.new_boolean(False),
         )
-        self.leave_zen_action = add("leave-zen", lambda *_: self._set_zen(False), ["Escape"])
+        self.leave_zen_action = add("leave-zen", lambda *_: self._set_zen(False))
         self.leave_zen_action.set_enabled(False)
-        add("export-pdf", lambda *_: self._export_pdf_dialog(), ["<Control><Shift>e"])
-        add("mindmap", lambda *_: self._show_mindmap(), ["<Control>m"])
+        add("export-pdf", lambda *_: self._export_pdf_dialog())
+        add("mindmap", lambda *_: self._show_mindmap())
         add("pin-note", lambda *_: self._toggle_pin())
         add("unhide-folders", lambda *_: self._unhide_all_folders())
-        add("zoom-in", lambda *_: self._zoom(0.1), ["<Control>plus", "<Control>equal"])
-        add("zoom-out", lambda *_: self._zoom(-0.1), ["<Control>minus"])
-        add("zoom-reset", lambda *_: self._zoom(None), ["<Control>0"])
+        add("zoom-in", lambda *_: self._zoom(0.1))
+        add("zoom-out", lambda *_: self._zoom(-0.1))
+        add("zoom-reset", lambda *_: self._zoom(None))
         add("clear-cache", lambda *_: self._clear_index_cache())
-        add("user-guide", lambda *_: self.reader.load_page("user-guide"), ["F1"])
+        add("user-guide", lambda *_: self.reader.load_page("user-guide"))
         add("getting-started", lambda *_: self.reader.load_page("getting-started"))
-        add("shortcuts", lambda *_: self._show_shortcuts(), ["<Control>question"])
+        add("shortcuts", lambda *_: self._show_shortcuts())
         add("about", lambda *_: self._show_about())
         add("reveal", lambda *_: self._reveal_current())
         add("open-external", lambda *_: self._open_current_externally())
@@ -1093,7 +1072,6 @@ class ReaderWindow(Adw.ApplicationWindow):
         add(
             "toggle-source",
             self._on_toggle_source,
-            ["<Control>u"],
             state=GLib.Variant.new_boolean(False),
         )
         add(
