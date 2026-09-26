@@ -143,12 +143,14 @@ class Vault:
         below the root, so containment holds by construction and no syscall is
         needed. A miss — a hidden file, or one created since the last index —
         falls through to the resolving check, which is what enforces containment
-        against a link target such as `../../etc/passwd`.
+        against a link target such as `../../etc/passwd`. Most misses name no file
+        at all, so the one-call existence test runs before the containment check,
+        which resolves every component of the path.
         """
         if rel in self._files_set:
             return True
         candidate = self.root / rel
-        return self.contains(candidate) and candidate.is_file()
+        return candidate.is_file() and self.contains(candidate)
 
     def notes_named(self, name: str) -> list[str]:
         """Returns every note whose filename stem matches, case- and accent-insensitively."""

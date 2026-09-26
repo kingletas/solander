@@ -49,8 +49,9 @@ def resolve_note(vault: Vault, source: str, target: str, exists=None) -> Resolut
     base_dir = str(PurePosixPath(source).parent)
     if base_dir == ".":
         base_dir = ""
+    # A path found without a note extension is never a note, so the bare
+    # target is only worth a lookup when it already carries one.
     with_extensions = [target] if target.casefold().endswith(NOTE_EXTENSIONS) else [
-        target,
         f"{target}.md",
         f"{target}.markdown",
     ]

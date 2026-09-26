@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### A long note opens sooner
+
+- **A note full of links rendered a third slower than it needed to.** Every `[[link]]` first looked for a file with the bare name, which can never be a note, and each miss resolved the whole path on disk, twice per link. The bare name is no longer tried, and a lookup that finds nothing now costs one check rather than a walk of the path. On a generated test note of 200 KB with about 3,800 links, rendering went from 0.89 to 0.63 seconds, and at 1 MB from 6.0 to 3.7 seconds. A note still renders while the window waits, so a very large one still pauses it.
+
 ### A restored session opens each note where you left it
 
 - **Reopening Solander put every note back at the top.** The session remembered the vault, the note and the open tabs, but not how far down each one you had read. Closing the window now records, for every open note, how far down it was, as a share of the note's length rather than a pixel count, so a window of another size or zoom still lands on the same passage. The window reads that position through a script world of its own; the note's own scripts stay off.
