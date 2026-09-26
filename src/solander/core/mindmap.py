@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass, field
 from urllib.parse import quote
 
-from .links import slugify
+from .anchors import heading_anchor
 
 # The window's own scheme, used when no client has said otherwise.
 NOTE_BASE = "reader:///note/"
@@ -68,7 +68,7 @@ def build_tree(title: str, body: str) -> MindNode:
         heading = _HEADING.match(line)
         if heading:
             level = len(heading.group(1))
-            base = slugify(heading.group(2))
+            base = heading_anchor(heading.group(2))
             anchor_counts[base] = anchor_counts.get(base, 0) + 1
             anchor = base if anchor_counts[base] == 1 else f"{base}-{anchor_counts[base]}"
             node = MindNode(label=_clean(heading.group(2)), anchor=anchor)

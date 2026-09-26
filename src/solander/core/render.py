@@ -15,6 +15,7 @@ from pygments.formatters import HtmlFormatter
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 
+from .anchors import block_anchor, heading_anchor
 from .bases import render_base
 from .callouts import callouts_rule
 from .canvas import canvas_body, parse_canvas
@@ -131,24 +132,11 @@ def vault_uri(rel: str, bases: dict | None = None) -> str:
     return f"{(bases or DEFAULT_BASES)['asset']}{quote(rel)}"
 
 
-def block_anchor(block_id: str) -> str:
-    """The element id a `^block-id` renders as, and a link to it points at."""
-    return f"block-{block_id}"
-
-
 def _link_anchor(link: WikiLink) -> str:
     """The fragment a link to another note carries: its heading or its block."""
     if link.anchor:
-        return slugify(link.anchor.split("#")[-1])
+        return heading_anchor(link.anchor.split("#")[-1])
     return block_anchor(link.block_id) if link.block_id else ""
-
-
-def _opening_token(tokens: list, index: int, level: int) -> int:
-    """The index of the nearest block opened at `level` before `index`, or -1."""
-    for position in range(index - 1, -1, -1):
-        if tokens[position].level == level and tokens[position].nesting == 1:
-            return position
-    return -1
 
 
 def block_ids_rule(state) -> None:
@@ -157,35 +145,50 @@ def block_ids_rule(state) -> None:
     A marker ends a paragraph or a heading, or stands as a paragraph of its own
     after a table, list or quote, which it then names. A heading keeps its own
     anchor, and an embedded note's blocks get no id, so the page has one of each.
+    One pass builds a new token list, with the open blocks on a stack, so each
+    marker finds its block at once however long the note: a scan back through
+    the tokens made a list followed by many markers cost their product.
     """
-    tokens = state.tokens
     anchored = state.env.get("depth", 0) == 0
-    index = 0
-    while index < len(tokens):
-        token = tokens[index]
-        opener = tokens[index - 1] if index else None
-        match = _BLOCK_ID.search(token.content) if token.type == "inline" else None
-        if not match or opener.type not in ("paragraph_open", "heading_open"):
-            index += 1
+    kept: list = []
+    open_blocks: list = []
+    opened_by: dict[int, object] = {}
+    skip_close = False
+    for token in state.tokens:
+        if skip_close:
+            skip_close = False
             continue
-        target = None
-        if match.start() == 0 and opener.type == "paragraph_open" and not opener.hidden:
-            before = tokens[index - 2] if index >= 2 else None
-            if before is not None and before.nesting == -1 and before.level == opener.level:
-                position = _opening_token(tokens, index - 2, opener.level)
-                target = tokens[position] if position >= 0 else None
-            del tokens[index - 1 : index + 2]
-            index -= 1
-        else:
+        opener = kept[-1] if kept else None
+        match = None
+        if token.type == "inline" and opener is not None:
+            if opener.type in ("paragraph_open", "heading_open"):
+                match = _BLOCK_ID.search(token.content)
+        if match:
+            target = None
+            if match.start() == 0 and opener.type == "paragraph_open" and not opener.hidden:
+                before = kept[-2] if len(kept) >= 2 else None
+                if before is not None and before.nesting == -1 and before.level == opener.level:
+                    target = opened_by.get(id(before))
+                kept.pop()
+                open_blocks.pop()
+                skip_close = True
+                if target is not None and anchored:
+                    target.attrSet("id", block_anchor(match.group(1)))
+                continue
             token.content = token.content[: match.start()].rstrip()
-            if opener.type == "paragraph_open" and opener.hidden:
-                position = _opening_token(tokens, index - 1, opener.level - 1)
-                target = tokens[position] if position >= 0 else None
-            elif opener.type == "paragraph_open":
-                target = opener
-            index += 1
-        if target is not None and anchored:
-            target.attrSet("id", block_anchor(match.group(1)))
+            if opener.type == "paragraph_open":
+                if not opener.hidden:
+                    target = opener
+                elif len(open_blocks) >= 2:
+                    target = open_blocks[-2]
+            if target is not None and anchored:
+                target.attrSet("id", block_anchor(match.group(1)))
+        if token.nesting == 1:
+            open_blocks.append(token)
+        elif token.nesting == -1 and open_blocks:
+            opened_by[id(token)] = open_blocks.pop()
+        kept.append(token)
+    state.tokens = kept
 
 
 def _find_section(body: str, anchor: str) -> str:
@@ -565,7 +568,7 @@ class NoteRenderer:
                 continue
             inline = tokens[index + 1] if index + 1 < len(tokens) else None
             text = inline.content if inline is not None else ""
-            base = slugify(text)
+            base = heading_anchor(text)
             counts[base] = counts.get(base, 0) + 1
             anchor = base if counts[base] == 1 else f"{base}-{counts[base]}"
             token.attrSet("id", anchor)
@@ -671,8 +674,8 @@ class NoteRenderer:
     def _wikilink_html(self, link: WikiLink, env: dict) -> str:
         label = html.escape(link.label)
         if not link.target and (link.anchor or link.block_id):
-            anchor = slugify(link.anchor) if link.anchor else block_anchor(link.block_id)
-            return f'<a class="wikilink internal" href="#{anchor}">{label}</a>'
+            anchor = heading_anchor(link.anchor) if link.anchor else block_anchor(link.block_id)
+            return f'<a class="wikilink internal" href="#{quote(anchor)}">{label}</a>'
         resolved = resolve_note(self.vault, env["source"], link.target)
         if resolved.kind == "note":
             href = note_uri(resolved.path, _link_anchor(link), self._bases())

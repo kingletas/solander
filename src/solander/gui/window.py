@@ -1,6 +1,7 @@
 """The main window: sidebar, reading pane, search, and every user-facing state."""
 
 import html
+import itertools
 import threading
 import traceback
 from contextlib import suppress
@@ -27,6 +28,7 @@ from ..core.frontmatter import split_frontmatter
 from ..core.graph import VaultGraph, local_neighbors
 from ..core.hits import FIRST_HIT_ID, mark_terms
 from ..core.indexing import sync_indexes
+from ..core.pagescripts import READ_SCROLL, SCRIPT_WORLD, restore_scroll
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
 from ..core.resolver import resolve_note
 from ..core.search import VaultSearch, demote, parse_query, search_filenames
@@ -66,20 +68,11 @@ MAX_PANEL_ROWS = 200
 HOVER_PREVIEW_DELAY_MS = 600
 OUTLINE_MIN_WIDTH = 200
 
-SCROLL_WORLD = "solander"
-"""The script world the window reads and sets a page's scroll position in.
-
-The page's own scripts stay off; a world of the window's own sees the same
-document without giving anything in the note a way to run.
-"""
-
-READ_SCROLL = (
-    "(() => { const room = document.documentElement.scrollHeight - window.innerHeight;"
-    " return String(room > 0 ? window.scrollY / room : 0); })()"
-)
-
 SYNC_RETRY_MS = 200
 """How often a finished sync looks again for a moment when no note is rendering."""
+
+SYNC_MAX_WAIT_US = 10_000_000
+"""The longest a finished sync waits for renders, so the vault never falls behind for good."""
 
 SCROLL_READ_TIMEOUT_MS = 500
 """How long closing waits for the tabs to say where they were before it gives up."""
@@ -195,6 +188,11 @@ class ReaderWindow(Adw.ApplicationWindow):
             settings.connect("notify::gtk-xft-dpi", self._on_text_scale)
         self._pending_scroll: dict[str, float] = {}
         self._renders_in_flight = 0
+        self._render_tokens = itertools.count(1)
+        self._render_waiting: dict[int, tuple] = {}
+        self._sync_waiting = None
+        self._sync_timer = 0
+        self._sync_since = 0
         self._scroll_read = False
         self.tab_view = Adw.TabView()
         self.tab_view.connect("notify::selected-page", lambda *_: self._sync_chrome())
@@ -1356,16 +1354,33 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._sync_lock.release()
 
     def _apply_sync(self, vault: Vault, renderer, graph: VaultGraph, search) -> bool:
-        """Swaps in the freshly synced vault, renderer, and graph on the main loop.
+        """Takes a finished sync on the main loop; the newest one waiting is the one applied.
 
-        While a note renders on its worker, every panel refresh here waits for the
-        interpreter lock between rows, so the swap waits for the render instead.
+        While a note renders on its worker, every panel refresh waits for the
+        interpreter lock between rows, so the swap waits for the render instead,
+        and for no longer than SYNC_MAX_WAIT_US however many renders follow.
         """
-        if self._renders_in_flight > 0:
-            GLib.timeout_add(SYNC_RETRY_MS, self._apply_sync, vault, renderer, graph, search)
+        self._sync_waiting = (vault, renderer, graph, search)
+        if not self._sync_timer:
+            self._sync_since = GLib.get_monotonic_time()
+            self._flush_sync()
+        return False
+
+    def _flush_sync(self) -> bool:
+        self._sync_timer = 0
+        waited = GLib.get_monotonic_time() - self._sync_since
+        if self._renders_in_flight > 0 and waited < SYNC_MAX_WAIT_US:
+            self._sync_timer = GLib.timeout_add(SYNC_RETRY_MS, self._flush_sync)
             return False
+        waiting, self._sync_waiting = self._sync_waiting, None
+        if waiting is not None:
+            self._swap_in_sync(*waiting)
+        return False
+
+    def _swap_in_sync(self, vault: Vault, renderer, graph: VaultGraph, search) -> None:
+        """Swaps in the freshly synced vault, renderer, and graph."""
         if self.vault is None or vault.root != self.vault.root or search is not self.search_index:
-            return False
+            return
         first_sync = not search.ready
         files_changed = vault.files != self.vault.files
         self.vault = vault
@@ -1380,10 +1395,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._update_links_panel()
         self._update_local_graph()
         if first_sync:
-            # The first render happened before the graph existed, so any
-            # dataview blocks showed "index is still building", so render again.
+            # The first render happened before the graph existed, so its dataview
+            # blocks said the index was still building. Render them again.
             self._reload_all_tabs()
-        return False
 
     def _own_hidden_folders(self) -> set[str]:
         """The folders hidden in this reader, which is not the vault's own setting."""
@@ -1483,11 +1497,16 @@ class ReaderWindow(Adw.ApplicationWindow):
     # -- book mode ---------------------------------------------------------
 
     def _book_info(self, rel: str) -> dict | None:
-        """Chapter placement for the renderer; None outside the active book."""
-        if not self.book or rel not in self.book["index_of"]:
+        """Chapter placement for the renderer; None outside the active book.
+
+        A render on a worker calls this, and leaving the book sets `self.book` to
+        None on the main loop, so it is read once.
+        """
+        book = self.book
+        if not book or rel not in book["index_of"]:
             return None
-        chapters = self.book["chapters"]
-        index = self.book["index_of"][rel]
+        chapters = book["chapters"]
+        index = book["index_of"][rel]
         return {
             "place": f"{index + 1} of {len(chapters)}",
             "prev_title": chapter_title(chapters[index - 1]) if index > 0 else None,
@@ -1859,41 +1878,56 @@ class ReaderWindow(Adw.ApplicationWindow):
         return page_id(self.store.state.theme, dark)
 
     def _provide_page_later(self, path: str, webview, deliver) -> bool:
-        """Renders a note on a worker thread and delivers its page on the main loop.
+        """Renders a note or a hover preview on a worker thread, delivered on the main loop.
 
         The window keeps answering while a long note renders. Anything else, and a
         note shown as source, canvas or base, returns False for `_provide_page`.
+        The worker holds only a token: the view and the request stay on the main
+        loop, so the last reference to either is never dropped on another thread.
         """
         segments = [part for part in path.split("/") if part]
-        if not segments or segments[0] != "note" or self.renderer is None or self.source_view:
+        if not segments or segments[0] not in ("note", "preview") or self.renderer is None:
             return False
         rel = "/".join(segments[1:])
-        if rel.casefold().endswith((".canvas", ".base")):
+        preview = segments[0] == "preview"
+        if not preview and (self.source_view or rel.casefold().endswith((".canvas", ".base"))):
             return False
         theme = self._theme()
         renderer = self.renderer.copy()
         terms: list[str] = []
-        if self._pending_highlight and webview is self.reader.webview:
+        if not preview and self._pending_highlight and webview is self.reader.webview:
             terms, self._pending_highlight = self._pending_highlight, []
+        reader = self._readers.get(webview)
+        if reader is not None:
+            reader.render_generation = getattr(reader, "render_generation", 0) + 1
+        token = next(self._render_tokens)
+        self._render_waiting[token] = (webview, deliver, reader and reader.render_generation)
 
         def build() -> None:
+            rendered, page = None, ""
             try:
-                rendered = renderer.render(rel, theme)
-                page = mark_terms(rendered.page, terms)[0] if terms else rendered.page
+                if preview:
+                    page = renderer.render_preview(rel, theme)
+                else:
+                    rendered = renderer.render(rel, theme)
+                    page = mark_terms(rendered.page, terms)[0] if terms else rendered.page
             except Exception:  # the request must be answered, whatever failed
                 traceback.print_exc()
                 rendered = None
                 page = build_message_page(
                     "This note could not be shown", "Rendering it failed.", theme
                 )
-            GLib.idle_add(finish, rendered, page)
+            finally:
+                GLib.idle_add(finish, token, rendered, page)
 
-        def finish(rendered, page: str) -> bool:
+        def finish(key: int, rendered, page: str) -> bool:
             self._renders_in_flight -= 1
-            reader = self._readers.get(webview)
-            if reader is not None:
-                reader.last_render = rendered
-            deliver(page)
+            view, answer, generation = self._render_waiting.pop(key)
+            current = self._readers.get(view)
+            # A tab that asked for another page since keeps that page's render.
+            if current is not None and generation == getattr(current, "render_generation", 0):
+                current.last_render = rendered
+            answer(page or build_message_page("This note could not be shown", "", theme))
             return False
 
         self._renders_in_flight += 1
@@ -2735,11 +2769,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         fraction = self._pending_scroll.pop(reader.current_note, None)
         if fraction is None:
             return
-        script = (
-            "window.scrollTo(0, "
-            f"{fraction:.5f} * (document.documentElement.scrollHeight - window.innerHeight))"
+        webview.evaluate_javascript(
+            restore_scroll(fraction), -1, SCRIPT_WORLD, None, None, None
         )
-        webview.evaluate_javascript(script, -1, SCROLL_WORLD, None, None, None)
 
     def _read_scroll_positions(self, done) -> None:
         """Asks every tab showing a note how far down it is, then calls `done` once.
@@ -2776,7 +2808,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             return
         for reader in readers:
             reader.webview.evaluate_javascript(
-                READ_SCROLL, -1, SCROLL_WORLD, None, None, answered, reader.current_note
+                READ_SCROLL, -1, SCRIPT_WORLD, None, None, answered, reader.current_note
             )
         GLib.timeout_add(SCROLL_READ_TIMEOUT_MS, finish)
 
