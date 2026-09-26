@@ -583,7 +583,44 @@ def run_checks(app):
                 app.quit()
                 return False
 
-            GLib.timeout_add(1200, done)
+            def check_board_width() -> bool:
+                # His saved window: 1872 wide at 140% zoom, measured with the sidebar open.
+                source = window.lookup_action("toggle-source")
+                window._on_toggle_source(source, GLib.Variant.new_boolean(False))
+                window.set_default_size(1872, 1045)
+                window.sidebar_widget.set_visible(True)
+                window.reader.webview.set_zoom_level(1.4)
+                window.reader.load_note("Wide.md")
+
+                def measure() -> bool:
+                    script = (
+                        "(() => { const k = document.querySelector('.kanban');"
+                        " if (!k) return 'none';"
+                        " const w = [...k.querySelectorAll('.kanban-column')]"
+                        ".map(c => Math.round(c.getBoundingClientRect().width));"
+                        " return [k.scrollWidth - k.clientWidth, Math.min(...w), w.length]"
+                        ".join(','); })()"
+                    )
+
+                    def measured(webview, result) -> None:
+                        value = webview.evaluate_javascript_finish(result).to_string()
+                        print(f"   six-lane board: overflow,narrowest,lanes = {value}")
+                        parts = value.split(",")
+                        check("a six-lane board fits its page with no sideways scroll",
+                              len(parts) == 3 and int(parts[0]) <= 0 and parts[2] == "6")
+                        check("its narrowest lane is still readable (at least 144 CSS px)",
+                              len(parts) == 3 and int(parts[1]) >= 144)
+                        GLib.timeout_add(300, done)
+
+                    # A world of its own, because the page's policy forbids scripts in the document.
+                    webview = window.reader.webview
+                    webview.evaluate_javascript(script, -1, "smoke", None, None, measured)
+                    return False
+
+                GLib.timeout_add(2000, measure)
+                return False
+
+            GLib.timeout_add(1200, check_board_width)
             return False
 
         GLib.timeout_add(1500, do_split_export)
@@ -655,6 +692,11 @@ def write_extra_fixtures() -> None:
         "---\nkanban-plugin: board\n---\n\n## Todo\n\n- [ ] [[A|card one]]\n\n"
         "## Done\n\n- [x] finished\n"
     )
+    lanes = "".join(
+        f"## Lane {n}\n\n- [ ] a card with enough words in it to wrap onto two lines\n\n"
+        for n in range(6)
+    )
+    (vault_path / "Wide.md").write_text(f"---\nkanban-plugin: board\n---\n\n{lanes}")
     drawing = json.dumps({"elements": [
         {"type": "rectangle", "x": 0, "y": 0, "width": 80, "height": 40},
         {"type": "text", "x": 8, "y": 8, "width": 60, "height": 18, "text": "box"},

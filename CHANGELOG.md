@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### A board fits the window
+
+- **A Kanban board's lanes now share the page instead of each taking a fixed 260 pixels.** Six lanes needed about 1,620 pixels, so at the window size and zoom this reader is used at, the board ran off the side and was never in view at once. Lanes now shrink together down to 8rem each, card text wraps rather than widening its lane, and only a board too wide even then scrolls sideways. Measured in the running window at 1872 pixels wide, 140% zoom and the sidebar open: a six-lane board went from 735 CSS pixels of overflow to none, with each lane 159 CSS pixels wide.
+
 ### The file tree keeps your place
 
 - **A change anywhere in the vault no longer collapses the file tree.** Every write the watcher saw emptied the tree and rebuilt its top level, so each expanded folder closed; with several writers in a vault that happened every few minutes. The tree now edits each folder it has listed in place, adding and removing only the rows that changed, so an open folder stays open and the row you were on stays where it was. Showing hidden files, Markdown only and hiding a folder keep your place the same way.
