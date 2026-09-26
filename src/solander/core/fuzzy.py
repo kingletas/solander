@@ -12,6 +12,8 @@ over a literal one.
 import unicodedata
 from dataclasses import dataclass
 
+from .vault import NOTE_EXTENSIONS
+
 # How a match was made, best first. The class decides the order; the score only
 # separates matches of the same class.
 WORD_IN_NAME = 0
@@ -44,15 +46,31 @@ def fuzzy_match(query: str, path: str) -> int | None:
     """Scores a query as a subsequence of a path, or None when it is not one.
 
     Consecutive runs, word-boundary hits, and matches inside the filename score
-    higher; characters skipped between hits cost a little.
+    higher; characters skipped between hits cost a little. The query is aligned
+    against the whole path and against the filename alone, and the better
+    alignment counts, so letters a folder happens to share cannot take the match
+    away from the name.
     """
     folded_query = _fold(query)
     folded_path = _fold(path)
     if not folded_query:
         return None
     name_start = folded_path.rfind("/") + 1
+    scores = [
+        score
+        for score in (
+            _align(folded_query, folded_path, 0, name_start),
+            _align(folded_query, folded_path, name_start, name_start),
+        )
+        if score is not None
+    ]
+    return max(scores) if scores else None
+
+
+def _align(folded_query: str, folded_path: str, start: int, name_start: int) -> int | None:
+    """Scores the leftmost alignment of the query from `start`, or None when there is none."""
     score = 0
-    position = 0
+    position = start
     previous_hit = -2
     for char in folded_query:
         found = folded_path.find(char, position)
@@ -114,4 +132,10 @@ def fuzzy_filenames(paths, query: str, limit: int = 200) -> list[FuzzyMatch]:
 
 
 def _fold(text: str) -> str:
-    return unicodedata.normalize("NFC", text).casefold()
+    """Case, accents and a note's own extension removed, so none of them decides a match."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    folded = "".join(char for char in decomposed if not unicodedata.combining(char)).casefold()
+    for extension in NOTE_EXTENSIONS:
+        if folded.endswith(extension):
+            return folded[: -len(extension)]
+    return folded
