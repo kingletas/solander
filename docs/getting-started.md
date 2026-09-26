@@ -68,9 +68,9 @@ The window hands you a single command. **Copy it, paste it into a Terminal, ente
 
 ## 4. Open your vault
 
-Use **Open a vault folder…** on the welcome page, drag a folder onto the window, or right-click a folder or `.md` file in your file manager and choose *Open With → Solander*. From a terminal, `solander ~/path/to/vault` does the same — or `flatpak run com.kingletas.Solander ~/path/to/vault` if you installed the Flatpak, which puts no `solander` on your `PATH`. The reader opens the vault **in place** — nothing is imported, and nothing is ever written into it.
+Use **Open a vault** on the welcome page, drag a folder onto the window, or right-click a folder or `.md` file in your file manager and choose *Open With → Solander*. From a terminal, `solander ~/path/to/vault` does the same, or `flatpak run com.kingletas.Solander ~/path/to/vault` if you installed the Flatpak, which puts no `solander` on your `PATH`. The reader opens the vault **in place**: nothing is imported, and nothing is ever written into it.
 
-The first open of a large vault builds the search and link index in the background — expect roughly 20 seconds for a 10,000-note vault, with progress in the sidebar's status line. The index persists under `~/.cache/solander/`, so every later launch is warm: about a second, re-reading only notes that changed. While the reader is open it watches the vault, so anything Obsidian or a sync client writes shows up in the tree, search, and link panels within a few seconds.
+The first open of a large vault builds the search and link index in the background. Expect roughly 20 seconds for a 10,000-note vault, with progress in the foot of the window. The index persists under `~/.cache/solander/`, so every later launch is warm: about a second, re-reading only notes that changed. While the reader is open it watches the vault, so anything Obsidian or a sync client writes shows up in the tree, search, and link panels within a few seconds.
 
 ## 5. Five things to try first
 
@@ -80,7 +80,7 @@ The first open of a large vault builds the search and link index in the backgrou
 4. **`Ctrl+M`** — the current note as a mind map of its headings and bullets. `Ctrl+M` again (or the link at the top) brings the markdown back.
 5. **`F11`** — reading mode: nothing on screen but the note. `Esc` returns.
 
-`Ctrl+?` shows every shortcut, and **`F1` opens the full user guide inside the app**. When you want the rest — Dataview, kanban boards, hidden folders, typography, exports — it's all in the [user guide](user-guide.md).
+`Ctrl+?` shows every shortcut, and **`F1` opens the full user guide inside the app**. When you want the rest (Dataview, kanban boards, hidden folders, typography, exports), it's all in the [user guide](user-guide.md).
 
 ## Where things live
 

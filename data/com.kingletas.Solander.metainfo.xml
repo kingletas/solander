@@ -46,8 +46,8 @@
   </branding>
   <screenshots>
     <screenshot type="default">
-      <caption>A note in the Atelier theme</caption>
-      <image type="source" width="1100" height="760">https://raw.githubusercontent.com/kingletas/solander/main/docs/images/atelier.png</image>
+      <caption>A note in the Stone theme</caption>
+      <image type="source" width="1100" height="760">https://raw.githubusercontent.com/kingletas/solander/main/docs/images/stone.png</image>
     </screenshot>
     <screenshot>
       <caption>The same note in Blood Record, one of the thirteen Archive themes</caption>

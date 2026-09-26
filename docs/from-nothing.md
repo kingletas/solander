@@ -28,7 +28,7 @@ Solander renders all of it, and **never writes into the folder**. That's the who
 
 - **No caches, no index files, no lock files, no thumbnails** land in your vault. Everything it remembers lives under `~/.config/solander/` and `~/.cache/solander/`.
 - **Nothing in a note is executed.** JavaScript is off in the rendering surface, raw HTML is escaped, and Templater or `dataviewjs` blocks render as labelled inert source rather than running.
-- **It doesn't touch the network.** Remote images, scripts, stylesheets and fonts are blocked. An `http` link opens in your normal browser; any other URI scheme is refused.
+- **It doesn't touch the network.** Remote images, scripts, stylesheets and fonts are blocked. A web link opens in your normal browser and a `mailto` link in your mail app; a link with any other scheme does nothing.
 
 A solander is the clamshell box an archive keeps documents in — you open it to look at something and close it to leave it as it was. That's the design brief in one object.
 
@@ -172,8 +172,10 @@ The window opens on the vault. Click through to **Recipes** and back — `[[Welc
 Three other ways in, all equivalent:
 
 ```bash
-solander note.md              # a single note, without its folder
+solander note.md              # a single note, in the vault that holds it
 ```
+
+The vault that holds a note is the nearest folder above it with an `.obsidian` directory, looking no higher than your home directory, or the note's own folder when there is none, so its links into the rest of the vault still work.
 
 ```bash
 solander                      # reopen whatever you had last
