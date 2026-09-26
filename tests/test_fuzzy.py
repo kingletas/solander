@@ -75,3 +75,22 @@ def test_how_a_match_was_made_is_what_orders_it():
     assert match_kind("brief", scattered) == SCATTERED
     ranked = [m.path for m in fuzzy_filenames([scattered, folder, inside, whole], "brief")]
     assert ranked == [whole, inside, folder, scattered]
+
+
+def test_a_note_named_by_the_query_beats_one_whose_folders_spell_it():
+    ranked = fuzzy_filenames(["Projects/Launch Plan.md", "People/Alan/Plan.md"], "plan")
+    assert [match.path for match in ranked] == ["People/Alan/Plan.md", "Projects/Launch Plan.md"]
+
+
+def test_the_note_extension_is_not_part_of_the_name():
+    assert fuzzy_filenames(["Journal/Monday.md", "Guides/md syntax.md"], "md")[0].path == (
+        "Guides/md syntax.md"
+    )
+    assert match_kind("md", "Journal/Monday.md") != WORD_IN_NAME
+
+
+def test_accents_do_not_hide_a_note():
+    assert [match.path for match in fuzzy_filenames(["Café.md", "Cafeteria.md"], "cafe")] == [
+        "Café.md",
+        "Cafeteria.md",
+    ]
