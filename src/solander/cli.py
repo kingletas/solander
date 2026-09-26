@@ -34,7 +34,7 @@ interpreter that permission. The profile, rendered for this installation:
 
 {profile}
 
-Install it as /etc/apparmor.d/solander and reload AppArmor — the exact
+Install it as /etc/apparmor.d/solander and reload AppArmor. The exact
 steps are in the README under "The sandbox and Ubuntu's user-namespace policy".
 
 To bypass this check and try anyway, set SOLANDER_SKIP_SANDBOX_CHECK=1.
@@ -42,7 +42,7 @@ To bypass this check and try anyway, set SOLANDER_SKIP_SANDBOX_CHECK=1.
 
 SHEBANG_HELP = """\
 solander: WebKit's sandbox cannot start, but the AppArmor profile for it
-is already installed — it just did not attach to this process.
+is already installed. It just did not attach to this process.
 
 That happens when the app is started through the venv console script or another
 `#!` shebang: AppArmor attaches the profile by interpreter path, and a shebang
@@ -85,7 +85,7 @@ def sandbox_ready() -> bool:
     if bwrap is None or true_bin is None:
         return True
     try:
-        probe = subprocess.run(  # noqa: S603 — fixed argv, no untrusted input
+        probe = subprocess.run(  # noqa: S603 - fixed argv, no untrusted input
             [bwrap, "--unshare-user", "--ro-bind", "/", "/", true_bin],
             capture_output=True,
             timeout=5,
@@ -101,7 +101,7 @@ def profile_target() -> str:
     From a source install the app runs on a private interpreter inside its own
     virtualenv, and naming that is as narrow as it gets. From a system package
     the interpreter is the shared `/usr/bin/python3`, and naming *that* would
-    grant user namespaces to every Python process on the machine — so the entry
+    grant user namespaces to every Python process on the machine. So the entry
     point is named instead, which is what Ubuntu's own profiles for packaged
     Python applications do.
     """
@@ -117,7 +117,7 @@ def setup_command(profile: str, profile_path: str) -> str:
     """One paste-able command: write the profile, then reload AppArmor.
 
     It lives here rather than with the setup window because it is a string and
-    nothing else — and a test for it must not have to import GTK.
+    nothing else, and a test for it must not have to import GTK.
     """
     marker = "SOLANDER_PROFILE"
     return (
@@ -155,7 +155,7 @@ def check_sandbox() -> str:
     if not interpreter.startswith(sys.prefix):
         help_text += (
             "\nNote: this interpreter is the system Python, so the profile above would\n"
-            "cover every Python process. Run `make install` first — it gives the app\n"
+            "cover every Python process. Run `make install` first: it gives the app\n"
             "a private interpreter copy the profile can name narrowly.\n"
         )
     return help_text
@@ -171,7 +171,7 @@ def sandbox_status() -> tuple[str, int]:
         f"profile     {PROFILE_PATH} {'installed' if installed else 'NOT installed'}",
         f"interpreter {interpreter}",
         f"label       {label or '(none)'}",
-        f"sandbox     {'works' if ready else 'REFUSED — WebKit cannot start'}",
+        f"sandbox     {'works' if ready else 'REFUSED: WebKit cannot start'}",
     ]
     if not interpreter.startswith(sys.prefix):
         lines.append(
@@ -180,7 +180,7 @@ def sandbox_status() -> tuple[str, int]:
         )
     if installed and not label.startswith("solander"):
         lines.append(
-            "warning     the profile is installed but did not attach here — it names "
+            "warning     the profile is installed but did not attach here: it names "
             "a different path, or this process came through a #! shebang"
         )
     if not ready:

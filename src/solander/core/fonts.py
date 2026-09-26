@@ -3,7 +3,7 @@
 They are bundled because neither ships with a Linux desktop, and a page that falls
 back to whatever is installed is a different design. The page loads them through
 `@font-face` over the client's own scheme; the window chrome cannot, because GTK
-resolves a family name through fontconfig and cannot see package data — so the
+resolves a family name through fontconfig and cannot see package data. So the
 same files are also pointed at by a fontconfig fragment.
 """
 

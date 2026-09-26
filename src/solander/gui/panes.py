@@ -2,8 +2,8 @@
 
 `Adw.OverlaySplitView` sizes its sidebar from a fraction and a pair of ceilings,
 which is a layout the window decides and the reader cannot argue with. A pane is
-a preference — how much of the screen an outline is worth is not something this
-file knows — so the divider is a handle, and where it is left is session state
+a preference. How much of the screen an outline is worth is not something this
+file knows, so the divider is a handle, and where it is left is session state
 like every other pane preference.
 
 The `show-sidebar` property is carried so the window's actions, its shortcuts and
@@ -64,7 +64,7 @@ class SplitPane(Gtk.Paned):
 
         A pane asked for a position before it has a size of its own is asked to
         divide nothing, and a sidebar at the end has no position at all until
-        there is a width to subtract it from — so the remembered width waits for
+        there is a width to subtract it from. So the remembered width waits for
         an allocation rather than being set at construction.
         """
         Gtk.Paned.do_size_allocate(self, width, height, baseline)

@@ -37,7 +37,7 @@ def _refuse_aliases(raw: str) -> None:
     """Raises before any alias is expanded, over the parser's own event stream.
 
     This is a pass rather than a `compose_node` override because LibYAML composes
-    in C and never calls one — a subclass that overrides it loads aliases anyway,
+    in C and never calls one: a subclass that overrides it loads aliases anyway,
     with nothing to say the refusal has stopped happening.
     """
     for event in yaml.parse(raw, Loader=_SafeLoader):
@@ -57,8 +57,8 @@ class SplitNote:
 def split_frontmatter(text: str, parse_properties: bool = True) -> SplitNote:
     """Separates a leading `---` YAML block from the body, tolerating malformed YAML.
 
-    `parse_properties=False` skips the YAML parse and returns empty properties —
-    the raw block is still split off, which is all a bulk pass over a vault needs.
+    `parse_properties=False` skips the YAML parse and returns empty properties.
+    The raw block is still split off, which is all a bulk pass over a vault needs.
     """
     if not text.startswith(("---\n", "---\r\n")) and text.strip() != "---":
         return SplitNote(body=text)
@@ -78,7 +78,7 @@ def _parse_properties(raw: str) -> dict:
         return {}
     try:
         _refuse_aliases(raw)
-        parsed = yaml.load(raw, Loader=_FrontmatterLoader)  # noqa: S506 — SafeLoader subclass
+        parsed = yaml.load(raw, Loader=_FrontmatterLoader)  # noqa: S506 - SafeLoader subclass
     except yaml.YAMLError:
         return {}
     return parsed if isinstance(parsed, dict) else {}

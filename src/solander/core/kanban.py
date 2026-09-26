@@ -1,6 +1,6 @@
 """Renders obsidian-kanban board notes as read-only column layouts.
 
-A board is plain markdown — `## Column` headings with task-list cards — plus
+A board is plain markdown, `## Column` headings with task-list cards, plus
 `kanban-plugin` frontmatter. The card text is rendered inline by the caller's
 parser, so wikilinks inside cards resolve like anywhere else.
 """

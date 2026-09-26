@@ -205,7 +205,7 @@ def test_the_family_adds_only_its_own_voice_to_the_chrome():
 
     It once stated the rail's borders, its section labels and its selected row,
     and the thirteen themes therefore never received the structure's treatment
-    for any of them — each kept the chrome it had before Stone. Anything the
+    for any of them: each kept the chrome it had before Stone. Anything the
     structure can say belongs there, where every theme is drawn the same way.
     """
     for palette in PALETTES:

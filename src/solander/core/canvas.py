@@ -2,7 +2,7 @@
 
 The canvas is untrusted vault content, so every coordinate is forced through
 `float()`, every color through a fixed palette or hex check, and every string
-through `html.escape` — the markup here is the app's own, like a message page.
+through `html.escape`. The markup here is the app's own, like a message page.
 """
 
 import html

@@ -116,7 +116,7 @@ def test_the_sandbox_probe_is_skipped_inside_flatpak(monkeypatch):
     """The probe cannot succeed inside Flatpak, and does not need to.
 
     A Flatpak process is already in Flatpak's own user namespace, so nesting
-    another is refused — while WebKit's sandbox works, because Flatpak is the
+    another is refused, while WebKit's sandbox works, because Flatpak is the
     confinement. Running the probe there refuses to start the application and
     prints an AppArmor fix that could never change the result.
     """

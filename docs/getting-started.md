@@ -4,9 +4,9 @@ Two of the three ways to install take a single command and need no setup afterwa
 
 ## 1. Install
 
-Pick one. **The Flatpak and the Debian package both skip the sandbox step in section 3** — only a source install needs it.
+Pick one. **The Flatpak and the Debian package both skip the sandbox step in section 3**; only a source install needs it.
 
-### The Flatpak — simplest
+### The Flatpak, the simplest
 
 It needs the GNOME 50 runtime, which isn't inside the 3 MB bundle. If you have ever installed anything from Flathub you already have the remote configured; if not, add it first:
 
@@ -20,9 +20,9 @@ Then take the bundle from the [latest release](https://github.com/kingletas/sola
 flatpak install --user solander_*.flatpak
 ```
 
-The first install also pulls the GNOME runtime — about a gigabyte, once, shared with every other Flatpak you own. Nothing else is required: Flatpak's own sandbox already carries the permission WebKit needs.
+The first install also pulls the GNOME runtime, about a gigabyte, once, shared with every other Flatpak you own. Nothing else is required: Flatpak's own sandbox already carries the permission WebKit needs.
 
-### The Debian package — for Ubuntu 24.04+
+### The Debian package, for Ubuntu 24.04+
 
 ```bash
 sudo apt install ./solander_*_all.deb
@@ -38,7 +38,7 @@ You need the system GObject bindings, because the reader is a GTK 4 application 
 sudo apt install python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0
 ```
 
-Optional — for viewing PDFs inside the app (without it, PDFs open in your system viewer):
+Optional, for viewing PDFs inside the app (without it, PDFs open in your system viewer):
 
 ```bash
 sudo apt install gir1.2-poppler-0.18
@@ -56,15 +56,15 @@ That creates a virtualenv against the system Python (so the GI bindings are visi
 
 **Solander** is in your applications grid.
 
-If you installed the Flatpak or the deb, you are done — skip to section 4. A source install has one more step first.
+If you installed the Flatpak or the deb, you are done; skip to section 4. A source install has one more step first.
 
-## 3. The one-time sandbox step — source installs only
+## 3. The one-time sandbox step (source installs only)
 
-On stock Ubuntu 24.04+ a source install's first launch shows a **setup window** instead of the reader. That's expected: WebKit sandboxes its rendering processes, Ubuntu restricts the user namespaces that sandbox needs, and the fix is a one-time security profile granting the permission to this app alone — the same mechanism Ubuntu ships for browsers.
+On stock Ubuntu 24.04+ a source install's first launch shows a **setup window** instead of the reader. That's expected: WebKit sandboxes its rendering processes, Ubuntu restricts the user namespaces that sandbox needs, and the fix is a one-time security profile granting the permission to this app alone, the same mechanism Ubuntu ships for browsers.
 
-The window hands you a single command. **Copy it, paste it into a Terminal, enter your password, then press "I ran it — check again"** — the reader starts on its own. That's the only time a terminal is involved.
+The window hands you a single command. **Copy it, paste it into a Terminal, enter your password, then press "I ran it, check again"**, and the reader starts on its own. That's the only time a terminal is involved.
 
-(The same flow works headless: launched from a terminal, the app prints the profile and the steps instead. The profile confines nothing — `flags=(unconfined)` plus one `userns` grant — it only lets WebKit's own sandbox turn on. `solander --sandbox-status` reports whether it worked and exits non-zero while anything is still wrong.)
+(The same flow works headless: launched from a terminal, the app prints the profile and the steps instead. The profile confines nothing: it is `flags=(unconfined)` plus one `userns` grant, and it only lets WebKit's own sandbox turn on. `solander --sandbox-status` reports whether it worked and exits non-zero while anything is still wrong.)
 
 ## 4. Open your vault
 
@@ -74,11 +74,11 @@ The first open of a large vault builds the search and link index in the backgrou
 
 ## 5. Five things to try first
 
-1. **`Ctrl+P`** — fuzzy quick-open. Type fragments (`scnt` finds "Second Note"); an empty query lists your recent notes.
-2. **`Ctrl+Shift+F`** — full-text search, ranked by relevance. Try an operator: `tag:project deadline` or `path:Journal standup`.
-3. **Middle-click** a note in the tree or a wikilink in a page — it opens in a new tab. Plain click stays in the current tab.
-4. **`Ctrl+M`** — the current note as a mind map of its headings and bullets. `Ctrl+M` again (or the link at the top) brings the markdown back.
-5. **`F11`** — reading mode: nothing on screen but the note. `Esc` returns.
+1. **`Ctrl+P`**: fuzzy quick-open. Type fragments (`scnt` finds "Second Note"); an empty query lists your recent notes.
+2. **`Ctrl+Shift+F`**: full-text search, ranked by relevance. Try an operator: `tag:project deadline` or `path:Journal standup`.
+3. **Middle-click** a note in the tree or a wikilink in a page, and it opens in a new tab. Plain click stays in the current tab.
+4. **`Ctrl+M`**: the current note as a mind map of its headings and bullets. `Ctrl+M` again (or the link at the top) brings the markdown back.
+5. **`F11`**: reading mode: nothing on screen but the note. `Esc` returns.
 
 `Ctrl+?` shows every shortcut, and **`F1` opens the full user guide inside the app**. When you want the rest (Dataview, kanban boards, hidden folders, typography, exports), it's all in the [user guide](user-guide.md).
 

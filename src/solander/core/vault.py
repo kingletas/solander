@@ -141,7 +141,7 @@ class Vault:
 
         The index is consulted first because every path in it was found by walking
         below the root, so containment holds by construction and no syscall is
-        needed. A miss — a hidden file, or one created since the last index —
+        needed. A miss (a hidden file, or one created since the last index)
         falls through to the resolving check, which is what enforces containment
         against a link target such as `../../etc/passwd`. Most misses name no file
         at all, so the one-call existence test runs before the containment check,
@@ -171,7 +171,7 @@ class Vault:
         except OSError as error:
             return NoteText(error=f"Cannot read {rel}: {error.strerror or error}")
         if size > MAX_NOTE_BYTES:
-            return NoteText(error=f"{rel} is {size:,} bytes — too large to open as a note")
+            return NoteText(error=f"{rel} is {size:,} bytes, too large to open as a note")
         try:
             data = path.read_bytes()
         except OSError as error:

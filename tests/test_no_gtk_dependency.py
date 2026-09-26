@@ -2,8 +2,8 @@
 
 CI is exactly such a machine, and the local virtualenv is not: it is built with
 `--system-site-packages` so the application can reach the system bindings, which
-means a stray GTK import in the core — or a unit test that reaches into the
-window layer — passes here and fails only after a push. These two checks move
+means a stray GTK import in the core, or a unit test that reaches into the
+window layer, passes here and fails only after a push. These two checks move
 that failure back to `make check`.
 """
 
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 # A fresh interpreter, because importing modules a second time inside the test
-# session resets constants other tests have already read — which is a way of
+# session resets constants other tests have already read, which is a way of
 # breaking three tests to check one.
 PROBE = """
 import importlib

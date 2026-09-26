@@ -44,7 +44,7 @@ def test_a_single_alias_is_refused():
     """The bomb below proves the size bound; this proves the refusal itself, quickly.
 
     A loader that composes in C ignores a `compose_node` override, so the refusal
-    can be lost while every other frontmatter test still passes — and the bomb
+    can be lost while every other frontmatter test still passes, and the bomb
     then hangs rather than failing.
     """
     note = split_frontmatter("---\na: &anchor [1, 2]\nb: *anchor\n---\nbody\n")

@@ -82,7 +82,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 
 sed -i "s/^__version__ = \".*\"$/__version__ = \"${VERSION}\"/" "$INIT"
-sed -i "s/^## Unreleased$/## ${VERSION} — ${DATE}/" "$CHANGELOG"
+sed -i "s/^## Unreleased$/## ${VERSION} - ${DATE}/" "$CHANGELOG"
 
 # Newest first: the software centre and the test both read the first entry.
 awk -v version="$VERSION" -v date="$DATE" -v placeholder="$PLACEHOLDER" '

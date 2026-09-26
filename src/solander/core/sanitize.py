@@ -133,7 +133,7 @@ _SAFE_LENGTH = re.compile(r"^-?\d{0,4}(\.\d{1,4})?(em|ex|px|pt|%)?$")
 def _safe_url(value: str, schemes: tuple[str, ...]) -> str:
     """Returns the URL unchanged when it points somewhere allowed, empty otherwise.
 
-    A scheme, a fragment, or a path rooted at the page's own origin — which is
+    A scheme, a fragment, or a path rooted at the page's own origin, which is
     what a client that cannot register a URI scheme writes its links as, and
     which can reach nowhere but wherever the page came from.
 

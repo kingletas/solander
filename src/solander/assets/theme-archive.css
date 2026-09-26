@@ -1,9 +1,9 @@
-/* THE ARCHIVE — Stone's colours swapped for a classified record. The type scale,
+/* THE ARCHIVE: Stone's colours swapped for a classified record. The type scale,
    the spacing and the component rules are the base sheet's; what is left here is
    the family's own voice, and nothing that reader.css already states.
 
    Everything is screen-only. Paper has no dark mode, and reader.css already forces
-   a light palette for print — a screen theme that reached print would fight it. */
+   a light palette for print, and a screen theme that reached print would fight it. */
 
 @media screen {
 

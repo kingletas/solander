@@ -3,7 +3,7 @@
 Snippet CSS is vault content and therefore untrusted. The sanitizer is an
 allowlist by construction: comments are stripped, only plain rules and @media
 blocks survive, and any declaration that could reach the network or smuggle an
-escape — url(), @import, expression(), a backslash — is dropped whole.
+escape (url(), @import, expression(), a backslash) is dropped whole.
 """
 
 import json

@@ -2,7 +2,7 @@
 
 The split is what makes the index incremental: `scan_note` is pure and cacheable
 per note, while `VaultGraph.assemble` resolves every cached scan against the
-current file index — cheap enough to redo whenever the vault changes.
+current file index, which is cheap enough to redo whenever the vault changes.
 """
 
 import os
@@ -127,7 +127,7 @@ class VaultGraph:
 
     @classmethod
     def build(cls, vault: Vault, progress=None) -> "VaultGraph":
-        """Reads and scans every note, then assembles the graph — the from-scratch path."""
+        """Reads and scans every note, then assembles the graph: the from-scratch path."""
         scans: dict[str, NoteScan] = {}
         total = len(vault.notes)
         for position, rel in enumerate(vault.notes):
@@ -273,7 +273,7 @@ _TAG_ITEM = re.compile(r"^\s*-\s+(.+)$")
 def _frontmatter_tags(raw: str):
     """Yields tag strings from a raw frontmatter block without a YAML parse.
 
-    Reads the shapes a vault actually writes — an inline value, or a `- item`
+    Reads the shapes a vault actually writes: an inline value, or a `- item`
     block list (indented or not, blank lines allowed) under a top-level
     `tags:`/`tag:` key; anything more exotic yields nothing.
     """

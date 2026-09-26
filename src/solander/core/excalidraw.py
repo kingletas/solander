@@ -2,7 +2,7 @@
 
 The drawing JSON (LZ-String compressed or plain) is untrusted vault content:
 coordinates go through float(), colors through a hex check, text through
-escaping — app-authored markup, like canvas and message pages.
+escaping. The markup is the app's own, like canvas and message pages.
 """
 
 import html

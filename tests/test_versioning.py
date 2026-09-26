@@ -45,7 +45,7 @@ def test_the_changelog_has_a_released_section_for_this_version():
     """A tag whose version is still headed Unreleased publishes empty notes."""
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     heading = re.compile(
-        rf"^## {re.escape(solander.__version__)} — \d{{4}}-\d\d-\d\d$", re.MULTILINE
+        rf"^## {re.escape(solander.__version__)} \S \d{{4}}-\d\d-\d\d$", re.MULTILINE
     )
 
     assert heading.search(changelog), (

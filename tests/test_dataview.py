@@ -63,7 +63,7 @@ def test_dateformat_uses_luxon_tokens():
 
 def test_date_keywords_are_answered_rather_than_read_as_fields():
     """A bare keyword parses as a field name, and a missing field makes every
-    comparison against it false — so a recency query returned nothing at all."""
+    comparison against it false, so a recency query returned nothing at all."""
     assert evaluate("date(today)") == datetime.date.today()
     assert evaluate("date(yesterday)") == datetime.date.today() - datetime.timedelta(days=1)
     assert evaluate("date(tomorrow)") == datetime.date.today() + datetime.timedelta(days=1)

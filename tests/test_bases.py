@@ -43,7 +43,7 @@ def test_table_view_filters_sorts_and_links(vault, vault_dir):
 
 def test_plugin_views_are_named_not_faked(vault, vault_dir):
     markup = render_base(make_graph(vault, vault_dir), BASE)
-    assert "tasknotesKanban plugin view — not rendered" in markup
+    assert "tasknotesKanban plugin view, which is not rendered" in markup
 
 
 def test_malformed_base_degrades(vault, vault_dir):

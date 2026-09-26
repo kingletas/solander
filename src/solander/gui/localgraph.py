@@ -23,7 +23,7 @@ def _call(view_ref, name, *args):
 class LocalGraphView:
     """Draws one note's neighborhood as a radial graph; clicking a node opens it.
 
-    The widget owns no vault state — the window hands it (center, neighbors)
+    The widget owns no vault state: the window hands it (center, neighbors)
     whenever the current note or the graph changes.
     """
 
@@ -37,7 +37,7 @@ class LocalGraphView:
             [Gtk.AccessibleProperty.LABEL], ["Local graph of the current note"]
         )
         # Bound-method callbacks would cycle area → callback → self → area, so
-        # the widget's release would fall to the GC — which may run on the sync
+        # the widget's release would fall to the GC, which may run on the sync
         # thread, and a GTK object finalized off the main loop aborts the app.
         view = weakref.ref(self)
         self.area.set_draw_func(lambda area, cr, w, h: _call(view, "_draw", area, cr, w, h))

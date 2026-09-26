@@ -1,11 +1,11 @@
 """The reader's visual themes: one identity per theme, in palettes rather than rules.
 
-A theme owns three things — the page tokens the reading surface consumes, the GTK
+A theme owns three things: the page tokens the reading surface consumes, the GTK
 colors the window chrome consumes, and the syntax palette for code. Layout lives in
 `reader.css` and the chrome structure lives with the window; neither is per-theme.
 
 Every theme is generated from a `Palette`, Stone included, so adding one is sixteen
-colours and no rules — and no theme carries a hand-written block the others cannot.
+colours and no rules, and no theme carries a hand-written block the others cannot.
 """
 
 from dataclasses import dataclass, field
@@ -82,7 +82,7 @@ def page_tokens(palette: Palette, selector: str = "") -> str:
     """The custom properties one theme contributes; the rules it uses are shared.
 
     Screen only. Paper has no dark mode, reader.css states the palette a page is
-    printed in, and a generated block is emitted after it — so a theme that reached
+    printed in, and a generated block is emitted after it. So a theme that reached
     print would win on source order and put the reader's ink on a black page.
     """
     p = palette
@@ -159,7 +159,7 @@ def chrome_extra(palette: Palette) -> str:
     This is loaded after the shared structure, so everything it names silently
     wins. It used to state the rail's borders, its section labels and its
     selected row, which meant the family never received any of the structure's
-    own treatment for those — a theme kept the chrome it had before Stone.
+    own treatment for those: a theme kept the chrome it had before Stone.
 
     The structure names a token per palette for each of them, so a theme still
     wears its own colours there. What is left here is what no token can say.
