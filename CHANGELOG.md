@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### A link to a block lands on the block
+
+- **`[[Note#^id]]` opens the note at the block, not at the top.** The link dropped the block id, and the page removed the `^id` marker without giving the block anything to scroll to, so every block link opened at the first line and `[[#^id]]` pointed at nothing. A block now carries its id: a paragraph or list item that ends in `^id`, and a table, list, quote or callout followed by a line holding only `^id`. That lone line used to show on the page as text; it is hidden now. A heading keeps its own anchor, and a note embedded in another gives its blocks no id, so no id appears twice on a page.
+
 ### Search finds what you meant
 
 - **A note is found by its own name.** Full-text search read only note bodies, so a note called `Kubernetes` whose text never said the word was absent from a search for it. The name is now indexed and counts ten times a word in the body, so a note named for what you searched leads.

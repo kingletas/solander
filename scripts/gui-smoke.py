@@ -1,5 +1,6 @@
 """Drives the real window through open, render, search, and navigation on a live display."""
 
+import re
 import sys
 from pathlib import Path
 
@@ -352,13 +353,48 @@ def run_checks(app):
                 every = int(marks) >= 2
                 check("every search word is marked in the note, not the first alone", every)
                 check("the first hit carries the anchor the note opens at", first == "1")
-                window._show_mindmap()
-                GLib.timeout_add(1000, check_map_toggle_on)
+                check_block_link()
 
             # A world of its own, because the page's policy forbids scripts in the document.
             webview = window.reader.webview
             webview.evaluate_javascript(script, -1, "smoke", None, None, counted)
             return False
+
+        def check_block_link():
+            """Follows a `[[Note#^id]]` link the way a click does, and finds the block on screen."""
+            page = window._provide_page("/note/Linker.md", window.reader.webview)
+            match = re.search(r'href="(reader:///note/Blocks\.md#[^"]*)"', page)
+            href = match.group(1) if match else ""
+            check("a block link keeps the block in its address", href.endswith("#block-deep"))
+            window.reader.webview.load_uri(href or "reader:///note/Blocks.md")
+
+            def measure_block():
+                script = (
+                    "(() => { const b = document.getElementById('block-deep');"
+                    " if (!b) return 'none';"
+                    " const top = b.getBoundingClientRect().top;"
+                    " const seen = top >= 0 && top < window.innerHeight;"
+                    " return [window.scrollY > 0, seen].join(','); })()"
+                )
+
+                def placed(webview, result) -> None:
+                    answer = webview.evaluate_javascript_finish(result).to_string()
+                    check("the linked block is on the page", answer != "none")
+                    scrolled = answer == "true,true"
+                    check("the note opens scrolled to the block, not at the top", scrolled)
+                    window.reader.load_note("A.md")
+                    GLib.timeout_add(1000, back_to_a)
+
+                webview = window.reader.webview
+                webview.evaluate_javascript(script, -1, "smoke", None, None, placed)
+                return False
+
+            def back_to_a():
+                window._show_mindmap()
+                GLib.timeout_add(1000, check_map_toggle_on)
+                return False
+
+            GLib.timeout_add(1500, measure_block)
 
         def check_map_toggle_on():
             uri = window.reader.webview.get_uri() or ""
@@ -710,6 +746,11 @@ def write_extra_fixtures() -> None:
         "---\ntitle: The Middle Way\n---\nSecond prose here.\n"
     )
     (vault_path / "Book" / "03 Three.md").write_text("Last prose here.\n")
+    (vault_path / "Blocks.md").write_text(
+        "# Blocks\n\n" + "A paragraph that only takes up room.\n\n" * 80
+        + "The paragraph a link points at. ^deep\n\n" + "After it.\n\n" * 5
+    )
+    (vault_path / "Linker.md").write_text("Go to [[Blocks#^deep]].\n")
     (vault_path / "Flow.md").write_text(
         "# Flow\n\n```mermaid\nflowchart LR\n  A[start] -->|go| B{ok?}\n"
         "  B -->|yes| C[done]\n  style C stroke:#080\n```\n\n"
