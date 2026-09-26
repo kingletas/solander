@@ -428,11 +428,39 @@ def run_checks(app):
                     print(f"   Blocks.md restored to {where:.3f} of the way down")
                     check("a restored note opens where it was read to", abs(where - 0.5) < 0.05)
                     check("a restored position is used once", window._pending_scroll == {})
-                    check_responsive()
+                    check_open_time()
 
                 webview = window.reader.webview
                 webview.evaluate_javascript(script, -1, "smoke", None, None, restored)
                 return False
+
+            def check_open_time():
+                """Times a note of ordinary size from asking for it to WebKit finishing the page."""
+                from gi.repository import WebKit
+
+                paragraph = "A paragraph with **bold**, a [[A]] link, a #tag and `code`. " * 4
+                table = "| a | b |\n|---|---|\n" + "| 1 | [[Second Note]] |\n" * 10
+                (vault_path / "Typical.md").write_text(
+                    "# Typical\n\n" + ("## Part\n\n" + (paragraph + "\n\n") * 4 + table
+                                        + "\n```python\nprint(1)\n```\n\n") * 6
+                )
+                webview = window.reader.webview
+                started = {}
+
+                def finished(view, event) -> None:
+                    ours = "Typical.md" in (view.get_uri() or "")
+                    if event != WebKit.LoadEvent.FINISHED or not ours:
+                        return
+                    view.disconnect(handler)
+                    took = time.monotonic() - started["at"]
+                    size = (vault_path / "Typical.md").stat().st_size // 1024
+                    print(f"   a {size} KB note opened in {took * 1000:.0f} ms")
+                    check("an ordinary note opens in under a second", took < 1.0)
+                    GLib.timeout_add(300, lambda: (check_responsive(), False)[1])
+
+                handler = webview.connect("load-changed", finished)
+                started["at"] = time.monotonic()
+                window.reader.load_note("Typical.md")
 
             def check_responsive():
                 """Opens a 1 MB note and times the window's own loop while it renders.
