@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### The file tree keeps your place
+
+- **A change anywhere in the vault no longer collapses the file tree.** Every write the watcher saw emptied the tree and rebuilt its top level, so each expanded folder closed; with several writers in a vault that happened every few minutes. The tree now edits each folder it has listed in place, adding and removing only the rows that changed, so an open folder stays open and the row you were on stays where it was. Showing hidden files, Markdown only and hiding a folder keep your place the same way.
+
 ### The menu is a list, and About says what this reader promises
 
 - **Twenty-odd entries in five sections became eleven rows in four.** No headings: a heading is what a menu needs when it has stopped being a list you can read. Typography, preferences, this note, tabs and what to show are drill-downs; everything else is one row.
