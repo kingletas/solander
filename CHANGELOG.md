@@ -22,6 +22,7 @@
 
 - **The window stopped answering while a note rendered.** The page was built on the thread that draws the window, so a 1 MB note held everything, from the sidebar to the close button, for several seconds. A note now renders on a worker thread with a renderer of its own, and the page is handed to the reading pane when it is ready. Measured in the running window while a 1 MB note rendered for about four seconds, the window's longest wait went from 3.2 seconds to under a tenth of a second.
 - **A change to the vault could freeze the window for as long.** After every change, the watcher walked every folder of the vault on that same thread to find new ones, and while a note rendered alongside, each step of the walk waited its turn. The walk now runs on its own thread too.
+- **A change to the vault while a long note rendered could still pause the window for half a second.** The file tree and the panels updated while the note was being built, and every row they redrew waited its turn behind the render. They now catch up the moment the page arrives, and the render hands the window its turn five times as often. On a busy machine the longest pause while a 1 MB note rendered went from as much as 979 ms to under 70 ms, over five runs.
 
 ### A long note opens sooner
 
