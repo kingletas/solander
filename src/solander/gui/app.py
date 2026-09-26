@@ -1,6 +1,7 @@
 """The application object: single instance, path handoff, session restore."""
 
 import gc
+import sys
 from pathlib import Path
 
 import gi
@@ -13,6 +14,7 @@ from .. import APP_ID, APP_NAME
 from .window import ReaderWindow
 
 GC_INTERVAL_SECONDS = 10
+SWITCH_INTERVAL_SECONDS = 0.001
 
 
 class ReaderApplication(Adw.Application):
@@ -33,6 +35,11 @@ class ReaderApplication(Adw.Application):
         # So automatic collection is off, and the main loop collects instead.
         gc.disable()
         GLib.timeout_add_seconds(GC_INTERVAL_SECONDS, self._collect)
+        # A note renders on a worker thread, and every Python callback the main
+        # loop makes meanwhile waits for the worker to hand back the interpreter
+        # lock. At the default 5 ms a tree refresh of a few dozen rows froze the
+        # window for over half a second; at 1 ms the worker yields five times as often.
+        sys.setswitchinterval(SWITCH_INTERVAL_SECONDS)
 
     @staticmethod
     def _collect() -> bool:

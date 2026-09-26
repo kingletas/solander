@@ -78,6 +78,9 @@ READ_SCROLL = (
     " return String(room > 0 ? window.scrollY / room : 0); })()"
 )
 
+SYNC_RETRY_MS = 200
+"""How often a finished sync looks again for a moment when no note is rendering."""
+
 SCROLL_READ_TIMEOUT_MS = 500
 """How long closing waits for the tabs to say where they were before it gives up."""
 
@@ -191,6 +194,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         if settings is not None:
             settings.connect("notify::gtk-xft-dpi", self._on_text_scale)
         self._pending_scroll: dict[str, float] = {}
+        self._renders_in_flight = 0
         self._scroll_read = False
         self.tab_view = Adw.TabView()
         self.tab_view.connect("notify::selected-page", lambda *_: self._sync_chrome())
@@ -1352,7 +1356,14 @@ class ReaderWindow(Adw.ApplicationWindow):
             self._sync_lock.release()
 
     def _apply_sync(self, vault: Vault, renderer, graph: VaultGraph, search) -> bool:
-        """Swaps in the freshly synced vault, renderer, and graph on the main loop."""
+        """Swaps in the freshly synced vault, renderer, and graph on the main loop.
+
+        While a note renders on its worker, every panel refresh here waits for the
+        interpreter lock between rows, so the swap waits for the render instead.
+        """
+        if self._renders_in_flight > 0:
+            GLib.timeout_add(SYNC_RETRY_MS, self._apply_sync, vault, renderer, graph, search)
+            return False
         if self.vault is None or vault.root != self.vault.root or search is not self.search_index:
             return False
         first_sync = not search.ready
@@ -1878,12 +1889,14 @@ class ReaderWindow(Adw.ApplicationWindow):
             GLib.idle_add(finish, rendered, page)
 
         def finish(rendered, page: str) -> bool:
+            self._renders_in_flight -= 1
             reader = self._readers.get(webview)
             if reader is not None:
                 reader.last_render = rendered
             deliver(page)
             return False
 
+        self._renders_in_flight += 1
         threading.Thread(target=build, daemon=True).start()
         return True
 
