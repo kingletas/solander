@@ -5,6 +5,7 @@
 ### The app's own notes describe the app
 
 - **The shortcuts window left out keys the window answers to.** `F5` reloads, `Ctrl+=` zooms in, a book has its own page-turning keys, and a search result opens in a new tab on middle-click, `Ctrl+click` or right-click; none of these were listed, and the folder row pointed at a View menu that no longer exists. The list names all of them now. The keys the window binds live in one table beside that list, and a test fails when a bound key is missing from the list or a listed key is bound to nothing.
+- **The welcome page was printing each recent vault's full path** under its name, the same leak the About dialog had. A card names its vault the way About and the recent-vaults menu do, and the smoke run fails if the welcome page contains the home directory.
 
 ### A board fits the window
 
