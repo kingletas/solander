@@ -473,9 +473,43 @@ def run_checks(app):
                 GLib.timeout_add(20, tick)
 
             def back_to_a():
-                window._show_mindmap()
-                GLib.timeout_add(1000, check_map_toggle_on)
+                check_text_scale()
                 return False
+
+            def check_text_scale():
+                """Raises the desktop's text scaling by half and reads the page's type size."""
+                from gi.repository import Gtk
+
+                settings = Gtk.Settings.get_default()
+                standard = settings.get_property("gtk-xft-dpi")
+                script = "getComputedStyle(document.documentElement).fontSize"
+
+                def read(then):
+                    def answered(webview, result) -> None:
+                        then(webview.evaluate_javascript_finish(result).to_string())
+
+                    webview = window.reader.webview
+                    webview.evaluate_javascript(script, -1, "smoke", None, None, answered)
+                    return False
+
+                def at_standard(before: str) -> None:
+                    settings.set_property("gtk-xft-dpi", int(standard * 1.5))
+                    GLib.timeout_add(800, read, at_large)
+
+                def at_large(after: str) -> None:
+                    print(f"   page type {before_size[0]} at the standard DPI, {after} at 1.5x")
+                    check("the page follows the desktop's text scaling", after == "24px")
+                    settings.set_property("gtk-xft-dpi", standard)
+                    window._show_mindmap()
+                    GLib.timeout_add(1000, check_map_toggle_on)
+
+                before_size = []
+
+                def remember(before: str) -> None:
+                    before_size.append(before)
+                    at_standard(before)
+
+                read(remember)
 
             GLib.timeout_add(1500, measure_block)
 
@@ -742,7 +776,13 @@ def run_checks(app):
                 window.reader.webview.set_zoom_level(1.4)
                 window.reader.load_note("Wide.md")
 
-                def measure() -> bool:
+                def measure(tries: int = 0) -> bool:
+                    # A new default size reaches a window that is already open only
+                    # when the compositor gets to it, so the board waits for the width.
+                    if window.get_width() != 1872 and tries < 20:
+                        window.set_default_size(1872, 1045)
+                        GLib.timeout_add(250, measure, tries + 1)
+                        return False
                     script = (
                         "(() => { const k = document.querySelector('.kanban');"
                         " if (!k) return 'none';"
@@ -755,6 +795,7 @@ def run_checks(app):
                     def measured(webview, result) -> None:
                         value = webview.evaluate_javascript_finish(result).to_string()
                         print(f"   six-lane board: overflow,narrowest,lanes = {value}")
+                        check("the window reached the saved width", window.get_width() == 1872)
                         parts = value.split(",")
                         check("a six-lane board fits its page with no sideways scroll",
                               len(parts) == 3 and int(parts[0]) <= 0 and parts[2] == "6")

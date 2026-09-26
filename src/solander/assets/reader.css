@@ -533,6 +533,8 @@ code.math-source { color: var(--muted); }
    no dark mode, so wide content wraps instead of clipping, boxes refuse to be
    sliced across page boundaries, and the palette is forced light. */
 @media print {
+  /* A PDF is the same whatever text scaling the screen was read at. */
+  html { font-size: 16px; }
   body, body.theme-dark {
     --bg: #ffffff; --fg: #24292f; --muted: #57606a; --border: #d0d7de;
     --border-strong: #a8b0b9; --surface: #f6f8fa; --accent: #0969da;
