@@ -80,3 +80,39 @@ def test_an_embedded_note_does_not_repeat_its_block_ids(vault, vault_dir):
     body = render(vault, vault_dir, "Embeds.md", "Mine. ^intro\n\n![[Alpha]]\n")
     assert body.count('id="block-intro"') == 1
     assert "^intro" not in body
+
+
+def test_many_markers_after_a_long_list_cost_their_sum_not_their_product(vault, vault_dir):
+    """A scan back through the tokens per marker once made this pattern quadratic."""
+    import time
+
+    def seconds(n: int) -> float:
+        rel = f"Markers{n}.md"
+        (vault_dir / rel).write_text("- a\n" * n + "\n" + "^x\n\n" * n)
+        vault.reindex()
+        renderer = NoteRenderer(vault)
+        start = time.perf_counter()
+        renderer.render(rel)
+        return time.perf_counter() - start
+
+    small, large = seconds(1500), seconds(6000)
+    # Four times the input: about four times the time when linear, sixteen when not.
+    assert large < small * 9
+
+
+def test_a_same_note_link_cannot_add_attributes(vault, vault_dir):
+    body = render(vault, vault_dir, "Quote.md", 'Text. ^ok\n\n[[#^x" title="t]]\n')
+    assert 'title="t"' not in body
+    assert 'href="#block-x%22%20title%3D%22t"' in body
+
+
+def test_a_heading_cannot_take_the_search_landing_or_a_block_id(vault, vault_dir):
+    text = (
+        "Intro.\n\n# Search hit\n\n# Block foo\n\nText. ^foo\n\n"
+        "[[#Search hit]] and [[#Block foo]]\n"
+    )
+    body = render(vault, vault_dir, "Names.md", text)
+    assert 'id="search-hit"' not in body
+    assert body.count('id="block-foo"') == 1
+    assert 'id="h-search-hit"' in body and 'href="#h-search-hit"' in body
+    assert 'id="h-block-foo"' in body and 'href="#h-block-foo"' in body

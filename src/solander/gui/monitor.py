@@ -37,6 +37,7 @@ class VaultMonitor:
         self._monitors: dict[str, Gio.FileMonitor] = {}
         self._timeout = 0
         self._cancelled = False
+        self._walks = 0
         self._rewatch()
 
     def cancel(self) -> None:
@@ -52,18 +53,21 @@ class VaultMonitor:
     def _rewatch(self) -> None:
         """Finds the vault's directories on a worker, then watches them on the main loop."""
 
+        self._walks += 1
+        walk_number = self._walks
+
         def walk() -> None:
             wanted = {str(self.root)}
             for dirpath, dirnames, _filenames in os.walk(self.root, followlinks=False):
                 dirnames[:] = [d for d in dirnames if not d.startswith(".")]
                 wanted.update(str(Path(dirpath) / d) for d in dirnames)
-            GLib.idle_add(self._watch, wanted)
+            GLib.idle_add(self._watch, wanted, walk_number)
 
         threading.Thread(target=walk, daemon=True).start()
 
-    def _watch(self, wanted: set[str]) -> bool:
-        """Makes the set of watched directories exactly `wanted`."""
-        if self._cancelled:
+    def _watch(self, wanted: set[str], walk_number: int) -> bool:
+        """Makes the set of watched directories exactly `wanted`, unless a newer walk exists."""
+        if self._cancelled or walk_number != self._walks:
             return False
         for path in set(self._monitors) - wanted:
             self._monitors.pop(path).cancel()
