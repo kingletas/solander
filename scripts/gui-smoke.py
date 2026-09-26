@@ -337,15 +337,27 @@ def run_checks(app):
         check("recent notes are tracked", "Second Note.md" in window.store.state.recent_notes)
         window._update_local_graph()
         check("local graph pane has neighbors", len(window.local_graph.neighbors) >= 1)
-        window._pending_highlight = "note"
-        window.reader.load_note("A.md")
+        window._pending_highlight = ["alpha", "callout"]
+        window.reader.load_note("A.md", anchor="search-hit")
 
         def check_highlight():
-            controller = window.reader.webview.get_find_controller()
-            check("search hit highlighting ran", controller.get_search_text() == "note")
-            check("highlight consumed after one load", window._pending_highlight == "")
-            window._show_mindmap()
-            GLib.timeout_add(1000, check_map_toggle_on)
+            check("highlight consumed after one load", window._pending_highlight == [])
+            script = (
+                "[document.querySelectorAll('mark.search-hit').length,"
+                " document.querySelectorAll('#search-hit').length].join(',')"
+            )
+
+            def counted(webview, result) -> None:
+                marks, first = webview.evaluate_javascript_finish(result).to_string().split(",")
+                every = int(marks) >= 2
+                check("every search word is marked in the note, not the first alone", every)
+                check("the first hit carries the anchor the note opens at", first == "1")
+                window._show_mindmap()
+                GLib.timeout_add(1000, check_map_toggle_on)
+
+            # A world of its own, because the page's policy forbids scripts in the document.
+            webview = window.reader.webview
+            webview.evaluate_javascript(script, -1, "smoke", None, None, counted)
             return False
 
         def check_map_toggle_on():

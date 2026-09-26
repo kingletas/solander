@@ -23,6 +23,7 @@ from ..core.bookmarks import read_bookmarks
 from ..core.csssnippets import load_snippets
 from ..core.frontmatter import split_frontmatter
 from ..core.graph import VaultGraph, local_neighbors
+from ..core.hits import FIRST_HIT_ID, mark_terms
 from ..core.indexing import sync_indexes
 from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
 from ..core.resolver import resolve_note
@@ -88,7 +89,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._preview_reader = None
         self._preview_timeout = 0
         self._preview_pending = ""
-        self._pending_highlight = ""
+        # The words of the search a note was opened from, marked in the next page served.
+        self._pending_highlight: list[str] = []
         self._snippets_css = ""
         self._pointer = (0.0, 0.0)
         self.book: dict | None = None
@@ -1804,6 +1806,10 @@ class ReaderWindow(Adw.ApplicationWindow):
             rendered = self.renderer.render(rel, theme)
             if reader is not None:
                 reader.last_render = rendered
+            if self._pending_highlight and webview is self.reader.webview:
+                page, _count = mark_terms(rendered.page, self._pending_highlight)
+                self._pending_highlight = []
+                return page
             return rendered.page
         if segments and segments[0] == "preview" and self.renderer is not None:
             return self.renderer.render_preview("/".join(segments[1:]), theme)
@@ -1943,11 +1949,6 @@ class ReaderWindow(Adw.ApplicationWindow):
         if event == WebKit.LoadEvent.FINISHED:
             if self._print_after_load and self.reader.webview is webview:
                 GLib.timeout_add(120, lambda: (self._maybe_print_loaded_chapter(), False)[1])
-            # A note opened from a search result gets its matches highlighted.
-            if self._pending_highlight and self.reader.webview is webview:
-                options = WebKit.FindOptions.CASE_INSENSITIVE | WebKit.FindOptions.WRAP_AROUND
-                webview.get_find_controller().search(self._pending_highlight, options, 500)
-                self._pending_highlight = ""
             return
         if event != WebKit.LoadEvent.COMMITTED:
             return
@@ -2183,8 +2184,8 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     def _on_search_row(self, _list, row) -> None:
         words = parse_query(self.search_entry.get_text()).words
-        self._pending_highlight = words[0] if words else ""
-        self.reader.load_note(row.note_path)
+        self._pending_highlight = list(words)
+        self.reader.load_note(row.note_path, anchor=FIRST_HIT_ID if words else "")
 
     # -- find in note ------------------------------------------------------
 
