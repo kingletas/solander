@@ -7,6 +7,7 @@
 - **A note is found by its own name.** Full-text search read only note bodies, so a note called `Kubernetes` whose text never said the word was absent from a search for it. The name is now indexed and counts ten times a word in the body, so a note named for what you searched leads.
 - **The word itself outranks longer words it begins.** Every word was matched only as a prefix, so `cat` put a note full of *catalogue* and *category* above one that says *cat*. Each word is now asked for whole and as a prefix, and the whole word wins.
 - **A `path:`, `file:` or `tag:` filter no longer loses its note.** Filters ran after the index had already stopped at a thousand matches, so in a vault where a word is common a filtered search could come back empty. Filtered searches now see every match; on an 11,000-note test vault they answered in 80 to 220 ms.
+- **Every word you searched is marked in the note you open, not only the first.** The page opens at the first one. The words are marked in the page before it is shown, since the reader runs no scripts, and they match as search does: case and accents aside, and at the start of a longer word. A marked hit is outlined, so it is not mistaken for a highlight in the note itself.
 - **Quick-open prefers the note named by what you typed.** `plan` puts `People/Alan/Plan.md` above `Projects/Launch Plan.md`; `cafe` finds `Café.md`; and `md` no longer matches every note by its extension.
 
 ### The app's own notes describe the app

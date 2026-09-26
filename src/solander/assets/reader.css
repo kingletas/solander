@@ -133,6 +133,8 @@ a:hover { color: var(--arc-hot, var(--accent)); }
 .wikilink:hover { border-bottom-color: var(--arc-hot, var(--accent)); }
 
 mark { background: var(--mark-bg); color: inherit; padding: 0 0.15em; border-radius: 2px; }
+/* A search hit is outlined, so it is never mistaken for a highlight the author wrote. */
+mark.search-hit { outline: 1px solid var(--accent); outline-offset: 0; }
 
 /* Selection is the theme's own accent rather than the desktop's. */
 ::selection { background: color-mix(in srgb, var(--arc-accent, var(--accent)) 58%, transparent); }
