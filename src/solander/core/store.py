@@ -1,4 +1,4 @@
-"""The persistent index: note scans and an FTS5 body index, stored outside the vault.
+"""The persistent index: note scans and an FTS5 name-and-body index, stored outside the vault.
 
 The store is a cache of derived data, never a source of truth — corruption or a
 schema change means it is deleted and rebuilt from the vault, silently.
@@ -11,8 +11,10 @@ from pathlib import Path
 
 from .graph import NoteScan, RawLink
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 SNIPPET_TOKENS = 14
+# How much a word in a note's name counts against the same word in its body.
+NAME_WEIGHT = 10.0
 
 
 class IndexStore:
@@ -47,7 +49,7 @@ class IndexStore:
         )
         db.execute(
             "CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5("
-            "rel UNINDEXED, body, tokenize='unicode61 remove_diacritics 2')"
+            "rel UNINDEXED, name, body, tokenize='unicode61 remove_diacritics 2')"
         )
         db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         db.commit()
@@ -89,7 +91,9 @@ class IndexStore:
         # The fts rel column is unindexed, so deletion goes through the stored
         # rowid — a WHERE rel=? there is a full-table scan, O(n²) over a build.
         self._drop_body(rel)
-        cursor = db.execute("INSERT INTO fts (rel, body) VALUES (?, ?)", (rel, text))
+        cursor = db.execute(
+            "INSERT INTO fts (rel, name, body) VALUES (?, ?, ?)", (rel, _note_name(rel), text)
+        )
         db.execute(
             "INSERT OR REPLACE INTO notes (rel, mtime, size, scan, fts_rowid) "
             "VALUES (?, ?, ?, ?, ?)",
@@ -111,25 +115,46 @@ class IndexStore:
         self.db.commit()
 
     def search_body(self, words: list[str], limit: int) -> list[tuple[str, str]]:
-        """Returns (rel, snippet) for notes matching every word, best matches first.
+        """Returns (rel, snippet) for notes matching every word in name or body, best first.
 
-        Words become quoted prefix terms, so the query string a user typed can
-        never reach FTS5's own query syntax.
+        Each word is quoted, so the query string a user typed can never reach
+        FTS5's own query syntax, and asked for both whole and as a prefix, so a
+        note holding the word itself outranks one holding only longer words it
+        begins. A word in the note's name counts NAME_WEIGHT times one in its body.
         """
-        terms = []
-        for word in words:
-            cleaned = word.replace('"', "")
-            if cleaned:
-                terms.append(f'"{cleaned}"*')
-        if not terms:
+        match = _match_expression(words)
+        if not match:
             return []
-        match = " AND ".join(terms)
         rows = self.db.execute(
-            "SELECT rel, snippet(fts, 1, '', '', '…', ?) FROM fts "
-            "WHERE fts MATCH ? ORDER BY rank LIMIT ?",
-            (SNIPPET_TOKENS, match, limit),
+            "SELECT rel, snippet(fts, 2, '', '', '…', ?) FROM fts "
+            "WHERE fts MATCH ? ORDER BY bm25(fts, 0.0, ?, 1.0) LIMIT ?",
+            (SNIPPET_TOKENS, match, NAME_WEIGHT, limit),
         )
         return [(rel, snippet) for rel, snippet in rows]
+
+    def match_rels(self, words: list[str]) -> list[str]:
+        """Every note matching every word, best first, without snippets, for filtering."""
+        match = _match_expression(words)
+        if not match:
+            return []
+        rows = self.db.execute(
+            "SELECT rel FROM fts WHERE fts MATCH ? ORDER BY bm25(fts, 0.0, ?, 1.0)",
+            (match, NAME_WEIGHT),
+        )
+        return [rel for (rel,) in rows]
+
+    def snippets_for(self, words: list[str], rels: list[str]) -> dict[str, str]:
+        """The snippet each of these notes shows for the words."""
+        match = _match_expression(words)
+        if not match or not rels:
+            return {}
+        rows = self.db.execute(
+            "SELECT notes.rel, snippet(fts, 2, '', '', '…', ?) FROM fts "
+            "JOIN notes ON notes.fts_rowid = fts.rowid "
+            "WHERE fts MATCH ? AND notes.rel IN (SELECT value FROM json_each(?))",
+            (SNIPPET_TOKENS, match, json.dumps(rels)),
+        )
+        return dict(rows)
 
     def all_rels(self) -> list[str]:
         """Returns every cached note path, for filter-only queries."""
@@ -140,6 +165,23 @@ class IndexStore:
         if connection is not None:
             connection.close()
             self._local.connection = None
+
+
+def _match_expression(words: list[str]) -> str:
+    """An FTS5 query for every word, whole or as a prefix, carrying none of the user's syntax."""
+    terms = []
+    for word in words:
+        cleaned = word.replace('"', "")
+        if cleaned:
+            terms.append(f'("{cleaned}" OR "{cleaned}"*)')
+    return " AND ".join(terms)
+
+
+def _note_name(rel: str) -> str:
+    """The note's filename without its extension, which is what a person calls it."""
+    name = rel.rsplit("/", 1)[-1]
+    stem, dot, _extension = name.rpartition(".")
+    return stem if dot else name
 
 
 def open_index_store(path: Path | str) -> IndexStore:

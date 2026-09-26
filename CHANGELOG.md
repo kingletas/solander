@@ -2,11 +2,19 @@
 
 ## Unreleased
 
+### Search finds what you meant
+
+- **A note is found by its own name.** Full-text search read only note bodies, so a note called `Kubernetes` whose text never said the word was absent from a search for it. The name is now indexed and counts ten times a word in the body, so a note named for what you searched leads.
+- **The word itself outranks longer words it begins.** Every word was matched only as a prefix, so `cat` put a note full of *catalogue* and *category* above one that says *cat*. Each word is now asked for whole and as a prefix, and the whole word wins.
+- **A `path:`, `file:` or `tag:` filter no longer loses its note.** Filters ran after the index had already stopped at a thousand matches, so in a vault where a word is common a filtered search could come back empty. Filtered searches now see every match; on an 11,000-note test vault they answered in 80 to 220 ms.
+- **Quick-open prefers the note named by what you typed.** `plan` puts `People/Alan/Plan.md` above `Projects/Launch Plan.md`; `cafe` finds `Café.md`; and `md` no longer matches every note by its extension.
+
 ### The app's own notes describe the app
 
 - **The shortcuts window left out keys the window answers to.** `F5` reloads, `Ctrl+=` zooms in, a book has its own page-turning keys, and a search result opens in a new tab on middle-click, `Ctrl+click` or right-click; none of these were listed, and the folder row pointed at a View menu that no longer exists. The list names all of them now. The keys the window binds live in one table beside that list, and a test fails when a bound key is missing from the list or a listed key is bound to nothing.
 - **The welcome page was printing each recent vault's full path** under its name, the same leak the About dialog had. A card names its vault the way About and the recent-vaults menu do, and the smoke run fails if the welcome page contains the home directory.
 - **The user guide, getting started, the walkthrough and the README described a window that had moved on.** They sent people to a View menu and a Note menu that are now Preferences and This note, put Theme before Mode, gave the rail a sepia it lost to Stone, put a breadcrumb on the page that now lives in the header bar, said a single note opens in its own folder when it opens in the vault that holds it, and said every link scheme but the web was refused when `mailto` opens your mail app. They now match the app, and the guide adds what it left out: `F5`, `Ctrl+=`, `F1`, the book keys, opening a search result in a new tab, Show Hidden Files and Markdown Files Only, and that search is case-insensitive with no phrase search. The software-centre screenshot pointed at an Atelier image that no longer exists and shows Stone now.
+
 
 ### A board fits the window
 

@@ -120,3 +120,60 @@ def test_demotion_keeps_the_index_order_within_each_group():
 def test_a_vault_that_excludes_nothing_is_left_alone():
     hits = [SearchHit(path="Archive/Old.md"), SearchHit(path="Notes/Live.md")]
     assert demote(hits, set()) == hits
+
+
+def ranked_search(tmp_path, notes: dict[str, str]):
+    """A search over a small vault of the given notes, built through the real index."""
+    from solander.core.vault import Vault
+
+    root = tmp_path / "ranking"
+    for rel, text in notes.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(text)
+    vault = Vault.open(root)
+    search, graph = make_search(vault, tmp_path)
+    return search, graph
+
+
+def test_a_note_is_found_by_its_own_name(tmp_path):
+    search, _ = ranked_search(
+        tmp_path,
+        {
+            "Kubernetes.md": "Clusters, pods and deployments.",
+            "Daily/Mon.md": "Read about kubernetes.",
+        },
+    )
+    assert [hit.path for hit in search.search_content("kubernetes")][0] == "Kubernetes.md"
+
+
+def test_a_note_named_for_the_word_outranks_a_one_line_mention(tmp_path):
+    search, _ = ranked_search(
+        tmp_path,
+        {
+            "Inbox/stub.md": "kafka",
+            "Guides/Kafka Guide.md": "Kafka topics. Kafka partitions. " * 3
+            + "Consumers and producers. " * 20,
+        },
+    )
+    assert [hit.path for hit in search.search_content("kafka")][0] == "Guides/Kafka Guide.md"
+
+
+def test_the_exact_word_outranks_words_it_begins(tmp_path):
+    search, _ = ranked_search(
+        tmp_path,
+        {
+            "Shop/Catalogue.md": "The catalogue lists every category. "
+            "Catalogue pages and category pages.",
+            "Pets/Notes.md": "Our cat sleeps all day.",
+        },
+    )
+    assert [hit.path for hit in search.search_content("cat")][0] == "Pets/Notes.md"
+
+
+def test_a_filter_finds_its_note_however_many_notes_mention_the_word(tmp_path):
+    notes = {f"standups/{n:04}.md": "standup notes " * 5 for n in range(1100)}
+    notes["journal/2026-02-02.md"] = "a short standup"
+    search, _ = ranked_search(tmp_path, notes)
+    assert [hit.path for hit in search.search_content("path:journal standup")] == [
+        "journal/2026-02-02.md"
+    ]
