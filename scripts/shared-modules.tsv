@@ -9,6 +9,7 @@ src/solander/core/frontmatter.py	src/slate/cartridges/obsidian/frontmatter.py
 src/solander/core/fuzzy.py	src/slate/cartridges/obsidian/fuzzy.py
 src/solander/core/kanban.py	src/slate/cartridges/obsidian/kanban.py
 src/solander/core/links.py	src/slate/cartridges/obsidian/links.py
+src/solander/core/listdiff.py	src/slate/ui/vault/listdiff.py
 src/solander/core/lzstring.py	src/slate/cartridges/obsidian/lzstring.py
 src/solander/core/markdown.py	src/slate/cartridges/obsidian/markdown.py
 src/solander/core/mermaid.py	src/slate/cartridges/obsidian/mermaid.py
