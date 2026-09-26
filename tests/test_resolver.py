@@ -53,3 +53,22 @@ def test_embed_prefers_note_then_falls_back_to_file(vault):
     assert resolve_embed(vault, "Index.md", "Alpha").kind == "note"
     assert resolve_embed(vault, "Index.md", "diagram.png").kind == "image"
     assert resolve_embed(vault, "Index.md", "ghost.png").kind == "missing"
+
+
+def test_a_link_without_an_extension_never_asks_for_the_bare_name(vault):
+    asked = []
+
+    def exists(rel):
+        asked.append(rel)
+        return vault.has_file(rel)
+
+    resolution = resolve_note(vault, "Projects/Beta.md", "Alpha", exists=exists)
+    assert resolution.path == "Projects/Alpha.md"
+    assert "Alpha" not in asked
+    assert "Projects/Alpha" not in asked
+
+
+def test_a_file_with_the_bare_name_does_not_stand_in_for_the_note(vault, vault_dir):
+    (vault_dir / "Projects" / "Alpha").write_text("not a note")
+    vault.reindex()
+    assert resolve_note(vault, "Projects/Beta.md", "Alpha").path == "Projects/Alpha.md"
