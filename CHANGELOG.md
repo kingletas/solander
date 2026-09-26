@@ -13,6 +13,10 @@
 ### A screen reader can name what it lands on
 
 - **Sidebar rows, search boxes and task checkboxes were announced by their role alone.** A result, a link, a bookmark, a tag or a heading in the sidebar was read as "list item", the three search boxes as a blank text field once their placeholder went, a checkbox in a note as "check box, not checked" with no task, and the pinned and recent list as its heading and first row run together. Each now has a name: a note row its title and path with the snippet as its description, a tag its count, a quick-list row whether it is pinned or recent, and a checkbox the text of its task. `make a11y` reads the running window over AT-SPI, the bus Orca reads, opens each sidebar panel as assistive technology would, and fails on any control on screen with no name or any button, tab or entry that cannot take keyboard focus. It does not press keys, so the order Tab takes is still unchecked.
+- **Search says what it found.** The result count and messages such as "still indexing" were a line of text a screen reader never reached, since focus stays in the search box; they are now announced, the count that changes with every keystroke quietly.
+- **An embedded image says what its author wrote for it.** `![[chart.png|Sales funnel]]` gave a screen reader the file name; the caption is its alt text now.
+- **A folder's menu opens from the keyboard.** The Menu key or `Shift+F10` on a folder in the tree opens Read as Book and Hide Folder, which only a right-click reached before.
+- **A Markdown link to a note is marked by more than its colour**, with the same dotted underline a wikilink has.
 
 ### The file tree sorts by date or type
 

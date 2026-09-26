@@ -2236,7 +2236,7 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     def _on_search_typed(self, entry) -> None:
         if self.vault is None:
-            self.search_status.set_text("Open a vault first")
+            self._search_says("Open a vault first")
             return
         query = entry.get_text().strip()
         self._clear_results()
@@ -2247,15 +2247,16 @@ class ReaderWindow(Adw.ApplicationWindow):
                 for rel in self.store.state.recent_notes
                 if self.vault.has_file(rel) and not hidden_under(rel, hidden)
             ]
-            self.search_status.set_text("Recent notes" if recents else "")
+            self._search_says("Recent notes" if recents else "")
             for rel in recents:
                 self._add_result(rel, "")
             return
         hits = self._quick_hits(search_filenames(self.vault, query))
-        self.search_status.set_text(
+        self._search_says(
             f"{len(hits)} filename matches. Press Enter for full-text search"
             if hits
-            else "No filename matches. Press Enter for full-text search"
+            else "No filename matches. Press Enter for full-text search",
+            Gtk.AccessibleAnnouncementPriority.LOW,
         )
         for hit in hits[:50]:
             self._add_result(hit.path, "")
@@ -2267,18 +2268,18 @@ class ReaderWindow(Adw.ApplicationWindow):
         if not query:
             return
         if self.search_index is None or not self.search_index.ready:
-            self.search_status.set_text("Still indexing. Try again shortly")
+            self._search_says("Still indexing. Try again shortly")
             return
         if parse_query(query).tags and (self.graph is None or not self.graph.ready):
-            self.search_status.set_text("The tag index is still building. Try again shortly")
+            self._search_says("The tag index is still building. Try again shortly")
             return
         self._clear_results()
         note_tags = self.graph.note_tags if self.graph is not None else None
         hits = self._ranked_hits(self.search_index.search_content(query, note_tags))
         if not hits:
-            self.search_status.set_text(f"No matches for “{query}”")
+            self._search_says(f"No matches for “{query}”")
             return
-        self.search_status.set_text(f"{len(hits)} notes match")
+        self._search_says(f"{len(hits)} notes match")
         for hit in hits:
             self._add_result(hit.path, hit.snippet)
 
@@ -2306,6 +2307,14 @@ class ReaderWindow(Adw.ApplicationWindow):
         row.note_path = path
         self._open_in_new_tab_on(row, path)
         self.search_results.append(row)
+
+    def _search_says(
+        self, text: str, priority=Gtk.AccessibleAnnouncementPriority.MEDIUM
+    ) -> None:
+        """Shows the search status and has a screen reader say it; focus stays in the box."""
+        self.search_status.set_text(text)
+        if text:
+            self.search_status.announce(text, priority)
 
     def _open_in_new_tab_on(self, row, path: str) -> None:
         """Middle-click, Ctrl+click and right-click open a result in a new tab.

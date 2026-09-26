@@ -408,3 +408,11 @@ def test_a_task_checkbox_is_labelled_by_its_task(vault, vault_dir):
     box = '<input class="task-list-item-checkbox" disabled type="checkbox" />'
     assert f"<label>{box} open one</label>" in body
     assert "checked disabled" in body and "done one</label>" in body
+
+
+def test_an_embedded_image_takes_its_caption_as_alt_text(vault, vault_dir):
+    (vault_dir / "Pic.md").write_text("![[diagram.png|Sales funnel]]\n\n![[diagram.png]]\n")
+    vault.reindex()
+    body = NoteRenderer(vault).render("Pic.md").body
+    assert 'alt="Sales funnel"' in body
+    assert 'alt="diagram.png"' in body

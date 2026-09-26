@@ -120,6 +120,8 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 a.external::after { content: " ↗"; font-size: 0.8em; color: var(--muted); }
 .wikilink { border-bottom: 1px dotted var(--accent); }
+/* A Markdown link to a note or a heading is marked by more than its colour. */
+a.internal:not(.wikilink) { border-bottom: 1px dotted var(--accent); }
 .wikilink.missing {
   color: var(--missing);
   border-bottom: 1px dashed var(--missing);
