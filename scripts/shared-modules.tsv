@@ -1,0 +1,17 @@
+# Modules Solander and Slate carry as identical copies. One pair per line:
+# the path in Solander, a tab, the path in Slate. This file is itself identical in both.
+src/solander/core/bases.py	src/slate/cartridges/obsidian/bases.py
+src/solander/core/callouts.py	src/slate/cartridges/obsidian/callouts.py
+src/solander/core/canvas.py	src/slate/cartridges/obsidian/canvas.py
+src/solander/core/dql.py	src/slate/cartridges/obsidian/dql.py
+src/solander/core/excalidraw.py	src/slate/cartridges/obsidian/excalidraw.py
+src/solander/core/frontmatter.py	src/slate/cartridges/obsidian/frontmatter.py
+src/solander/core/fuzzy.py	src/slate/cartridges/obsidian/fuzzy.py
+src/solander/core/kanban.py	src/slate/cartridges/obsidian/kanban.py
+src/solander/core/links.py	src/slate/cartridges/obsidian/links.py
+src/solander/core/lzstring.py	src/slate/cartridges/obsidian/lzstring.py
+src/solander/core/markdown.py	src/slate/cartridges/obsidian/markdown.py
+src/solander/core/mermaid.py	src/slate/cartridges/obsidian/mermaid.py
+src/solander/core/palettes.py	src/slate/presentation/palettes.py
+scripts/shared-modules.tsv	scripts/shared-modules.tsv
+scripts/shared-modules.sh	scripts/shared-modules.sh
