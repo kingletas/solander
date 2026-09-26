@@ -235,6 +235,21 @@ def run_checks(app):
             hero = 'class="welcome-name"' in welcome and 'class="action-card"' in welcome
             check("welcome page carries the frontispiece", hero)
             check("welcome hero inlines the app mark", "<svg" in welcome)
+            # The fixture vault is not under the home directory, so a recent vault
+            # that is stands in for one; the card is drawn whether or not it exists.
+            recents = window.store.state.recent_vaults
+            home = str(Path.home())
+            homed = str(Path.home() / "Smoke Card Vault")
+            recents.insert(0, homed)
+            try:
+                carded = window._provide_page("/page/welcome", window.reader.webview)
+            finally:
+                recents.remove(homed)
+            check("a welcome vault card names its vault", "Smoke Card Vault" in carded)
+            check(
+                "the welcome page does not print the home directory",
+                home not in carded and "~/Smoke Card Vault" not in carded,
+            )
             flow = window._provide_page("/note/Flow.md", window.reader.webview)
             drew = 'class="mermaid-diagram"' in flow and "start" in flow and "ok?" in flow
             check("mermaid flowchart renders as static SVG", drew)

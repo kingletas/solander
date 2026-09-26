@@ -1882,14 +1882,14 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     def _welcome_page(self, theme: str) -> str:
         cards = ""
+        # A card names the vault the way the recent-vaults menu and About do; where
+        # it is kept stays in the link, which the hover line does not print.
         for root in self.store.state.recent_vaults[:6]:
             name = html.escape(Path(root).name)
-            path = html.escape(root)
             href = f"reader:///action/open-recent?arg={quote(root, safe='')}"
             cards += (
                 f'<a class="vault-card" href="{href}">'
-                f'<span class="vault-card-name">{name}</span>'
-                f'<span class="vault-card-path">{path}</span></a>'
+                f'<span class="vault-card-name">{name}</span></a>'
             )
         recents_block = ""
         if cards:

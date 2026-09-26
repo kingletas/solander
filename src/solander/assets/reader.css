@@ -483,7 +483,6 @@ section.footnotes {
 }
 .vault-card:hover { text-decoration: none; border-color: var(--accent); }
 .vault-card-name { display: block; font-weight: 600; font-family: var(--display-face); }
-.vault-card-path { display: block; color: var(--muted); font-size: 0.78rem; margin-top: 0.1em; }
 
 /* Hover preview */
 .preview { font-size: 0.85em; }
