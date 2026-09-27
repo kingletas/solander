@@ -109,6 +109,7 @@ class ReaderFoot(Gtk.Box):
         self.capability = Gtk.Label(label=capability, xalign=0)
         self.indexed = Gtk.Label(label="", xalign=0)
         self.measure = Gtk.Label(label="", xalign=1)
+        self.working = Gtk.Spinner(visible=False)
         self.theme = Gtk.Label(label="", xalign=1)
         self.dot = Gtk.Box()
         self.dot.add_css_class("theme-dot")
@@ -118,6 +119,7 @@ class ReaderFoot(Gtk.Box):
         self.append(self._separator())
         self.append(self.indexed)
         self.append(Gtk.Box(hexpand=True))
+        self.append(self.working)
         self.append(self.measure)
         self.append(self._separator())
         self.append(self.dot)
@@ -136,6 +138,13 @@ class ReaderFoot(Gtk.Box):
 
     def say_theme(self, label: str) -> None:
         self.theme.set_label(label)
+
+    def say_opening(self, name: str | None) -> None:
+        """Shows that a note is still being built, or clears it once the page is in."""
+        self.working.set_visible(bool(name))
+        self.working.set_spinning(bool(name))
+        if name:
+            self.measure.set_label(f"Opening {name}…")
 
     def say_note(self, words: int) -> None:
         """The size of what is on the page, in the terms a reader thinks in."""

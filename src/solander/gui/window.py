@@ -74,6 +74,9 @@ MAX_PANEL_ROWS = 200
 HOVER_PREVIEW_DELAY_MS = 600
 OUTLINE_MIN_WIDTH = 200
 
+OPENING_NOTICE_MS = 500
+"""How long a note may take before the foot says it is still opening."""
+
 SYNC_RETRY_MS = 200
 """How often a finished sync looks again for a moment when no note is rendering."""
 
@@ -196,6 +199,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._renders_in_flight = 0
         self._render_tokens = itertools.count(1)
         self._render_waiting: dict[int, tuple] = {}
+        self._opening_token = 0
+        self._opening_reader = None
         self._sync_waiting = None
         self._sync_timer = 0
         self._sync_since = 0
@@ -1906,6 +1911,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         if reader is not None:
             reader.render_generation = getattr(reader, "render_generation", 0) + 1
         token = next(self._render_tokens)
+        if not preview and reader is not None:
+            GLib.timeout_add(OPENING_NOTICE_MS, self._say_opening, token, reader, rel)
         generation = reader.render_generation if reader is not None else None
         self._render_waiting[token] = (webview, deliver, generation)
         # A tab that asks for another page stops this render at its next step,
@@ -1937,6 +1944,9 @@ class ReaderWindow(Adw.ApplicationWindow):
         def finish(key: int, rendered, page: str) -> bool:
             self._renders_in_flight -= 1
             view, answer, generation = self._render_waiting.pop(key)
+            if self._opening_token == key:
+                self._opening_token = 0
+                self.foot.say_opening(None)
             current = self._readers.get(view)
             # A tab that asked for another page since keeps that page's render.
             if current is not None and generation == getattr(current, "render_generation", 0):
@@ -1947,6 +1957,14 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._renders_in_flight += 1
         threading.Thread(target=build, daemon=True).start()
         return True
+
+    def _say_opening(self, token: int, reader, rel: str) -> bool:
+        """Says in the foot that the visible tab's note is still being built."""
+        if token in self._render_waiting and reader is self.reader:
+            self._opening_token = token
+            self._opening_reader = reader
+            self.foot.say_opening(rel.rsplit("/", 1)[-1].rsplit(".", 1)[0])
+        return False
 
     def _provide_page(self, path: str, webview=None) -> str:
         theme = self._theme()
@@ -2138,6 +2156,9 @@ class ReaderWindow(Adw.ApplicationWindow):
 
     def _sync_chrome(self) -> None:
         """Points every piece of window chrome at the selected tab's state."""
+        if self._opening_token and self._opening_reader is not self.reader:
+            self._opening_token = 0
+            self.foot.say_opening(None)
         page = self.tab_view.get_selected_page()
         if page is None:
             return
