@@ -256,7 +256,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         )
         header.pack_end(self.outline_toggle)
         header.pack_end(self._search_pill())
-        header.pack_end(self._readonly_badge())
+        self.readonly_badge = self._readonly_badge()
+        header.pack_end(self.readonly_badge)
 
         self.sidebar_widget = self._build_sidebar()
         self.sidebar_widget.set_visible(self.store.state.sidebar_visible)
@@ -737,7 +738,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.menu_popover.popdown()
 
     def _readonly_badge(self) -> Gtk.MenuButton:
-        """The read-only state as a quiet lock: the reason and next actions one click away."""
+        """The read-only state as a lock and a word; the reason and next actions a click away."""
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         content.set_margin_top(12)
         content.set_margin_bottom(12)
@@ -767,7 +768,10 @@ class ReaderWindow(Adw.ApplicationWindow):
             button.get_child().set_xalign(0.0)
             content.append(button)
         badge = Gtk.MenuButton(
-            icon_name="changes-prevent-symbolic", popover=Gtk.Popover(child=content)
+            child=Adw.ButtonContent(
+                icon_name="changes-prevent-symbolic", label="Read-only", can_shrink=True
+            ),
+            popover=Gtk.Popover(child=content),
         )
         badge.add_css_class("flat")
         badge.set_tooltip_text("Read-only: why, and what to do instead")

@@ -81,6 +81,10 @@ def run_checks(app):
         check("leaving zen restores the sidebar", window.sidebar_widget.get_visible())
         check("leaving zen restores the header", window.toolbar_view.get_reveal_top_bars())
 
+        badge = window.readonly_badge.get_child()
+        check("the read-only control carries its word", badge.get_label() == "Read-only")
+        check("the read-only word is on screen", badge.get_mapped() and badge.get_width() > 40)
+
         window.reader.emit("open-external-uri", "mailto:ana@example.org?subject=Hi")
         dialog = window.get_visible_dialog()
         check("a mail link asks before opening", dialog is not None)

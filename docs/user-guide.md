@@ -19,7 +19,7 @@ A full-height rail on the left, a shade deeper than the reading canvas and set o
 
 Every panel has a visible switch: the sidebar toggles from the button at the far left of the header (or `F9`), and the **outline panel** (the current note's headings, docked on the right with its own close button) from the list button on the right (or `F8`). Both toggles remember their state.
 
-The header also carries the open note's folder path, each folder a click into the file tree, then back/forward (WebKit's real history), search, and a quiet lock icon: click it for the read-only reason (the app can't write by design, not by permission) and the next action: view raw source, open the note in your default editor, or reveal it in Files.
+The header also carries the open note's folder path, each folder a click into the file tree, then back/forward (WebKit's real history), search, and a lock marked *Read-only*: click it for the reason (the app can't write by design, not by permission) and the next action: view raw source, open the note in your default editor, or reveal it in Files.
 
 ## Opening things
 

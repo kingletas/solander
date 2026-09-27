@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### The read-only control says so
+
+- **The header showed a lock and nothing else**, so what it meant was a guess until you hovered or clicked it. It now reads *Read-only* beside the lock, and a click still explains why and offers to show the source, open the note in your editor or reveal it in Files. When the header is short of room, the word shrinks before the other controls do.
+
 ### A mail link asks first
 
 - **A `mailto` link opened the mail app the moment it was clicked.** Such a link can fill in a subject, a message and copies to other people, and a note from anyone can carry one, so opening it is now a question: it names who the email is to, the first three addresses and a count of the rest, and says what else the link fills in. Web links still open in the browser at once, and every other scheme still does nothing.
