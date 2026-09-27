@@ -54,10 +54,11 @@ command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$
 
 # A stale icon-theme.cache takes precedence over the directory it sits in, so an
 # icon installed after the cache was written is invisible until it is rebuilt.
+# Without the tool to rebuild it, the cache goes, and GTK reads the directory.
 if [ -f "$DATA_HOME/icons/hicolor/icon-theme.cache" ]; then
-  command -v gtk-update-icon-cache >/dev/null 2>&1 \
-    && gtk-update-icon-cache -f -q "$DATA_HOME/icons/hicolor" 2>/dev/null \
-    || rm -f "$DATA_HOME/icons/hicolor/icon-theme.cache"
+  if ! gtk-update-icon-cache -f -q "$DATA_HOME/icons/hicolor" 2>/dev/null; then
+    rm -f "$DATA_HOME/icons/hicolor/icon-theme.cache"
+  fi
 fi
 
 echo "installed: $PREFIX/solander"
