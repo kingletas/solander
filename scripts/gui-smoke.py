@@ -354,6 +354,18 @@ def run_checks(app):
         check("recent notes are tracked", "Second Note.md" in window.store.state.recent_notes)
         window._update_local_graph()
         check("local graph pane has neighbors", len(window.local_graph.neighbors) >= 1)
+        from gi.repository import Gdk
+
+        graph_view = window.local_graph
+        moved = graph_view.on_key(Gdk.KEY_Right) and graph_view.selected == 0
+        check("the arrow keys select a note in the local graph", moved)
+        first = graph_view.neighbors[0][0] if graph_view.neighbors else ""
+        opened = []
+        real_open = graph_view.on_activate
+        graph_view.on_activate = opened.append
+        graph_view.on_key(Gdk.KEY_Return)
+        graph_view.on_activate = real_open
+        check("Enter opens the selected note from the local graph", opened == [first])
         window._pending_highlight = ["alpha", "callout"]
         window.reader.load_note("A.md", anchor="search-hit")
 

@@ -37,6 +37,18 @@ import gi
 gi.require_version("Atspi", "2.0")
 from gi.repository import Atspi
 
+# The app is one instance per user, so `python -m solander.cli` would hand its
+# path to a reader the person already has open, and change what their window
+# shows. This starts an instance of its own, as the smoke run does.
+LAUNCH = """
+import sys
+from gi.repository import Gio
+from solander.gui.app import ReaderApplication
+app = ReaderApplication()
+app.set_flags(app.get_flags() | Gio.ApplicationFlags.NON_UNIQUE)
+sys.exit(app.run([sys.argv[0], sys.argv[1]]))
+"""
+
 STARTUP_SECONDS = 7
 PANEL_SETTLE_SECONDS = 1.5
 MAX_DEPTH = 60
@@ -146,7 +158,7 @@ def main() -> int:
             XDG_CACHE_HOME=str(root / "cache"),
         )
         process = subprocess.Popen(
-            [sys.executable, "-m", "solander.cli", str(root / "vault" / "A.md")],
+            [sys.executable, "-c", LAUNCH, str(root / "vault" / "A.md")],
             env=env,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

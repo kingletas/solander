@@ -6,7 +6,9 @@ import weakref
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Pango, PangoCairo
+from gi.repository import Gdk, Gtk, Pango, PangoCairo
+
+from ..core.graph import describe_neighbors, neighbor_phrase
 
 NODE_RADIUS = 7.0
 CENTER_RADIUS = 10.0
@@ -20,11 +22,18 @@ def _call(view_ref, name, *args):
         getattr(view, name)(*args)
 
 
+def _key(view_ref, keyval: int) -> bool:
+    view = view_ref()
+    return view.on_key(keyval) if view is not None else False
+
+
 class LocalGraphView:
     """Draws one note's neighborhood as a radial graph; clicking a node opens it.
 
     The widget owns no vault state: the window hands it (center, neighbors)
-    whenever the current note or the graph changes.
+    whenever the current note or the graph changes. Without a pointer, the arrow
+    keys move between the linked notes and Enter opens one; a screen reader gets
+    the whole neighborhood as text, and each move is announced.
     """
 
     def __init__(self, on_activate):
@@ -32,10 +41,9 @@ class LocalGraphView:
         self.center = ""
         self.neighbors: list[tuple[str, str]] = []
         self._positions: list[tuple[float, float, str]] = []
-        self.area = Gtk.DrawingArea(hexpand=True, vexpand=True)
-        self.area.update_property(
-            [Gtk.AccessibleProperty.LABEL], ["Local graph of the current note"]
-        )
+        self.selected = -1
+        self.area = Gtk.DrawingArea(hexpand=True, vexpand=True, focusable=True)
+        self._describe()
         # Bound-method callbacks would cycle area → callback → self → area, so
         # the widget's release would fall to the GC, which may run on the sync
         # thread, and a GTK object finalized off the main loop aborts the app.
@@ -44,11 +52,59 @@ class LocalGraphView:
         click = Gtk.GestureClick()
         click.connect("released", lambda _g, n, x, y: _call(view, "_on_click", None, n, x, y))
         self.area.add_controller(click)
+        keys = Gtk.EventControllerKey()
+        keys.connect("key-pressed", lambda _c, keyval, _code, _state: _key(view, keyval))
+        self.area.add_controller(keys)
+        focus = Gtk.EventControllerFocus()
+        focus.connect("enter", lambda _c: _call(view, "_redraw"))
+        focus.connect("leave", lambda _c: _call(view, "_redraw"))
+        self.area.add_controller(focus)
 
     def show_note(self, center: str, neighbors: list[tuple[str, str]]) -> None:
         """Points the pane at a note and its neighbor list, then redraws."""
         self.center = center
         self.neighbors = neighbors
+        self.selected = -1
+        self._describe()
+        self.area.queue_draw()
+
+    def _describe(self) -> None:
+        name, listed = describe_neighbors(self.center, self.neighbors)
+        self.area.update_property(
+            [Gtk.AccessibleProperty.LABEL, Gtk.AccessibleProperty.DESCRIPTION], [name, listed]
+        )
+
+    def _redraw(self) -> None:
+        self.area.queue_draw()
+
+    def on_key(self, keyval: int) -> bool:
+        """Moves between the linked notes, or opens the selected one."""
+        count = len(self.neighbors)
+        if not count:
+            return False
+        if keyval in (Gdk.KEY_Right, Gdk.KEY_Down):
+            self._select((self.selected + 1) % count)
+        elif keyval in (Gdk.KEY_Left, Gdk.KEY_Up):
+            self._select((self.selected - 1) % count if self.selected >= 0 else count - 1)
+        elif keyval == Gdk.KEY_Home:
+            self._select(0)
+        elif keyval == Gdk.KEY_End:
+            self._select(count - 1)
+        elif keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_space):
+            if self.selected < 0:
+                return False
+            self.on_activate(self.neighbors[self.selected][0])
+        else:
+            return False
+        return True
+
+    def _select(self, index: int) -> None:
+        self.selected = index
+        rel, direction = self.neighbors[index]
+        self.area.announce(
+            neighbor_phrase(rel, direction, index + 1, len(self.neighbors)),
+            Gtk.AccessibleAnnouncementPriority.MEDIUM,
+        )
         self.area.queue_draw()
 
     def _on_click(self, _gesture, _n_press, x: float, y: float) -> None:
@@ -103,6 +159,13 @@ class LocalGraphView:
                 cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.45)
             cr.arc(node_x, node_y, NODE_RADIUS, 0, 2 * math.pi)
             cr.fill()
+            if self.area.has_focus() and self._is_selected(path):
+                # The keyboard's place, drawn as a ring rather than a colour.
+                cr.set_source_rgba(accent.red, accent.green, accent.blue, 1.0)
+                cr.set_line_width(2.0)
+                cr.arc(node_x, node_y, NODE_RADIUS + 4, 0, 2 * math.pi)
+                cr.stroke()
+                cr.set_line_width(1.2)
             self._positions.append((node_x, node_y, path))
             self._label(cr, layout, fg, path, node_x, node_y + NODE_RADIUS + 2)
 
@@ -111,6 +174,9 @@ class LocalGraphView:
         cr.fill()
         self._positions.append((center_x, center_y, self.center))
         self._label(cr, layout, fg, self.center, center_x, center_y + CENTER_RADIUS + 2, bold=True)
+
+    def _is_selected(self, path: str) -> bool:
+        return 0 <= self.selected < len(self.neighbors) and self.neighbors[self.selected][0] == path
 
     def _label(self, cr, layout, fg, path: str, x: float, y: float, bold: bool = False) -> None:
         stem = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
