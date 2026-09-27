@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### A board fits a narrower window
+
+- **In a window narrower than about 1500 pixels, a six-lane board ran off the right edge.** Its lanes stopped shrinking at 8rem, the last one was cut off behind a sideways scroll inside the page, and at that width a card's words broke in the middle. Lanes now wrap onto a second row once they would drop below 9rem, so every lane is in view and none is squeezed; in a wide window a board is one row, as before. The smoke run now measures each lane's edge against the board's and the page's own sideways scroll, where it compared whole-pixel scroll widths, which a lane laid out at a fractional width can miss by one.
+
 ### The read-only control says so
 
 - **The header showed a lock and nothing else**, so what it meant was a guess until you hovered or clicked it. It now reads *Read-only* beside the lock, and a click still explains why and offers to show the source, open the note in your editor or reveal it in Files. When the header is short of room, the word shrinks before the other controls do.
