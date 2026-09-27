@@ -28,6 +28,7 @@ from ..core.frontmatter import split_frontmatter
 from ..core.graph import VaultGraph, local_neighbors
 from ..core.hits import FIRST_HIT_ID, mark_terms
 from ..core.indexing import sync_indexes
+from ..core.mailto import describe_mailto
 from ..core.pagescripts import READ_SCROLL, SCRIPT_WORLD, restore_scroll
 from ..core.render import (
     NoteRenderer,
@@ -2409,7 +2410,22 @@ class ReaderWindow(Adw.ApplicationWindow):
     # -- external handoffs -------------------------------------------------
 
     def _on_external_uri(self, _reader, uri: str) -> None:
-        Gtk.UriLauncher(uri=uri).launch(self, None, None)
+        if urlparse(uri).scheme.casefold() != "mailto":
+            Gtk.UriLauncher(uri=uri).launch(self, None, None)
+            return
+        dialog = Adw.AlertDialog(heading="Open your mail app?", body=describe_mailto(uri))
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("open", "Open Mail App")
+        dialog.set_response_appearance("open", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response("open")
+        dialog.set_close_response("cancel")
+
+        def on_response(_dialog, response):
+            if response == "open":
+                Gtk.UriLauncher(uri=uri).launch(self, None, None)
+
+        dialog.connect("response", on_response)
+        dialog.present(self)
 
     def _on_external_file(self, _reader, rel: str) -> None:
         if self.vault is not None and self.vault.has_file(rel):
