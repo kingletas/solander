@@ -16,6 +16,7 @@
 - **Search says what it found.** The result count and messages such as "still indexing" were a line of text a screen reader never reached, since focus stays in the search box; they are now announced, the count that changes with every keystroke quietly.
 - **An embedded image says what its author wrote for it.** `![[chart.png|Sales funnel]]` gave a screen reader the file name; the caption is its alt text now.
 - **A folder's menu opens from the keyboard.** The Menu key or `Shift+F10` on a folder in the tree opens Read as Book and Hide Folder, which only a right-click reached before.
+- **The local graph works without a pointer.** It was a picture you could only click. It now takes focus: the arrow keys move between the linked notes, with a ring showing where you are, Enter opens one, and a screen reader hears the whole neighbourhood as text and each note as you reach it.
 - **A PDF's pages can be read by a screen reader.** They are drawn as pictures, so assistive technology found a document with nothing in it; each page now carries its number as its name and its text as its description, filled in a page at a time so a long document never holds the window.
 - **A Markdown link to a note is marked by more than its colour**, with the same dotted underline a wikilink has.
 

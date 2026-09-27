@@ -115,3 +115,16 @@ def test_local_neighbors_orders_both_in_out(vault):
     assert neighbors["Personal/Cycle B.md"] == "both"
     index_neighbors = dict(local_neighbors(graph, "Projects/Alpha.md"))
     assert index_neighbors["Index.md"] == "in"
+
+
+def test_the_local_graph_reads_as_text():
+    from solander.core.graph import describe_neighbors, neighbor_phrase
+
+    neighbors = [("Projects/Beta.md", "both"), ("Gamma.md", "in"), ("Delta.md", "out")]
+    name, listed = describe_neighbors("Projects/Alpha.md", neighbors)
+    assert name == "Local graph of Alpha: 3 linked notes"
+    assert listed == (
+        "Beta, links both ways; Gamma, links to this note; Delta, linked from this note"
+    )
+    assert neighbor_phrase("Gamma.md", "in", 2, 3) == "Gamma, links to this note, 2 of 3"
+    assert describe_neighbors("", []) == ("Local graph, no note open", "")

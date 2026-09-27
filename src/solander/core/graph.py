@@ -221,6 +221,37 @@ def local_neighbors(graph: "VaultGraph", rel: str, cap: int = 30) -> list[tuple[
     return ordered[:cap]
 
 
+_DIRECTION_WORDS = {
+    "both": "links both ways",
+    "in": "links to this note",
+    "out": "linked from this note",
+}
+
+
+def note_title(rel: str) -> str:
+    """A note's name as a person reads it: no folder, no extension."""
+    return rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+
+
+def neighbor_phrase(rel: str, direction: str, position: int, count: int) -> str:
+    """One neighbor as a screen reader says it, e.g. 'Beta, links both ways, 2 of 5'."""
+    return f"{note_title(rel)}, {_DIRECTION_WORDS.get(direction, direction)}, {position} of {count}"
+
+
+def describe_neighbors(center: str, neighbors: list[tuple[str, str]]) -> tuple[str, str]:
+    """The local graph as text: a name for the pane and a description listing its notes."""
+    if not center:
+        return "Local graph, no note open", ""
+    count = len(neighbors)
+    noun = "note" if count == 1 else "notes"
+    name = f"Local graph of {note_title(center)}: {count} linked {noun}"
+    listed = "; ".join(
+        f"{note_title(rel)}, {_DIRECTION_WORDS.get(direction, direction)}"
+        for rel, direction in neighbors
+    )
+    return name, listed
+
+
 def _portable(value):
     """Converts parsed YAML into JSON-safe values; dates become ISO strings."""
     if isinstance(value, dict):
