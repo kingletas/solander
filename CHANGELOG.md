@@ -18,6 +18,7 @@
 - **A folder's menu opens from the keyboard.** The Menu key or `Shift+F10` on a folder in the tree opens Read as Book and Hide Folder, which only a right-click reached before.
 - **The local graph works without a pointer.** It was a picture you could only click. It now takes focus: the arrow keys move between the linked notes, with a ring showing where you are, Enter opens one, and a screen reader hears the whole neighbourhood as text and each note as you reach it.
 - **A PDF's pages can be read by a screen reader.** They are drawn as pictures, so assistive technology found a document with nothing in it; each page now carries its number as its name and its text as its description, filled in a page at a time so a long document never holds the window.
+- **The page shows where the keyboard is.** A focused link, fold or checkbox gets a solid ring in the theme's accent, where before it had only WebKit's default, which could be taken for a wikilink's dotted underline.
 - **A Markdown link to a note is marked by more than its colour**, with the same dotted underline a wikilink has.
 
 ### The file tree sorts by date or type

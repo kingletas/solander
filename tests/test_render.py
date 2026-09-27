@@ -416,3 +416,9 @@ def test_an_embedded_image_takes_its_caption_as_alt_text(vault, vault_dir):
     body = NoteRenderer(vault).render("Pic.md").body
     assert 'alt="Sales funnel"' in body
     assert 'alt="diagram.png"' in body
+
+
+def test_the_page_draws_its_own_keyboard_focus(vault):
+    page = NoteRenderer(vault).render("Index.md").page
+    assert "a:focus-visible" in page
+    assert "outline: 2px solid var(--accent)" in page
