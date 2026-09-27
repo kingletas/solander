@@ -588,13 +588,18 @@ code.math-source { color: var(--muted); }
 
 /* Kanban boards */
 .note:has(.kanban) { max-width: none; }
-.kanban { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto; padding: 4px 0 12px; }
-/* Lanes share the page so a whole board is in view; below 8rem a lane stops shrinking and the board scrolls. */
+/* Lanes share the page equally, and when they would drop below 9rem the rest
+   wrap onto another row, so every lane is in view and none is squeezed. */
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 12px;
+  align-items: start;
+  padding: 4px 0 12px;
+}
 .kanban-column {
-  flex: 1 1 0;
   box-sizing: border-box;
-  min-width: 8rem;
-  max-width: 22rem;
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -612,7 +617,6 @@ code.math-source { color: var(--muted); }
   overflow-wrap: anywhere;
 }
 .kanban-done { opacity: 0.6; text-decoration: line-through; }
-@media print { .kanban { flex-wrap: wrap; overflow-x: visible; } }
 
 /* Excalidraw drawings */
 .note.excalidraw-note { max-width: none; }

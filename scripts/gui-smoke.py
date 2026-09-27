@@ -904,21 +904,31 @@ def run_checks(app):
                     script = (
                         "(() => { const k = document.querySelector('.kanban');"
                         " if (!k) return 'none';"
-                        " const w = [...k.querySelectorAll('.kanban-column')]"
-                        ".map(c => Math.round(c.getBoundingClientRect().width));"
-                        " return [k.scrollWidth - k.clientWidth, Math.min(...w), w.length]"
+                        " const edge = k.getBoundingClientRect().right;"
+                        " const r = [...k.querySelectorAll('.kanban-column')]"
+                        ".map(c => c.getBoundingClientRect());"
+                        " const past = Math.max(...r.map(b => b.right - edge));"
+                        " const page = document.documentElement;"
+                        " return [past.toFixed(1), Math.round(Math.min(...r.map(b => b.width))),"
+                        " r.length, page.scrollWidth - page.clientWidth, window.innerWidth]"
                         ".join(','); })()"
                     )
 
                     def measured(webview, result) -> None:
                         value = webview.evaluate_javascript_finish(result).to_string()
-                        print(f"   six-lane board: overflow,narrowest,lanes = {value}")
+                        print(
+                            "   six-lane board: past the edge, narrowest, lanes,"
+                            f" page overflow, page width = {value}"
+                        )
                         check("the window reached the saved width", window.get_width() == 1872)
                         parts = value.split(",")
+                        whole = len(parts) == 5
+                        # Half a pixel covers lanes laid out at fractional widths.
                         check("a six-lane board fits its page with no sideways scroll",
-                              len(parts) == 3 and int(parts[0]) <= 0 and parts[2] == "6")
+                              whole and float(parts[0]) <= 0.5 and parts[2] == "6"
+                              and int(parts[3]) <= 0)
                         check("its narrowest lane is still readable (at least 144 CSS px)",
-                              len(parts) == 3 and int(parts[1]) >= 144)
+                              whole and int(parts[1]) >= 144)
                         GLib.timeout_add(300, done)
 
                     # A world of its own, because the page's policy forbids scripts in the document.
