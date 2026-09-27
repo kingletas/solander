@@ -744,10 +744,13 @@ def run_checks(app):
         pdf_path = vault_path / "doc.pdf"
         surface = cairo.PDFSurface(str(pdf_path), 300, 200)
         context = cairo.Context(surface)
-        for _page in range(2):
+        for page_number in range(2):
             context.set_source_rgb(0, 0, 0)
             context.rectangle(40, 40, 120, 60)
             context.fill()
+            if page_number == 0:
+                context.move_to(40, 140)
+                context.show_text("READABLEPAGETEXT")
             context.show_page()
         surface.finish()
         viewer = PdfWindow(pdf_path, window)
@@ -759,6 +762,9 @@ def run_checks(app):
             data = bytes(rendered.get_data())
             has_ink = any(data[i] < 200 for i in range(0, len(data), 4))
         check("pdf page has actual content", has_ink)
+        viewer._describe_page(0)
+        described = getattr(viewer._areas[0], "page_text", "")
+        check("a PDF page's text reaches assistive technology", "READABLEPAGETEXT" in described)
         viewer.destroy()
         continue_pdf()
 

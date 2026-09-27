@@ -20,6 +20,8 @@ except (ImportError, ValueError):
     Poppler = None
 
 MAX_PDF_PAGES = 1000
+MAX_DESCRIBED_CHARS = 20000
+"""A page's text, as a screen reader gets it, is cut here; a page rarely holds more."""
 PAGE_GAP = 14
 FIT_WIDTH = 840
 MIN_SCALE = 0.4
@@ -104,6 +106,30 @@ class PdfWindow(Adw.Window):
             )
         self.status.set_text(f"{self.document.get_n_pages()} pages")
         self._resize_areas()
+        GLib.idle_add(self._describe_next, 0)
+
+    def _describe_page(self, index: int) -> None:
+        """Gives a page its number as a name and its text as a description.
+
+        A page is drawn as a picture, so without this a screen reader finds a
+        document with nothing in it.
+        """
+        area = self._areas[index]
+        page = self.document.get_page(index)
+        text = " ".join((page.get_text() or "").split()) if page is not None else ""
+        area.page_text = text[:MAX_DESCRIBED_CHARS]
+        area.update_property(
+            [Gtk.AccessibleProperty.LABEL, Gtk.AccessibleProperty.DESCRIPTION],
+            [f"Page {index + 1} of {len(self._areas)}", area.page_text or "No text on this page"],
+        )
+
+    def _describe_next(self, index: int) -> bool:
+        """Describes one page per idle turn, so a long document never holds the window."""
+        if self.document is None or index >= len(self._areas):
+            return False
+        self._describe_page(index)
+        GLib.idle_add(self._describe_next, index + 1)
+        return False
 
     def _resize_areas(self) -> None:
         for index, area in enumerate(self._areas):
