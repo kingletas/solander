@@ -29,7 +29,13 @@ from ..core.graph import VaultGraph, local_neighbors
 from ..core.hits import FIRST_HIT_ID, mark_terms
 from ..core.indexing import sync_indexes
 from ..core.pagescripts import READ_SCROLL, SCRIPT_WORLD, restore_scroll
-from ..core.render import NoteRenderer, build_message_page, build_page, build_source_page
+from ..core.render import (
+    NoteRenderer,
+    RenderCancelled,
+    build_message_page,
+    build_page,
+    build_source_page,
+)
 from ..core.resolver import resolve_note
 from ..core.search import VaultSearch, demote, parse_query, search_filenames
 from ..core.session import SessionStore, adopt_former_state, reading_fraction, shown_path
@@ -1893,7 +1899,6 @@ class ReaderWindow(Adw.ApplicationWindow):
         if not preview and (self.source_view or rel.casefold().endswith((".canvas", ".base"))):
             return False
         theme = self._theme()
-        renderer = self.renderer.copy()
         terms: list[str] = []
         if not preview and self._pending_highlight and webview is self.reader.webview:
             terms, self._pending_highlight = self._pending_highlight, []
@@ -1901,7 +1906,14 @@ class ReaderWindow(Adw.ApplicationWindow):
         if reader is not None:
             reader.render_generation = getattr(reader, "render_generation", 0) + 1
         token = next(self._render_tokens)
-        self._render_waiting[token] = (webview, deliver, reader and reader.render_generation)
+        generation = reader.render_generation if reader is not None else None
+        self._render_waiting[token] = (webview, deliver, generation)
+        # A tab that asks for another page stops this render at its next step,
+        # rather than letting a note nobody is waiting for hold the interpreter.
+        superseded = (
+            (lambda: reader.render_generation != generation) if reader is not None else None
+        )
+        renderer = self.renderer.copy(should_stop=superseded)
 
         def build() -> None:
             rendered, page = None, ""
@@ -1911,6 +1923,8 @@ class ReaderWindow(Adw.ApplicationWindow):
                 else:
                     rendered = renderer.render(rel, theme)
                     page = mark_terms(rendered.page, terms)[0] if terms else rendered.page
+            except RenderCancelled:
+                rendered, page = None, build_message_page("Superseded", "", theme)
             except Exception:  # the request must be answered, whatever failed
                 traceback.print_exc()
                 rendered = None

@@ -422,3 +422,14 @@ def test_the_page_draws_its_own_keyboard_focus(vault):
     page = NoteRenderer(vault).render("Index.md").page
     assert "a:focus-visible" in page
     assert "outline: 2px solid var(--accent)" in page
+
+
+def test_a_render_nobody_waits_for_stops_early(vault):
+    import pytest
+
+    from solander.core.render import RenderCancelled
+
+    renderer = NoteRenderer(vault)
+    with pytest.raises(RenderCancelled):
+        renderer.copy(should_stop=lambda: True).render("Index.md")
+    assert "Index" in renderer.copy(should_stop=lambda: False).render("Index.md").page

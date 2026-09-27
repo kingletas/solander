@@ -240,6 +240,10 @@ def _find_block(body: str, block_id: str) -> str:
     return ""
 
 
+class RenderCancelled(Exception):
+    """Raised inside a render whose page nobody is waiting for any more."""
+
+
 class NoteRenderer:
     """Renders notes from one vault, resolving links and embeds as it goes."""
 
@@ -258,18 +262,20 @@ class NoteRenderer:
         self.snippets = snippets
         self.options = options
         self.book = book
+        self.should_stop = None
         self.md = build_parser()
         self.md.core.ruler.before("inline", "obsidian_callouts", callouts_rule)
         self.md.core.ruler.before("inline", "obsidian_block_ids", block_ids_rule)
         self._install_render_rules()
 
-    def copy(self) -> "NoteRenderer":
+    def copy(self, should_stop=None) -> "NoteRenderer":
         """A renderer over the same vault and settings, with a parser of its own.
 
         A render on another thread uses one of these, so no parser or engine is
-        ever shared between two renders at once.
+        ever shared between two renders at once. `should_stop`, when given, is
+        asked between the render's phases, and a yes ends it with RenderCancelled.
         """
-        return NoteRenderer(
+        renderer = NoteRenderer(
             self.vault,
             self.typography,
             self.graph_provider,
@@ -277,6 +283,12 @@ class NoteRenderer:
             options=self.options,
             book=self.book,
         )
+        renderer.should_stop = should_stop
+        return renderer
+
+    def _check_stop(self) -> None:
+        if self.should_stop is not None and self.should_stop():
+            raise RenderCancelled
 
     def _typo(self) -> dict | None:
         return self.typography() if callable(self.typography) else None
@@ -345,6 +357,8 @@ class NoteRenderer:
                 # The header carries the title, so the body's copy of it yields.
                 shown, body_md = _titled(body_md, title)
             body_html = self._render_markdown(body_md, env)
+        # Building the page's HTML and sanitizing it are the two long steps.
+        self._check_stop()
         book = self._book_context(rel)
         if book:
             # A book page is the chapter alone: title, prose, and the way to
@@ -557,6 +571,7 @@ class NoteRenderer:
     def _render_markdown(self, body: str, env: dict) -> str:
         prepared = strip_html_comments(strip_block_comments(body))
         tokens = self.md.parse(prepared, env)
+        self._check_stop()
         self._assign_heading_anchors(tokens, env)
         return self.md.renderer.render(tokens, self.md.options, env)
 
