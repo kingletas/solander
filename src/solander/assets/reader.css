@@ -122,6 +122,12 @@ a.external::after { content: " ↗"; font-size: 0.8em; color: var(--muted); }
 .wikilink { border-bottom: 1px dotted var(--accent); }
 /* A Markdown link to a note or a heading is marked by more than its colour. */
 a.internal:not(.wikilink) { border-bottom: 1px dotted var(--accent); }
+/* Where the keyboard is: a solid ring, never mistaken for a wikilink's dotted underline. */
+a:focus-visible, summary:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
 .wikilink.missing {
   color: var(--missing);
   border-bottom: 1px dashed var(--missing);
