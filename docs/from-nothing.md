@@ -28,7 +28,7 @@ Solander renders all of it, and **never writes into the folder**. That's the who
 
 - **No caches, no index files, no lock files, no thumbnails** land in your vault. Everything it remembers lives under `~/.config/solander/` and `~/.cache/solander/`.
 - **Nothing in a note is executed.** JavaScript is off in the rendering surface, raw HTML is escaped, and Templater or `dataviewjs` blocks render as labelled inert source rather than running.
-- **It doesn't touch the network.** Remote images, scripts, stylesheets and fonts are blocked. A web link opens in your normal browser and a `mailto` link in your mail app; a link with any other scheme does nothing.
+- **It doesn't touch the network.** Remote images, scripts, stylesheets and fonts are blocked. A web link opens in your normal browser and a `mailto` link in your mail app once you say yes to the email it would start; a link with any other scheme does nothing.
 
 A solander is the clamshell box an archive keeps documents in: you open it to look at something and close it to leave it as it was. That's the design brief in one object.
 

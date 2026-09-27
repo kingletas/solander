@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### A mail link asks first
+
+- **A `mailto` link opened the mail app the moment it was clicked.** Such a link can fill in a subject, a message and copies to other people, and a note from anyone can carry one, so opening it is now a question: it names who the email is to, the first three addresses and a count of the rest, and says what else the link fills in. Web links still open in the browser at once, and every other scheme still does nothing.
+
 ### The page follows the desktop's text size
 
 - **Large Text made the menus bigger and left the note as it was.** GNOME's text scaling reaches an application only as GTK's font DPI, which WebKit does not read, so the reading page stayed at its standard size. The page now sizes its type by that DPI, and follows it when it changes while the window is open: at a scaling of 1.5, measured in the running window, the page's base size went from 16 to 24 pixels. Zoom still works on top of it, and an exported PDF keeps the standard size whatever the screen was set to.

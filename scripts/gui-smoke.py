@@ -81,6 +81,16 @@ def run_checks(app):
         check("leaving zen restores the sidebar", window.sidebar_widget.get_visible())
         check("leaving zen restores the header", window.toolbar_view.get_reveal_top_bars())
 
+        window.reader.emit("open-external-uri", "mailto:ana@example.org?subject=Hi")
+        dialog = window.get_visible_dialog()
+        check("a mail link asks before opening", dialog is not None)
+        if dialog is not None:
+            said = dialog.get_body()
+            check("the question names the address", "ana@example.org" in said)
+            check("the question names what the link fills in", "the subject" in said)
+            # libadwaita 1.5 ignores a close made in the same turn as the present.
+            GLib.timeout_add(100, lambda: dialog.force_close() or False)
+
         check("sidebar is resizable", window.paned.get_position() > 0)
         window.paned.set_position(340)
         check("sidebar width follows the drag position", window.paned.get_position() == 340)
@@ -88,6 +98,8 @@ def run_checks(app):
         window.open_in_new_tab("A.md")
 
         def check_tabs():
+            # A dialog closes at the end of its animation, so this is asked a beat later.
+            check("cancelling leaves no question open", window.get_visible_dialog() is None)
             check("a second tab opened", window.tab_view.get_n_pages() == 2)
             check("new tab shows its note", window.current_note == "A.md")
             window._close_current_tab()

@@ -32,7 +32,7 @@ Never used it? **[From nothing to reading a vault](docs/from-nothing.md)** takes
 
 - **Write into the vault.** No caches, indexes, locks, conflict files, or thumbnails. All application state lives under `~/.config/solander/` and `~/.cache/solander/`.
 - **Execute anything from a note.** JavaScript is disabled in the rendering surface; raw HTML in notes is escaped, and the generated HTML passes through an allowlist sanitizer before display. Templater and `dataviewjs` render as labeled inert source.
-- **Touch the network.** Remote images, scripts, stylesheets, and fonts are blocked; `http`/`https` links open in your system browser, `mailto` links open your mail app, and every other URI scheme is refused.
+- **Touch the network.** Remote images, scripts, stylesheets, and fonts are blocked; `http`/`https` links open in your system browser, `mailto` links open your mail app after asking, and every other URI scheme is refused.
 
 ## Install
 

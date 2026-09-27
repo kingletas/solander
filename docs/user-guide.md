@@ -33,7 +33,7 @@ The header also carries the open note's folder path, each folder a click into th
 - **Hover previews**: rest the pointer on a wikilink for a moment and a popover shows the opening of the target, rendered through the same pipeline. The popover takes no input, so clicks always land on the page.
 - **Tabs**: `Ctrl+T` new, `Ctrl+W` close (the last tab shows the welcome page instead of closing the window). Middle-click or `Ctrl+click` on tree notes and in-page wikilinks opens tabs; each tab keeps its own history and outline; open tabs restore with the session, each scrolled to where you left it.
 - **Outline**: the panel on the right (`F8`) jumps to any heading of the current note.
-- **Links out of the vault**: `http` and `https` links open in your browser and `mailto` links in your mail app. A link with any other scheme does nothing.
+- **Links out of the vault**: `http` and `https` links open in your browser and a `mailto` link in your mail app, after asking: the question names who the email is to and anything else the link fills in, such as a subject or a copy to someone else. A link with any other scheme does nothing.
 
 ## Search
 
