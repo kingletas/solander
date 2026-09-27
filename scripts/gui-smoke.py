@@ -497,6 +497,8 @@ def run_checks(app):
                     ticks["gap"] = max(ticks["gap"], now - ticks["last"])
                     ticks["last"] = now
                     rendered = window.reader.last_render
+                    if now - started > 1.0 and "notice" not in ticks:
+                        ticks["notice"] = window.foot.measure.get_label()
                     if rendered is None and now - started < 60:
                         return True
                     took = now - started
@@ -504,6 +506,16 @@ def run_checks(app):
                     print(f"   Huge.md rendered in {took:.1f} s; longest stall {worst:.0f} ms")
                     check("a 1 MB note renders", rendered is not None)
                     check("the window keeps answering while it renders", worst < 250)
+                    notice = ticks.get("notice", "")
+                    check("the foot says a long note is still opening", notice == "Opening Huge…")
+                    GLib.timeout_add(
+                        600,
+                        lambda: check(
+                            "the notice goes once the page is in",
+                            "Opening" not in window.foot.measure.get_label()
+                            and not window.foot.working.get_spinning(),
+                        ),
+                    )
                     huge.unlink(missing_ok=True)
                     window.reader.load_note("A.md")
                     GLib.timeout_add(1000, back_to_a)
