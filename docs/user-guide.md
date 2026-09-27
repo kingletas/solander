@@ -131,6 +131,18 @@ Two more switches under Preferences decide what the tree lists. **Markdown Files
 
 The vault is watched while open: creations, edits, deletions, and renames re-index in the background after a two-second quiet period, refreshing the tree, search, link panels, and any visible Dataview results. The index persists per vault under `~/.cache/solander/`. Cold builds are tens of seconds on a very large vault, warm launches about a second. The cache is derived data: corruption rebuilds it silently, and Preferences → Clear Index Cache does so on demand. Expect it to cost disk roughly proportional to the vault's text.
 
+## With a screen reader or the keyboard alone
+
+- **Every control has a name** a screen reader announces: sidebar rows say what they hold (a note's title and folder, a tag and how many notes carry it, whether a quick-list note is pinned or recent), and the search boxes are named rather than relying on a placeholder that disappears once you type.
+- **Search says what it found.** The result count and messages such as "still indexing" are announced while focus stays in the search box.
+- **The local graph works without a pointer.** Tab to it, move between the linked notes with the arrow keys (`Home` and `End` jump to the ends), and press `Enter` to open one. It is read as a list of the linked notes and which way each link goes.
+- **A PDF's pages carry their text**, so a screen reader can read a document the viewer draws as pictures.
+- **A folder's menu** (Read as Book, Hide Folder) opens with the `Menu` key or `Shift+F10`.
+- **In a note**, task checkboxes are labelled by their task, an embedded image's caption is its alt text, links are marked by more than colour, and the keyboard's place is drawn as a solid ring.
+- **Text size** follows Settings → Accessibility → Large Text, as described under Reading comfort.
+
+These are checked by an automated audit that reads the window the way assistive technology does, and by the smoke run's walk through the `Tab` order. **They have not yet been tried with Orca**, so if something reads badly in practice, an issue saying what you heard is the most useful report there is.
+
 ## Keyboard shortcuts
 
 Everything can be reached without a pointer. `Tab` moves between the sidebar's panel tabs, the lists, the header buttons and the page, and comes back round; inside the file tree, the arrow keys move between rows, and `Enter` opens a note or opens and closes a folder. The whole tree is a single `Tab` stop, however many notes it lists.
