@@ -795,6 +795,7 @@ def run_checks(app):
         surface.finish()
         viewer = PdfWindow(pdf_path, window)
         check("pdf viewer parsed both pages", viewer.status.get_text() == "2 pages")
+        check("pdf viewer stays above the main window", viewer.get_transient_for() is window)
         rendered = viewer._surface(0)
         check("pdf page renders to a surface", rendered is not None and rendered.get_width() > 0)
         has_ink = False
