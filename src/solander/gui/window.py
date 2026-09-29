@@ -334,6 +334,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.search_entry.set_margin_end(6)
         self.search_entry.connect("search-changed", self._on_search_typed)
         self.search_entry.connect("activate", self._on_search_submitted)
+        # Escape empties the box, which clears the search everywhere it shows.
+        self.search_entry.connect("stop-search", lambda entry: entry.set_text(""))
         self.search_results = Gtk.ListBox()
         self.search_results.add_css_class("navigation-sidebar")
         self.search_results.connect("row-activated", self._on_search_row)
@@ -1268,6 +1270,11 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.vault = vault
         self.renderer = renderer
         self.graph = None
+        # A search belongs to the vault it ran in: its results name that vault's notes.
+        self._pending_highlight = []
+        self.search_entry.set_text("")
+        self._clear_results()
+        self._search_says("")
         if self.vault_monitor is not None:
             self.vault_monitor.cancel()
         if self.index_store is not None:
@@ -1934,7 +1941,8 @@ class ReaderWindow(Adw.ApplicationWindow):
                     page = renderer.render_preview(rel, theme)
                 else:
                     rendered = renderer.render(rel, theme)
-                    page = mark_terms(rendered.page, terms)[0] if terms else rendered.page
+                    marked = bool(terms) and not rendered.error
+                    page = mark_terms(rendered.page, terms)[0] if marked else rendered.page
             except RenderCancelled:
                 rendered, page = None, build_message_page("Superseded", "", theme)
             except Exception:  # the request must be answered, whatever failed
@@ -1956,6 +1964,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             # A tab that asked for another page since keeps that page's render.
             if current is not None and generation == getattr(current, "render_generation", 0):
                 current.last_render = rendered
+                current.search_marked = bool(terms) and rendered is not None and not rendered.error
             answer(page or build_message_page("This note could not be shown", "", theme))
             return False
 
@@ -1994,9 +2003,13 @@ class ReaderWindow(Adw.ApplicationWindow):
             if reader is not None:
                 reader.last_render = rendered
             if self._pending_highlight and webview is self.reader.webview:
-                page, _count = mark_terms(rendered.page, self._pending_highlight)
-                self._pending_highlight = []
-                return page
+                terms, self._pending_highlight = self._pending_highlight, []
+                if not rendered.error:
+                    if reader is not None:
+                        reader.search_marked = True
+                    return mark_terms(rendered.page, terms)[0]
+            if reader is not None:
+                reader.search_marked = False
             return rendered.page
         if segments and segments[0] == "preview" and self.renderer is not None:
             return self.renderer.render_preview("/".join(segments[1:]), theme)
@@ -2281,6 +2294,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         query = entry.get_text().strip()
         self._clear_results()
         if not query:
+            self._clear_search_marks()
             hidden = self._hidden_folders()
             recents = [
                 rel
@@ -2385,7 +2399,35 @@ class ReaderWindow(Adw.ApplicationWindow):
         primary.connect("pressed", primary_pressed)
         row.add_controller(primary)
 
+    def _clear_search_marks(self) -> None:
+        """Draws every tab still showing a search's marks again without them, where it was.
+
+        The marks are part of the page served, so they go by rendering it again; the
+        position is read and restored with the two page scripts, and no third is added.
+        """
+        self._pending_highlight = []
+        for reader in list(self._readers.values()):
+            rel = reader.current_note
+            if not getattr(reader, "search_marked", False) or not rel:
+                continue
+            reader.search_marked = False
+
+            reader.webview.evaluate_javascript(
+                READ_SCROLL, -1, SCRIPT_WORLD, None, None, self._redraw_unmarked, (reader, rel)
+            )
+
+    def _redraw_unmarked(self, webview, result, reader_and_note) -> None:
+        reader, rel = reader_and_note
+        with suppress(GLib.Error):
+            fraction = reading_fraction(webview.evaluate_javascript_finish(result).to_string())
+            if fraction is not None:
+                self._pending_scroll[rel] = fraction
+        if reader.current_note == rel:
+            reader.load_note(rel)
+
     def _on_search_row(self, _list, row) -> None:
+        if self.vault is None or not self.vault.has_file(row.note_path):
+            return  # a result left from another vault names nothing here
         words = parse_query(self.search_entry.get_text()).words
         self._pending_highlight = list(words)
         self.reader.load_note(row.note_path, anchor=FIRST_HIT_ID if words else "")
