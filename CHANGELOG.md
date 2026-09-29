@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### A search clears when it should
+
+- **Opening another vault left the first vault's search in the sidebar.** Its results, its count and the words in the box stayed, so one vault's note names showed inside another's window, and clicking one opened an error page naming a file the new vault does not have. Opening a vault now empties the box, the results and the status line, and a result that names a note the open vault lacks opens nothing.
+- **Emptying the search box left its words marked in the open note.** The marks are part of the page, so they stayed until another note opened. Emptying the box, by its clear button, by deleting the text or with `Escape`, which now empties it, draws every marked tab again without them, at the same place in the note. The position is read and restored with the two scripts the window already runs in a page; no third is added.
+- **An error page no longer carries search marks.** A search word that happened to be in the missing file's path was marked inside the error message.
+- `make smoke` now also runs `scripts/search-smoke.py`, which drives the real window through both on two invented vaults, and fails six ways on the code before this change.
+
 ### A board fits a narrower window
 
 - **In a window narrower than about 1500 pixels, a six-lane board ran off the right edge.** Its lanes stopped shrinking at 8rem, the last one was cut off behind a sideways scroll inside the page, and at that width a card's words broke in the middle. Lanes now wrap onto a second row once they would drop below 9rem, so every lane is in view and none is squeezed; in a wide window a board is one row, as before. The smoke run now measures each lane's edge against the board's and the page's own sideways scroll, where it compared whole-pixel scroll widths, which a lane laid out at a fractional width can miss by one.
