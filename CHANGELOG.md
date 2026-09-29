@@ -2,9 +2,10 @@
 
 ## Unreleased
 
-### The PDF viewer stays above its note
+### The PDF viewer stays above its note, and a page's block ids are capped
 
 - **A PDF opened in its own window could fall behind the main window** and look as if it had never opened, since it had no parent. It is now transient for the main window, so it stays above it.
+- **A page makes at most 1,000 block ids**, `READER_MAX_BLOCK_IDS_PER_PAGE`, as a backstop beside the other page limits. Markers past it still leave the page; their blocks just get no id, so a link to one lands at the top.
 
 ### A search clears when it should
 

@@ -116,3 +116,13 @@ def test_a_heading_cannot_take_the_search_landing_or_a_block_id(vault, vault_dir
     assert body.count('id="block-foo"') == 1
     assert 'id="h-search-hit"' in body and 'href="#h-search-hit"' in body
     assert 'id="h-block-foo"' in body and 'href="#h-block-foo"' in body
+
+
+def test_markers_past_the_cap_leave_the_page_without_an_id(vault, vault_dir, monkeypatch):
+    monkeypatch.setattr("solander.core.render.MAX_BLOCK_IDS_PER_PAGE", 3)
+    text = "".join(f"Paragraph {n}. ^p{n}\n\n" for n in range(1, 6))
+    body = render(vault, vault_dir, "Many.md", text)
+    assert body.count('id="block-') == 3
+    assert '<p id="block-p3">Paragraph 3.</p>' in body
+    assert "<p>Paragraph 4.</p>" in body
+    assert "^p5" not in body
