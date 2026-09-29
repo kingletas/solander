@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### The PDF viewer stays above its note
+
+- **A PDF opened in its own window could fall behind the main window** and look as if it had never opened, since it had no parent. It is now transient for the main window, so it stays above it.
+
 ### A search clears when it should
 
 - **Opening another vault left the first vault's search in the sidebar.** Its results, its count and the words in the box stayed, so one vault's note names showed inside another's window, and clicking one opened an error page naming a file the new vault does not have. Opening a vault now empties the box, the results and the status line, and a result that names a note the open vault lacks opens nothing.
