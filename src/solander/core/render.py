@@ -57,6 +57,10 @@ MAX_FOOTER_BACKLINKS = 50
 MAX_HEADER_TAGS = 5
 READING_WORDS_PER_MINUTE = 220
 
+# A backstop on the ids one page's block markers become. The rule is linear, so
+# this bounds the page rather than the time; markers past it still leave the page.
+MAX_BLOCK_IDS_PER_PAGE = int(os.environ.get("READER_MAX_BLOCK_IDS_PER_PAGE", "1000"))
+
 # A block id closes a block's text, or stands alone on the line after the block.
 _BLOCK_ID = re.compile(r"(?:^|\s)\^([A-Za-z0-9-]+)[ \t]*$")
 _FENCE_LINE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
@@ -150,6 +154,7 @@ def block_ids_rule(state) -> None:
     the tokens made a list followed by many markers cost their product.
     """
     anchored = state.env.get("depth", 0) == 0
+    ids_left = MAX_BLOCK_IDS_PER_PAGE
     kept: list = []
     open_blocks: list = []
     opened_by: dict[int, object] = {}
@@ -172,8 +177,9 @@ def block_ids_rule(state) -> None:
                 kept.pop()
                 open_blocks.pop()
                 skip_close = True
-                if target is not None and anchored:
+                if target is not None and anchored and ids_left > 0:
                     target.attrSet("id", block_anchor(match.group(1)))
+                    ids_left -= 1
                 continue
             token.content = token.content[: match.start()].rstrip()
             if opener.type == "paragraph_open":
@@ -181,8 +187,9 @@ def block_ids_rule(state) -> None:
                     target = opener
                 elif len(open_blocks) >= 2:
                     target = open_blocks[-2]
-            if target is not None and anchored:
+            if target is not None and anchored and ids_left > 0:
                 target.attrSet("id", block_anchor(match.group(1)))
+                ids_left -= 1
         if token.nesting == 1:
             open_blocks.append(token)
         elif token.nesting == -1 and open_blocks:

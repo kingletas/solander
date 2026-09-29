@@ -38,7 +38,8 @@ class PdfWindow(Adw.Window):
     """One PDF, rendered page by page on demand; the file is never written."""
 
     def __init__(self, path: Path, parent):
-        super().__init__(title=path.name, transient_for=None)
+        # Transient for the main window, so it stays above the note that opened it.
+        super().__init__(title=path.name, transient_for=parent)
         self.set_default_size(920, 980)
         self.path = path
         self.document = None
