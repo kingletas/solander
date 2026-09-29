@@ -181,6 +181,7 @@ State lives outside every vault: `~/.config/solander/` (session, preferences, hi
 | `READER_MAX_EMBED_DEPTH` / `READER_MAX_EMBEDS_PER_PAGE` | Embed nesting (5) and count per page (200) |
 | `READER_PREVIEW_MAX_CHARS` | Hover preview slice (2,500) |
 | `READER_MAX_MATH_CHARS` | Longest TeX converted (5,000) |
+| `READER_MAX_BLOCK_IDS_PER_PAGE` | Block markers that become ids on one page (1,000); later markers still leave the page, without an id |
 | `READER_MAX_LINKS_PER_NOTE` / `READER_MAX_MENTIONS_PER_TARGET` / `READER_MAX_TASKS_PER_NOTE` | Graph bounds (2,000 / 1,000 / 2,000) |
 | `READER_MAX_BOOKMARKS` / `READER_MAX_BOOKMARK_BYTES` | Bookmarks file bounds (500 / 1 MB) |
 | `READER_MAX_CANVAS_NODES` / `READER_MAX_CANVAS_BYTES` | Canvas bounds (1,000 / 5 MB) |
