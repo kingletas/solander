@@ -887,20 +887,14 @@ def run_checks(app):
 
             def check_board_width() -> bool:
                 # His saved window: 1872 wide at 140% zoom, measured with the sidebar open.
+                # The window opened at that width (seed_saved_window); nothing resizes it here.
                 source = window.lookup_action("toggle-source")
                 window._on_toggle_source(source, GLib.Variant.new_boolean(False))
-                window.set_default_size(1872, 1045)
                 window.sidebar_widget.set_visible(True)
                 window.reader.webview.set_zoom_level(1.4)
                 window.reader.load_note("Wide.md")
 
-                def measure(tries: int = 0) -> bool:
-                    # A new default size reaches a window that is already open only
-                    # when the compositor gets to it, so the board waits for the width.
-                    if window.get_width() != 1872 and tries < 20:
-                        window.set_default_size(1872, 1045)
-                        GLib.timeout_add(250, measure, tries + 1)
-                        return False
+                def measure() -> bool:
                     script = (
                         "(() => { const k = document.querySelector('.kanban');"
                         " if (!k) return 'none';"
@@ -918,9 +912,13 @@ def run_checks(app):
                         value = webview.evaluate_javascript_finish(result).to_string()
                         print(
                             "   six-lane board: past the edge, narrowest, lanes,"
-                            f" page overflow, page width = {value}"
+                            f" page overflow, page width = {value}; window {window.get_width()}"
+                            f"x{window.get_height()}"
                         )
-                        check("the window reached the saved width", window.get_width() == 1872)
+                        # GTK takes its frame out of a default size: 1872 opens 1862 wide under
+                        # X11 with no compositor. Up to 12 px short is that frame, not a resize.
+                        check("the window opened at the saved width, less GTK's frame",
+                              1860 <= window.get_width() <= 1872)
                         parts = value.split(",")
                         whole = len(parts) == 5
                         # Half a pixel covers lanes laid out at fractional widths.
@@ -1082,8 +1080,28 @@ def check_saved_session() -> None:
     check("closing the window saves each open note's reading position", bool(positions))
 
 
+def seed_saved_window() -> None:
+    """Saves his window size before the reader starts, so the window opens at it.
+
+    Under Wayland a window takes its default size only before it is first shown;
+    a new default size on an open window is ignored. Opening at the saved size is
+    also how his own window starts, so the board is measured the way he sees it.
+    """
+    import json
+    import os
+
+    config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "solander"
+    session = config / "session.json"
+    # The run's XDG_CONFIG_HOME is its own; a real session is never written over.
+    if session.exists():
+        return
+    config.mkdir(parents=True, exist_ok=True)
+    session.write_text(json.dumps({"window_width": 1872, "window_height": 1045}))
+
+
 def main() -> int:
     write_extra_fixtures()
+    seed_saved_window()
     sys.excepthook = record_crash
     app = ReaderApplication()
     # Without this, a reader already running for the real vault owns the app id,
