@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### A base renders its formulas, groups and limits
+
+- **A base that used a formula said *not evaluated* instead of showing its rows.** `formulas` now evaluate for each note, and `formula.NAME` works in filters, columns, sorting and grouping, including one formula that names another. One that reaches itself says so rather than looping.
+- **A view's `groupBy` is honoured**: its rows come in one group per value, in the group's direction, each headed with its count. A view's `limit` caps its rows, and the view says it was cut.
+- **Bases' own expressions evaluate as Obsidian writes them**: `&&` and `||`, `list.filter(expr)` over `value`, `.length` on a list, `link.asFile()` to reach the note a link points to, `file.links` and `file.basename`, and a duration written as a string beside a date, as in `now() - "1d"`. Dataview's forms keep their meaning; a lambda passed to `filter` is read as before.
+- The same change is in Slate's copy of the renderer.
+
 ### The PDF viewer stays above its note, and a page's block ids are capped
 
 - **A PDF opened in its own window could fall behind the main window** and look as if it had never opened, since it had no parent. It is now transient for the main window, so it stays above it.

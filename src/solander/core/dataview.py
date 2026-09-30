@@ -53,6 +53,8 @@ _DUR_UNITS = {
     "y": 31536000, "yr": 31536000, "year": 31536000, "years": 31536000,
 }
 
+_DURATION = re.compile(r"^\s*(-?\d+)\s*([A-Za-z]+)\s*$")
+
 # Luxon format tokens, longest first, mapped onto strftime pieces.
 _LUXON = [
     ("yyyy", "%Y"), ("yy", "%y"), ("MMMM", "%B"), ("MMM", "%b"), ("MM", "%m"),
@@ -87,10 +89,14 @@ class Row:
 
 
 class Evaluator:
-    """Evaluates expression ASTs against a row and the query's `this` page."""
+    """Evaluates expression ASTs against a row and the query's `this` page.
 
-    def __init__(self, this_row: "Row | None" = None):
+    Given the vault graph, it can follow a link to its file with `asFile()`.
+    """
+
+    def __init__(self, this_row: "Row | None" = None, graph=None):
         self.this_row = this_row
+        self.graph = graph
 
     def evaluate(self, node, row: Row):
         if isinstance(node, Literal):
@@ -181,17 +187,30 @@ class Evaluator:
             _arity(node, 2)
             values = self.evaluate(node.arguments[0], row)
             function = node.arguments[1]
-            if not isinstance(values, list) or not isinstance(function, Lambda):
+            if not isinstance(values, list):
                 return None
+            # Dataview passes a lambda; Bases writes the body alone, over `value`.
+            if isinstance(function, Lambda):
+                parameter, body = function.parameter, function.body
+            else:
+                parameter, body = "value", function
             results = []
             for item in values:
-                bound = Row(row.props, {**row.bindings, function.parameter: item})
-                outcome = self.evaluate(function.body, bound)
+                bound = Row(row.props, {**row.bindings, parameter: item})
+                outcome = self.evaluate(body, bound)
                 if name == "map":
                     results.append(outcome)
                 elif _truthy(outcome):
                     results.append(item)
             return results
+        if name == "asfile":
+            _arity(node, 1)
+            target = self.evaluate(node.arguments[0], row)
+            if not isinstance(target, Link) or self.graph is None:
+                return None
+            if target.rel not in self.graph.props:
+                return None
+            return _file_namespace(target.rel, self.graph)
         if name == "date" and len(node.arguments) == 1:
             keyword = _date_keyword(node.arguments[0])
             if keyword:
@@ -363,6 +382,8 @@ def _member(value, part: str):
             "weekday": value.isoweekday(),
         }.get(part)
     if isinstance(value, list):
+        if part == "length":
+            return len(value)
         collected = [_member(item, part) for item in value]
         return [item for item in collected if item is not None]
     return None
@@ -432,6 +453,7 @@ def _compare(left, right):
 
 
 def _add(left, right):
+    left, right = _duration_pair(left, right)
     if isinstance(left, str) or isinstance(right, str):
         return _to_text(left) + _to_text(right)
     if isinstance(left, (datetime.date, datetime.datetime)) and isinstance(
@@ -448,7 +470,7 @@ def _add(left, right):
 
 
 def _subtract(left, right):
-    left, right = _coerce_pair(left, right)
+    left, right = _duration_pair(*_coerce_pair(left, right))
     if isinstance(left, (datetime.date, datetime.datetime)):
         if isinstance(right, datetime.timedelta):
             return left - right
@@ -459,6 +481,23 @@ def _subtract(left, right):
     if isinstance(left, datetime.timedelta) and isinstance(right, datetime.timedelta):
         return left - right
     return None
+
+
+def _duration_pair(left, right):
+    """Lets a Bases duration string, such as `"1d"`, stand in beside a date."""
+    if isinstance(left, (datetime.date, datetime.datetime)) and isinstance(right, str):
+        right = _duration(right) or right
+    return left, right
+
+
+def _duration(text: str):
+    """`"1d"`, `"2 weeks"` or `"3M"` as a timedelta; capital M is a month, as in Bases."""
+    match = _DURATION.match(text)
+    if not match:
+        return None
+    amount, unit = int(match.group(1)), match.group(2)
+    seconds = _DUR_UNITS["month"] if unit == "M" else _DUR_UNITS.get(unit.casefold())
+    return datetime.timedelta(seconds=amount * seconds) if seconds else None
 
 
 def _luxon_format(moment, pattern: str) -> str:
@@ -537,8 +576,10 @@ def _file_namespace(rel: str, graph) -> dict:
     day = _to_date(day_match.group(1)) if day_match else None
     tags = sorted(graph.note_tags.get(rel, set()))
     outgoing = graph.outgoing.get(rel, [])
+    outlinks = [Link(o.path, o.target) for o in outgoing if o.kind == "note" and o.path]
     return {
         "name": stem,
+        "basename": stem,
         "fullname": filename,
         "path": rel,
         "properties": props,
@@ -552,7 +593,8 @@ def _file_namespace(rel: str, graph) -> dict:
         "day": day,
         "tags": [f"#{tag}" for tag in tags],
         "etags": [f"#{tag}" for tag in tags],
-        "outlinks": [Link(o.path, o.target) for o in outgoing if o.kind == "note" and o.path],
+        "outlinks": outlinks,
+        "links": outlinks,
         "inlinks": sorted(
             {Link(m.source, m.source.rsplit("/", 1)[-1].rsplit(".", 1)[0])
              for m in graph.backlinks.get(rel, [])},

@@ -1,8 +1,9 @@
 """Renders Obsidian `.base` files read-only: table views over the vault graph.
 
-A base is YAML: filters, table views with column order and sort, and display
-names. Filter strings share the Dataview evaluator (method calls desugar to
-functions), with `==` normalized first. Plugin view types are named, not faked.
+A base is YAML: filters, formulas, table views with column order, sort, groups
+and a row limit, and display names. Filter strings share the Dataview evaluator
+(method calls desugar to functions), with `==` normalized first. Plugin view
+types are named, not faked.
 """
 
 import html
@@ -33,6 +34,10 @@ def render_base(graph, text: str) -> str:
     engine = DataviewEngine(graph)
     display_names = _display_names(data.get("properties"))
     base_filter = data.get("filters")
+    try:
+        formulas = _parse_formulas(data.get("formulas"))
+    except DqlError as error:
+        return _message(f"This base file has a formula that cannot be read: {error}")
     sections = []
     for view in views:
         name = str(view.get("name") or view.get("type") or "view")
@@ -44,7 +49,9 @@ def render_base(graph, text: str) -> str:
             )
             continue
         try:
-            sections.append(_table_view(engine, view, base_filter, display_names, name))
+            sections.append(
+                _table_view(engine, view, base_filter, formulas, display_names, name)
+            )
         except DqlError as error:
             sections.append(
                 f'<div class="dataview-note">View “{html.escape(name)}” '
@@ -53,11 +60,14 @@ def render_base(graph, text: str) -> str:
     return f'<div class="dataview">{"".join(sections)}</div>'
 
 
-def _table_view(engine, view: dict, base_filter, display_names: dict, name: str) -> str:
-    evaluator = Evaluator()
+def _table_view(
+    engine, view: dict, base_filter, formulas: dict, display_names: dict, name: str
+) -> str:
+    evaluator = Evaluator(graph=engine.graph)
     rows = []
     for rel in sorted(engine.graph.props.keys()):
         row = engine._page_row(rel)
+        row.bindings["formula"] = _Formulas(evaluator, formulas, row)
         if _passes(evaluator, base_filter, row) and _passes(evaluator, view.get("filters"), row):
             rows.append(row)
     for order in reversed(_sort_spec(view)):
@@ -66,8 +76,9 @@ def _table_view(engine, view: dict, base_filter, display_names: dict, name: str)
             key=lambda row, a=accessor: _sort_key(a(evaluator, row)),
             reverse=str(order.get("direction", "ASC")).upper() == "DESC",
         )
-    truncated = len(rows) > MAX_BASE_ROWS
-    rows = rows[:MAX_BASE_ROWS]
+    cap = min(_limit(view) or MAX_BASE_ROWS, MAX_BASE_ROWS)
+    truncated = len(rows) > cap
+    rows = rows[:cap]
     columns = [str(column) for column in view.get("order") or ["file.name"]]
     headers = "".join(
         f"<th>{html.escape(display_names.get(column, _short(column)))}</th>"
@@ -75,17 +86,23 @@ def _table_view(engine, view: dict, base_filter, display_names: dict, name: str)
     )
     accessors = [_accessor(column) for column in columns]
     lines = []
-    for row in rows:
-        cells = []
-        for column, accessor in zip(columns, accessors, strict=True):
-            value = accessor(evaluator, row)
-            if column == "file.name":
-                file_ns = row.get("file")
-                value = file_ns.get("link") if isinstance(file_ns, dict) else value
-            cells.append(f"<td>{_value_html(value)}</td>")
-        lines.append(f"<tr>{''.join(cells)}</tr>")
+    for label, members in _groups(evaluator, view, rows):
+        if label is not None:
+            lines.append(
+                f'<tr class="base-group"><th colspan="{len(columns)}">'
+                f"{html.escape(label)} ({len(members)})</th></tr>"
+            )
+        for row in members:
+            cells = []
+            for column, accessor in zip(columns, accessors, strict=True):
+                value = accessor(evaluator, row)
+                if column == "file.name":
+                    file_ns = row.get("file")
+                    value = file_ns.get("link") if isinstance(file_ns, dict) else value
+                cells.append(f"<td>{_value_html(value)}</td>")
+            lines.append(f"<tr>{''.join(cells)}</tr>")
     notice = (
-        f'<div class="dataview-note">Showing the first {MAX_BASE_ROWS} rows</div>'
+        f'<div class="dataview-note">Showing the first {cap} rows</div>'
         if truncated
         else ""
     )
@@ -94,6 +111,71 @@ def _table_view(engine, view: dict, base_filter, display_names: dict, name: str)
         f"<table><thead><tr>{headers}</tr></thead><tbody>{''.join(lines)}</tbody></table>"
         f'<div class="dataview-note">{len(rows)} result(s)</div>{notice}'
     )
+
+
+class _Formulas(dict):
+    """A row's `formula.NAME` values, each evaluated the first time it is read.
+
+    One formula may name another; one that reaches itself is an error, not a loop.
+    """
+
+    def __init__(self, evaluator: Evaluator, expressions: dict, row: Row):
+        super().__init__()
+        self._evaluator = evaluator
+        self._expressions = expressions
+        self._row = row
+        self._reading: set = set()
+
+    def get(self, name, default=None):
+        if name in self:
+            return self[name]
+        expression = self._expressions.get(name)
+        if expression is None:
+            return default
+        if name in self._reading:
+            raise DqlError(f"formula {name!r} refers to itself")
+        self._reading.add(name)
+        try:
+            value = self._evaluator.evaluate(expression, self._row)
+        finally:
+            self._reading.discard(name)
+        self[name] = value
+        return value
+
+
+def _parse_formulas(formulas) -> dict:
+    parsed = {}
+    if isinstance(formulas, dict):
+        for name, text in formulas.items():
+            try:
+                parsed[str(name)] = parse_expression(_normalize(str(text)))
+            except DqlError as error:
+                raise DqlError(f"{name}: {error}") from error
+    return parsed
+
+
+def _limit(view: dict) -> int:
+    limit = view.get("limit")
+    return limit if isinstance(limit, int) and not isinstance(limit, bool) and limit > 0 else 0
+
+
+def _groups(evaluator: Evaluator, view: dict, rows: list) -> list:
+    """Splits sorted rows by the view's `groupBy` value, keeping their order inside each group.
+
+    Without a `groupBy`, the rows are one unlabelled group.
+    """
+    spec = view.get("groupBy")
+    if not isinstance(spec, dict) or not spec.get("property"):
+        return [(None, rows)]
+    accessor = _accessor(str(spec["property"]))
+    groups: dict = {}
+    for row in rows:
+        value = accessor(evaluator, row)
+        label = _to_text(value) if value not in (None, "", []) else "No value"
+        groups.setdefault(label, []).append(row)
+    descending = str(spec.get("direction", "ASC")).upper() == "DESC"
+    labels = sorted(groups, key=lambda label: label.casefold(), reverse=descending)
+    return [(label, groups[label]) for label in labels]
 
 
 def _passes(evaluator: Evaluator, node, row: Row) -> bool:
