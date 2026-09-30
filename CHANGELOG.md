@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### A base opens in about a second, and the window keeps answering
+
+- **A base over a large vault took seconds to render.** One whose formula follows every link, as a subject page does, built the same note's `file.` fields again for every link that reached it, and parsed every filter again for every note. The fields are now built once per index snapshot and each filter once, and a base's own filter is applied once for all its views: a subject base over 14,000 notes went from 13.3 seconds to 0.9, with the same rows.
+- **The window froze while a base rendered.** A base is now rendered on a worker thread like a note, with the foot saying it is still opening, and `make smoke` holds one render for 1.5 seconds and fails if the window stalls for more than 250 ms meanwhile.
+- The core change is in Slate's copy too.
+
 ### A base renders its formulas, groups and limits
 
 - **A base that used a formula said *not evaluated* instead of showing its rows.** `formulas` now evaluate for each note, and `formula.NAME` works in filters, columns, sorting and grouping, including one formula that names another. One that reaches itself says so rather than looping.

@@ -1901,10 +1901,10 @@ class ReaderWindow(Adw.ApplicationWindow):
         return page_id(self.store.state.theme, dark)
 
     def _provide_page_later(self, path: str, webview, deliver) -> bool:
-        """Renders a note or a hover preview on a worker thread, delivered on the main loop.
+        """Renders a note, a base or a hover preview on a worker thread, delivered on the main loop.
 
-        The window keeps answering while a long note renders. Anything else, and a
-        note shown as source, canvas or base, returns False for `_provide_page`.
+        The window keeps answering while a long note or a base renders. Anything
+        else, and a note shown as source or canvas, returns False for `_provide_page`.
         The worker holds only a token: the view and the request stay on the main
         loop, so the last reference to either is never dropped on another thread.
         """
@@ -1913,8 +1913,9 @@ class ReaderWindow(Adw.ApplicationWindow):
             return False
         rel = "/".join(segments[1:])
         preview = segments[0] == "preview"
-        if not preview and (self.source_view or rel.casefold().endswith((".canvas", ".base"))):
+        if not preview and (self.source_view or rel.casefold().endswith(".canvas")):
             return False
+        is_base = not preview and rel.casefold().endswith(".base")
         theme = self._theme()
         terms: list[str] = []
         if not preview and self._pending_highlight and webview is self.reader.webview:
@@ -1939,6 +1940,8 @@ class ReaderWindow(Adw.ApplicationWindow):
             try:
                 if preview:
                     page = renderer.render_preview(rel, theme)
+                elif is_base:
+                    page = renderer.render_base_page(rel, theme)
                 else:
                     rendered = renderer.render(rel, theme)
                     marked = bool(terms) and not rendered.error

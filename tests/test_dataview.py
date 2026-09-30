@@ -226,3 +226,13 @@ def test_from_empty_link_means_backlinks_of_this(engine):
     markup = run(engine, "LIST FROM [[]]", this="Projects/Alpha.md")
     assert "Index" in markup
     assert "Gamma" not in markup
+
+
+def test_a_file_namespace_is_shared_until_the_file_facts_change(engine):
+    graph = engine.graph
+    first = engine._page_row("Projects/Beta.md").get("file")
+    assert engine._page_row("Projects/Beta.md").get("file") is first
+    graph.meta = {"Projects/Beta.md": (86400.0, 10)}
+    fresh = engine._page_row("Projects/Beta.md").get("file")
+    assert fresh is not first
+    assert fresh["mtime"] == datetime.datetime.fromtimestamp(86400.0)
