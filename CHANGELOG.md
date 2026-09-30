@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### The smoke run no longer fails on which screen the window opens on
+
+- **`make smoke` failed "the window opened at the saved width" whenever the window landed on a smaller or scaled monitor**, which the compositor clamps it to, so the same code passed from one terminal and failed from another. A window narrower than the saved size is now a `NOTE` with its width, and the board checks after it run at that width and say so. A window wider than the saved size still fails.
+
 ### A base renders its formulas, groups and limits
 
 - **A base that used a formula said *not evaluated* instead of showing its rows.** `formulas` now evaluate for each note, and `formula.NAME` works in filters, columns, sorting and grouping, including one formula that names another. One that reaches itself says so rather than looping.
