@@ -95,6 +95,24 @@ def test_filter_with_a_lambda():
     assert evaluate("filter(xs, (x) => x > 4)", props) == [5, 10]
 
 
+def test_bases_forms_beside_the_dataview_ones():
+    props = {"a": 1, "b": 0, "xs": [1, 5, 10]}
+    assert evaluate("a && !b", props) is True
+    assert evaluate("b || a", props) == 1
+    assert evaluate("xs.filter(value > 4)", props) == [5, 10]
+    assert evaluate("xs.filter(value > 4).length", props) == 2
+    assert evaluate("filter(xs, (value) => value > 4)", props) == [5, 10]
+
+
+def test_a_bases_duration_string_beside_a_date():
+    moment = datetime.datetime(2026, 1, 10, 12, 0)
+    props = {"when": moment}
+    assert evaluate('when - "1d"', props) == moment - datetime.timedelta(days=1)
+    assert evaluate('when + "2 weeks"', props) == moment + datetime.timedelta(weeks=2)
+    assert evaluate('when - "3M"', props) == moment - datetime.timedelta(days=90)
+    assert evaluate('"a" + "1d"') == "a1d"
+
+
 def test_functions_used_by_the_vault():
     assert evaluate('length([1, 2, 3])') == 3
     assert evaluate('lower("ABC")') == "abc"

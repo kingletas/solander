@@ -117,7 +117,7 @@ _TOKEN = re.compile(
   | (?P<string>"(?:[^"\\]|\\.)*")
   | (?P<tag>\#[\w/-]+)
   | (?P<name>[A-Za-z_][\w-]*)
-  | (?P<op><=|>=|!=|=>|[-+*/%()\[\],.!<>=&|])
+  | (?P<op><=|>=|!=|=>|&&|\|\||[-+*/%()\[\],.!<>=&|])
     """,
     re.VERBOSE,
 )
@@ -185,14 +185,14 @@ class _Parser:
 
     def _or(self):
         node = self._and()
-        while self.peek().kind == "or" or self.peek().text == "|":
+        while self.peek().kind == "or" or self.peek().text in ("|", "||"):
             self.advance()
             node = Binary("or", node, self._and())
         return node
 
     def _and(self):
         node = self._comparison()
-        while self.peek().kind == "and" or self.peek().text == "&":
+        while self.peek().kind == "and" or self.peek().text in ("&", "&&"):
             self.advance()
             node = Binary("and", node, self._comparison())
         return node
