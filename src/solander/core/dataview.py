@@ -572,6 +572,9 @@ def _file_namespace(rel: str, graph) -> dict:
     note's namespace is asked for many thousands of times in one render. Nothing
     writes into a namespace once built. The cache belongs to the graph and is
     dropped when its file facts are replaced, so it never outlives the snapshot.
+    It relies on a graph never being changed in place once assembled: every sync
+    builds a new one, and the properties, tags and links a namespace carries are
+    read from the graph it was built for.
     """
     cached = getattr(graph, "_file_namespaces", None)
     if cached is None or cached[0] is not graph.meta:
