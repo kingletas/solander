@@ -31,6 +31,24 @@ FIRST_NOTE_FLOOR_TRIES = 14
 FIRST_NOTE_TRIES = 60
 
 
+# The size Solander hands GTK when it builds the window, recorded as it is asked
+# for. GTK 4's default size follows the window once it is shown, and a compositor
+# may clamp the window, so this is the only reading that is Solander's alone.
+requested_sizes: list[tuple[int, int]] = []
+
+
+def record_requested_size() -> None:
+    from solander.gui.window import ReaderWindow
+
+    original = ReaderWindow.set_default_size
+
+    def recording(window, width: int, height: int) -> None:
+        requested_sizes.append((width, height))
+        original(window, width, height)
+
+    ReaderWindow.set_default_size = recording
+
+
 def check(label: str, condition: bool) -> None:
     print(f"{'ok' if condition else 'FAIL'}  {label}")
     checks_run.append(label)
@@ -921,6 +939,8 @@ def run_checks(app):
                         # A compositor may also clamp the window to a smaller or scaled monitor,
                         # which says where it landed rather than what Solander did, so a narrower
                         # window is noted and the board below is measured at the width it has.
+                        check("Solander asked for the saved window size, 1872 by 1045",
+                              requested_sizes[:1] == [(1872, 1045)])
                         width = window.get_width()
                         if width < 1860:
                             print(
@@ -1113,6 +1133,7 @@ def seed_saved_window() -> None:
 def main() -> int:
     write_extra_fixtures()
     seed_saved_window()
+    record_requested_size()
     sys.excepthook = record_crash
     app = ReaderApplication()
     # Without this, a reader already running for the real vault owns the app id,
