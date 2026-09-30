@@ -566,6 +566,24 @@ def _note_uri(rel: str, base: str = NOTE_BASE) -> str:
 
 
 def _file_namespace(rel: str, graph) -> dict:
+    """A note's `file.` fields, built once per graph snapshot and then shared.
+
+    A base can follow every link in the vault through `asFile()`, so the same
+    note's namespace is asked for many thousands of times in one render. Nothing
+    writes into a namespace once built. The cache belongs to the graph and is
+    dropped when its file facts are replaced, so it never outlives the snapshot.
+    """
+    cached = getattr(graph, "_file_namespaces", None)
+    if cached is None or cached[0] is not graph.meta:
+        cached = (graph.meta, {})
+        graph._file_namespaces = cached
+    namespace = cached[1].get(rel)
+    if namespace is None:
+        namespace = cached[1][rel] = _build_file_namespace(rel, graph)
+    return namespace
+
+
+def _build_file_namespace(rel: str, graph) -> dict:
     filename = rel.rsplit("/", 1)[-1]
     stem = filename.rsplit(".", 1)[0]
     folder = rel.rsplit("/", 1)[0] if "/" in rel else ""
