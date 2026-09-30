@@ -4,7 +4,7 @@
 
 ### The smoke run no longer fails on which screen the window opens on
 
-- **`make smoke` failed "the window opened at the saved width" whenever the window landed on a smaller or scaled monitor**, which the compositor clamps it to, so the same code passed from one terminal and failed from another. A window narrower than the saved size is now a `NOTE` with its width, and the board checks after it run at that width and say so. A window wider than the saved size still fails.
+- **`make smoke` failed "the window opened at the saved width" whenever the window landed on a smaller or scaled monitor**, which the compositor clamps it to, so the same code passed from one terminal and failed from another. A window narrower than the saved size is now a `NOTE` with its width, and the board checks after it run at that width and say so. A window wider than the saved size still fails. **Solander not restoring the saved size still fails too**: a new check records the size Solander asks GTK for as it builds the window, which no compositor can change, and wants the saved 1872 by 1045.
 
 ### A base renders its formulas, groups and limits
 
