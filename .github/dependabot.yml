@@ -13,3 +13,11 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+
+  # The tools CI installs, pinned in .github/ci-requirements.txt.
+  - package-ecosystem: pip
+    directory: /.github
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
