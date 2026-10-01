@@ -12,7 +12,9 @@ MAX_RESULTS = 200
 
 # Obsidian's property operator: `[status]` or `[project:Garden Shed]`. It is
 # lifted out before the query is split into words, since a value may hold spaces.
-_PROPERTY = re.compile(r"\[([^\[\]:]+)(?::([^\[\]]*))?\]")
+# A bracket doubled, as in `[[Some Note]]`, is a wikilink being searched for, not
+# an operator.
+_PROPERTY = re.compile(r"(?<!\[)\[([^\[\]:]+)(?::([^\[\]]*))?\](?!\])")
 
 
 @dataclass(frozen=True)

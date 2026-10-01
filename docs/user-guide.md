@@ -51,10 +51,10 @@ Four operators narrow full-text queries, combinable with plain words. Operators 
 | `path:journal` | The note's path contains the term |
 | `file:meeting` | The filename contains the term |
 | `tag:project` | The note carries the tag; nested children match, so `tag:project` finds `project/alpha` |
-| `[project:Garden Shed]` | The note's frontmatter property holds the value, or any item of it when it's a list; the value may contain spaces |
+| `[project:Garden Shed]` | The note's frontmatter property contains the value, or any item of it does when it's a list. It is *contains*, not *equals*: `[rating:5]` also keeps 15, and `[status:done]` keeps `undone`. The value may hold spaces |
 | `[status]` | The note has the property at all, whatever its value |
 
-Quotation marks are ignored, so there is no phrase search: `"harbour light"` finds notes with both words anywhere in them.
+A wikilink typed into the box, `[[Some Note]]`, is searched as words rather than read as a property. Quotation marks are ignored, so there is no phrase search: `"harbour light"` finds notes with both words anywhere in them.
 
 ## The note page
 

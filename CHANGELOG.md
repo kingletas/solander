@@ -4,7 +4,7 @@
 
 ### Search by property
 
-- **Search takes Obsidian's property operator.** `[project:Garden Shed]` keeps the notes whose `project` property holds that value, or has it as one item of a list; `[status]` keeps the notes that have the property at all. Names and values are case-insensitive, a value may contain spaces, and it combines with words and the other operators like they combine with each other. Like `tag:`, it waits for the vault index, and says so if it isn't ready.
+- **Search takes Obsidian's property operator.** `[project:Garden Shed]` keeps the notes whose `project` property contains that value, or has an item that does when it's a list; `[status]` keeps the notes that have the property at all. Names and values are case-insensitive, a value may contain spaces, a wikilink such as `[[Some Note]]` is still searched as words, and it combines with words and the other operators like they combine with each other. Like `tag:`, it waits for the vault index, and says so if it isn't ready.
 
 ### A base renders its formulas, groups and limits
 
