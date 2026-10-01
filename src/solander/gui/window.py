@@ -327,7 +327,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         search_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         search_box.set_margin_top(6)
         self.search_entry = Gtk.SearchEntry(
-            placeholder_text="Search notes (Ctrl+P); try path:, file:, tag:"
+            placeholder_text="Search notes (Ctrl+P); try path:, file:, tag:, [property]"
         )
         _name(self.search_entry, "Search notes")
         self.search_entry.set_margin_start(6)
@@ -2324,12 +2324,14 @@ class ReaderWindow(Adw.ApplicationWindow):
         if self.search_index is None or not self.search_index.ready:
             self._search_says("Still indexing. Try again shortly")
             return
-        if parse_query(query).tags and (self.graph is None or not self.graph.ready):
-            self._search_says("The tag index is still building. Try again shortly")
+        parsed = parse_query(query)
+        if (parsed.tags or parsed.properties) and (self.graph is None or not self.graph.ready):
+            self._search_says("The tag and property index is still building. Try again shortly")
             return
         self._clear_results()
         note_tags = self.graph.note_tags if self.graph is not None else None
-        hits = self._ranked_hits(self.search_index.search_content(query, note_tags))
+        note_props = self.graph.props if self.graph is not None else None
+        hits = self._ranked_hits(self.search_index.search_content(query, note_tags, note_props))
         if not hits:
             self._search_says(f"No matches for “{query}”")
             return

@@ -177,3 +177,37 @@ def test_a_filter_finds_its_note_however_many_notes_mention_the_word(tmp_path):
     assert [hit.path for hit in search.search_content("path:journal standup")] == [
         "journal/2026-02-02.md"
     ]
+
+
+def test_a_property_operator_keeps_its_spaces_and_case():
+    query = parse_query("[Project:Garden Shed] standup [status]")
+    assert query.words == ("standup",)
+    assert query.properties == (("project", "garden shed"), ("status", None))
+    assert not query.empty
+
+
+def test_a_bare_bracket_is_a_word_not_an_operator():
+    assert parse_query("[] [:x]").properties == ()
+
+
+def test_search_by_property_value_and_presence(vault, vault_dir, tmp_path):
+    (vault_dir / "Projects" / "Beta.md").write_text(
+        "---\nproject: Garden Shed\nstatus: open\n---\n# Beta\n\nstandup notes\n"
+    )
+    (vault_dir / "Projects" / "Gamma.md").write_text(
+        "---\nproject:\n  - Kitchen\n  - Garden Shed\n---\n# Gamma\n\nstandup notes\n"
+    )
+    (vault_dir / "Projects" / "Delta.md").write_text(
+        "---\nproject: Kitchen\n---\n# Delta\n\nstandup notes\n"
+    )
+    vault.reindex()
+    search, graph = make_search(vault, tmp_path)
+
+    def paths(query):
+        return sorted(h.path for h in search.search_content(query, graph.note_tags, graph.props))
+
+    assert paths("[project:garden shed]") == ["Projects/Beta.md", "Projects/Gamma.md"]
+    assert paths("[project:Garden Shed] standup") == ["Projects/Beta.md", "Projects/Gamma.md"]
+    assert paths("[status]") == ["Projects/Beta.md"]
+    assert paths("[project:Kitchen] [status]") == []
+    assert paths("[nowhere]") == []

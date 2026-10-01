@@ -1,5 +1,6 @@
 """Filename and full-text search: query parsing, operators, and the FTS-backed service."""
 
+import re
 import unicodedata
 from dataclasses import dataclass
 
@@ -8,6 +9,10 @@ from .store import IndexStore
 from .vault import Vault, hidden_under
 
 MAX_RESULTS = 200
+
+# Obsidian's property operator: `[status]` or `[project:Garden Shed]`. It is
+# lifted out before the query is split into words, since a value may hold spaces.
+_PROPERTY = re.compile(r"\[([^\[\]:]+)(?::([^\[\]]*))?\]")
 
 
 @dataclass(frozen=True)
@@ -20,20 +25,35 @@ class SearchHit:
 
 @dataclass(frozen=True)
 class Query:
-    """A parsed search: plain words plus `path:`, `file:`, and `tag:` filters."""
+    """A parsed search: plain words plus `path:`, `file:`, `tag:` and `[property]` filters.
+
+    Each property filter is a name and the value it must contain, or None when
+    having the property at all is enough.
+    """
 
     words: tuple[str, ...] = ()
     paths: tuple[str, ...] = ()
     files: tuple[str, ...] = ()
     tags: tuple[str, ...] = ()
+    properties: tuple[tuple[str, str | None], ...] = ()
 
     @property
     def empty(self) -> bool:
-        return not (self.words or self.paths or self.files or self.tags)
+        return not (self.words or self.paths or self.files or self.tags or self.properties)
 
 
 def parse_query(text: str) -> Query:
     """Splits a query into words and operator filters; unknown operators stay words."""
+    properties: list[tuple[str, str | None]] = []
+
+    def lift(match: re.Match) -> str:
+        name, value = match.group(1).strip(), (match.group(2) or "").strip()
+        if not name:
+            return match.group(0)
+        properties.append((_fold(name), _fold(value) if value else None))
+        return " "
+
+    text = _PROPERTY.sub(lift, text)
     words: list[str] = []
     filters: dict[str, list[str]] = {"path": [], "file": [], "tag": []}
     for token in text.split():
@@ -47,6 +67,7 @@ def parse_query(text: str) -> Query:
         paths=tuple(filters["path"]),
         files=tuple(filters["file"]),
         tags=tuple(filters["tag"]),
+        properties=tuple(properties),
     )
 
 
@@ -58,13 +79,16 @@ class VaultSearch:
         self.ready = False
 
     def search_content(
-        self, query: str, note_tags: dict[str, set[str]] | None = None
+        self,
+        query: str,
+        note_tags: dict[str, set[str]] | None = None,
+        note_props: dict[str, dict] | None = None,
     ) -> list[SearchHit]:
         """Finds notes matching every word and filter, best matches first."""
         parsed = parse_query(query)
         if parsed.empty:
             return []
-        filtered = bool(parsed.paths or parsed.files or parsed.tags)
+        filtered = bool(parsed.paths or parsed.files or parsed.tags or parsed.properties)
         if parsed.words and not filtered:
             candidates = self.store.search_body(list(parsed.words), MAX_RESULTS)
         elif parsed.words:
@@ -82,6 +106,9 @@ class VaultSearch:
             if any(term not in name for term in parsed.files):
                 continue
             if parsed.tags and not _tags_match(parsed.tags, (note_tags or {}).get(rel, set())):
+                continue
+            props = (note_props or {}).get(rel) or {}
+            if parsed.properties and not _properties_match(parsed.properties, props):
                 continue
             hits.append(SearchHit(path=rel, snippet=snippet))
             if len(hits) >= MAX_RESULTS:
@@ -118,6 +145,25 @@ def _tags_match(terms: tuple[str, ...], tags: set[str]) -> bool:
     return all(
         any(tag == term or tag.startswith(f"{term}/") for tag in tags) for term in terms
     )
+
+
+def _properties_match(terms: tuple[tuple[str, str | None], ...], props: dict) -> bool:
+    """Reports whether a note's frontmatter has every property, each holding its value.
+
+    Names are compared case-insensitively. A value matches when it appears in the
+    property's text, or in any item of a list.
+    """
+    folded = {_fold(str(key)): value for key, value in props.items()}
+    for name, wanted in terms:
+        if name not in folded:
+            return False
+        if wanted is None:
+            continue
+        value = folded[name]
+        items = value if isinstance(value, list) else [value]
+        if not any(wanted in _fold(str(item)) for item in items if item is not None):
+            return False
+    return True
 
 
 def _fold(text: str) -> str:
