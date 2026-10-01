@@ -12,6 +12,10 @@
 
 - **`make smoke` failed "the window opened at the saved width" whenever the window landed on a smaller or scaled monitor**, which the compositor clamps it to, so the same code passed from one terminal and failed from another. A window narrower than the saved size is now a `NOTE` with its width, and the board checks after it run at that width and say so. A window wider than the saved size still fails. **Solander not restoring the saved size still fails too**: a new check records the size Solander asks GTK for as it builds the window, which no compositor can change, and wants the saved 1872 by 1045.
 
+### Search by property
+
+- **Search takes Obsidian's property operator.** `[project:Garden Shed]` keeps the notes whose `project` property contains that value, or has an item that does when it's a list; `[status]` keeps the notes that have the property at all. Names and values are case-insensitive, a value may contain spaces, a wikilink such as `[[Some Note]]` is still searched as words, and it combines with words and the other operators like they combine with each other. Like `tag:`, it waits for the vault index, and says so if it isn't ready.
+
 ### A base renders its formulas, groups and limits
 
 - **A base that used a formula said *not evaluated* instead of showing its rows.** `formulas` now evaluate for each note, and `formula.NAME` works in filters, columns, sorting and grouping, including one formula that names another. One that reaches itself says so rather than looping.
