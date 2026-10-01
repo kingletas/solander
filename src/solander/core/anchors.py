@@ -1,7 +1,8 @@
 """The element ids a page gives its headings and blocks, kept from colliding."""
 
+from glossa.links import slugify
+
 from .hits import FIRST_HIT_ID
-from .links import slugify
 
 BLOCK_PREFIX = "block-"
 

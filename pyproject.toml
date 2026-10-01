@@ -7,6 +7,8 @@ license = { file = "LICENSE" }
 authors = [{ name = "Luis Tineo", email = "code@kingletas.com" }]
 requires-python = ">=3.12"
 dependencies = [
+    # The rendering modules Solander shares with Slate, pinned to a tag.
+    "glossa @ git+https://github.com/kingletas/glossa@v0.1.0",
     "markdown-it-py>=3.0",
     "mdit-py-plugins>=0.4",
     "linkify-it-py>=2.0",
@@ -30,6 +32,11 @@ dev = [
 # the application prints has to be the real one.
 [tool.hatch.version]
 path = "src/solander/__init__.py"
+
+# glossa is pinned by its git tag, a direct reference, which hatchling refuses
+# by default because PyPI does. Solander is not published there.
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [build-system]
 requires = ["hatchling"]

@@ -3,9 +3,9 @@
 import datetime
 
 import pytest
+from glossa.dataview import DataviewEngine, Evaluator, Row
+from glossa.dql import DqlError, parse_expression
 
-from solander.core.dataview import DataviewEngine, Evaluator, Row
-from solander.core.dql import DqlError, parse_expression
 from solander.core.graph import VaultGraph
 
 

@@ -51,7 +51,7 @@ The smoke run drives the **real window on a live display** through open, render,
 
 - **The sanitizer is the trust boundary.** Everything upstream of it handles attacker-controlled text; nothing downstream may receive unsanitized markup. New markup goes through it, or is app-authored with forced escaping and allowlisted values.
 - **Unsupported degrades visibly.** Anything the app cannot render becomes labeled source that names the reason. Silently dropping content is a bug.
-- **A theme is a palette, not a stylesheet.** Adding one to the Archive family means one entry in `core/palettes.py`; the tokens, the window chrome and the syntax colours are generated from it. Every colour that carries text is asserted against WCAG AA on the ground it sits on.
+- **A theme is a palette, not a stylesheet.** Adding one to the Archive family means one entry in `palettes.py` in [glossa](https://github.com/kingletas/glossa), the rendering library Solander shares with Slate; the tokens, the window chrome and the syntax colours are generated from it. Every colour that carries text is asserted against WCAG AA on the ground it sits on.
 - **Bounds are tested with the payload that broke things.** Note size, frontmatter size, embed depth and embeds per page are all capped, and each cap has a test built from input that previously froze the renderer.
 - **Comments say what the code does or what it guards against**, in a sentence or two. History belongs in the commit message and the changelog.
 

@@ -4,7 +4,8 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-from .fuzzy import fuzzy_filenames
+from glossa.fuzzy import fuzzy_filenames
+
 from .store import IndexStore
 from .vault import Vault, hidden_under
 

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### The rendering modules live in one library now
+
+- **The fifteen modules Solander and Slate carried as identical copies moved to [glossa](https://github.com/kingletas/glossa)**: Markdown, links, callouts and frontmatter; Dataview and its query language; Bases; canvases, boards, drawings and diagrams; and the fuzzy matching, list diffs and palettes. Solander pins `v0.1.0`, so a fix is made once and reaches both apps by a version bump rather than by hand. Nothing Solander renders changes.
+- `make check` no longer compares copies with Slate's checkout, since there are no copies left to compare. The tests that need no vault moved with the modules; the ones that need Solander's own vault graph stay here and now exercise the library.
+
 ### The shared-copies check runs from a worktree
 
 - **The check that keeps the copies Solander and Slate share identical skipped itself in every worktree**, because it looked for the other app beside the checkout it ran in, and a worktree sits inside its repository. One shared module drifted that way and merged. It now looks beside the repository's main checkout, so a change built in a worktree is compared before review; `SOLANDER_TREE` and `SLATE_TREE` still win, and with the other app not on the machine at all it still says so and passes.
