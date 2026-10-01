@@ -8,6 +8,10 @@
 - **The window froze while a base rendered.** A base is now rendered on a worker thread like a note, with the foot saying it is still opening, and `make smoke` holds one render for 1.5 seconds and fails if the window stalls for more than 250 ms meanwhile.
 - The core change is in Slate's copy too.
 
+### The smoke run no longer fails on which screen the window opens on
+
+- **`make smoke` failed "the window opened at the saved width" whenever the window landed on a smaller or scaled monitor**, which the compositor clamps it to, so the same code passed from one terminal and failed from another. A window narrower than the saved size is now a `NOTE` with its width, and the board checks after it run at that width and say so. A window wider than the saved size still fails. **Solander not restoring the saved size still fails too**: a new check records the size Solander asks GTK for as it builds the window, which no compositor can change, and wants the saved 1872 by 1045.
+
 ### A base renders its formulas, groups and limits
 
 - **A base that used a formula said *not evaluated* instead of showing its rows.** `formulas` now evaluate for each note, and `formula.NAME` works in filters, columns, sorting and grouping, including one formula that names another. One that reaches itself says so rather than looping.
