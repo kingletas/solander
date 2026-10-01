@@ -44,15 +44,17 @@ Two searches share the Search page. `Ctrl+P` and `Ctrl+Shift+F` both open it, an
 
 Middle-click, `Ctrl+click` or right-click a result to open it in a new tab.
 
-Three operators narrow full-text queries, combinable with plain words. Operators and terms are case-insensitive, and a note has to match every one of them:
+Four operators narrow full-text queries, combinable with plain words. Operators and terms are case-insensitive, and a note has to match every one of them:
 
 | Operator | Meaning |
 |---|---|
 | `path:journal` | The note's path contains the term |
 | `file:meeting` | The filename contains the term |
 | `tag:project` | The note carries the tag; nested children match, so `tag:project` finds `project/alpha` |
+| `[project:Garden Shed]` | The note's frontmatter property contains the value, or any item of it does when it's a list. It is *contains*, not *equals*: `[rating:5]` also keeps 15, and `[status:done]` keeps `undone`. The value may hold spaces |
+| `[status]` | The note has the property at all, whatever its value |
 
-Quotation marks are ignored, so there is no phrase search: `"harbour light"` finds notes with both words anywhere in them.
+A wikilink typed into the box, `[[Some Note]]`, is searched as words rather than read as a property. Quotation marks are ignored, so there is no phrase search: `"harbour light"` finds notes with both words anywhere in them.
 
 ## The note page
 
