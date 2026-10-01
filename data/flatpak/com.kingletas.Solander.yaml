@@ -76,11 +76,13 @@ modules:
       - PYTHONPATH="${PWD}/.build-backend" pip3 install --no-index
         --no-build-isolation --no-deps --prefix=${FLATPAK_DEST} .
     sources:
-      # The tag Solander's pyproject pins; flatpak-builder fetches it before the
+      # The tag Solander's pyproject pins, and its commit, so a moved tag fails the
+      # build rather than changing it. flatpak-builder fetches it before the
       # build starts, since the build itself has no network.
       - type: git
         url: https://github.com/kingletas/glossa.git
         tag: v0.1.0
+        commit: d22da3a3d90343de1afb493d95f2ec55a1c494fd
       - type: file
         url: https://files.pythonhosted.org/packages/a9/84/1798b6d85ecde0e31546004efd25c5de1b1f49250644a60cce460e12593a/hatchling-1.32.0-py3-none-any.whl
         sha256: 0e17c9c3b9aa7c625acc8d0f5b622f107d5049af9ecf5ada4de1aada5be7cdbc
