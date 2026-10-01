@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Moving quickly through notes renders only where you stop
+
+- **Holding a key down the file tree rendered every note it passed**, each on its own thread, though only the last would be seen. A tab now has one render in flight and at most one waiting behind it: a request that arrives meanwhile replaces the waiting one, which is answered at once without being rendered. Ten notes asked for in a row render two, the first and the last, and `make smoke` checks it.
+
 ### A base opens in about a second, and the window keeps answering
 
 - **A base over a large vault took seconds to render.** One whose formula follows every link, as a subject page does, built the same note's `file.` fields again for every link that reached it, and parsed every filter again for every note. The fields are now built once per index snapshot and each filter once, and a base's own filter is applied once for all its views: a subject base over 14,000 notes went from 13.3 seconds to 0.9, with the same rows.

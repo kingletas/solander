@@ -601,13 +601,54 @@ def run_checks(app):
                     print(f"   a held base rendered in {took:.1f} s; longest stall {worst:.0f} ms")
                     check("a base opens through the page request", ticks["done"])
                     check("the window keeps answering while a base renders", worst < 250)
-                    window.reader.load_note("A.md")
-                    GLib.timeout_add(1000, lambda: (check_text_scale(), False)[1])
+                    check_moot_renders()
                     return False
 
                 handler = webview.connect("load-changed", finished)
                 window.reader.load_note("Things.base")
                 GLib.timeout_add(20, tick)
+
+            def check_moot_renders():
+                """Asks one tab for ten notes in a row while the first is still rendering.
+
+                It is what holding a key down the file tree does. Only the first and
+                the last are wanted, so the eight between must not be rendered.
+                """
+                from solander.core.render import NoteRenderer
+
+                original = NoteRenderer.render
+                ran: list[str] = []
+
+                def counted(self, rel, theme="light"):
+                    ran.append(rel)
+                    time.sleep(0.6)
+                    return original(self, rel, theme)
+
+                NoteRenderer.render = counted
+                notes = ["A.md", "Second Note.md", "Bare Note.md", "Query.md"] * 3
+                asked = notes[:10]
+
+                def ask(index: int = 0) -> bool:
+                    if index < len(asked):
+                        window.reader.load_note(asked[index])
+                        GLib.timeout_add(40, ask, index + 1)
+                    else:
+                        GLib.timeout_add(2500, settle)
+                    return False
+
+                def settle() -> bool:
+                    NoteRenderer.render = original
+                    print(f"   ten notes asked for in a row; rendered: {ran}")
+                    check(
+                        f"a tab asked for ten notes in a row renders few of them ({len(ran)})",
+                        0 < len(ran) <= 3,
+                    )
+                    check("and it renders the last one", bool(ran) and ran[-1] == asked[-1])
+                    window.reader.load_note("A.md")
+                    GLib.timeout_add(1000, lambda: (check_text_scale(), False)[1])
+                    return False
+
+                ask()
 
             def check_tab_chain(tries: int = 0):
                 """Walks Tab's focus chain from the page, the way the key does, until it closes.
