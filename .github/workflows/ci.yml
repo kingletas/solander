@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        run: pip install uv
+        run: pip install -c .github/ci-requirements.txt uv
       - name: Install dependencies
         run: uv sync --frozen
       - name: Lint
@@ -46,7 +46,7 @@ jobs:
           python-version: "3.12"
       - name: Semgrep
         run: |
-          pip install semgrep
+          pip install -c .github/ci-requirements.txt semgrep
           semgrep --config p/python --error --metrics=off src/ tests/ scripts/
 
   # A tag must not be the first time the packaging runs. The deb is cheap, so it
