@@ -200,6 +200,15 @@ class ReaderWindow(Adw.ApplicationWindow):
         self._renders_in_flight = 0
         self._render_tokens = itertools.count(1)
         self._render_waiting: dict[int, tuple] = {}
+        # Each surface's latest render, and the tokens that are still somebody's
+        # latest. A worker reads only the second, so it never touches a surface.
+        self._latest_render: dict = {}
+        self._live_renders: set[int] = set()
+        # One render in flight per surface, and at most one waiting behind it. A
+        # request that arrives meanwhile replaces the one waiting, which is
+        # answered at once without being rendered: nobody will see it.
+        self._render_running: dict = {}
+        self._render_parked: dict = {}
         self._opening_token = 0
         self._opening_reader = None
         self._sync_waiting = None
@@ -1921,23 +1930,27 @@ class ReaderWindow(Adw.ApplicationWindow):
         if not preview and self._pending_highlight and webview is self.reader.webview:
             terms, self._pending_highlight = self._pending_highlight, []
         reader = self._readers.get(webview)
-        if reader is not None:
-            reader.render_generation = getattr(reader, "render_generation", 0) + 1
         token = next(self._render_tokens)
         if not preview and reader is not None:
             GLib.timeout_add(OPENING_NOTICE_MS, self._say_opening, token, reader, rel)
-        generation = reader.render_generation if reader is not None else None
-        self._render_waiting[token] = (webview, deliver, generation)
-        # A tab that asks for another page stops this render at its next step,
-        # rather than letting a note nobody is waiting for hold the interpreter.
-        superseded = (
-            (lambda: reader.render_generation != generation) if reader is not None else None
-        )
+        self._render_waiting[token] = (webview, deliver, reader)
+        superseded = None
+        if reader is not None:
+            self._live_renders.discard(self._latest_render.get(reader))
+            self._latest_render[reader] = token
+            self._live_renders.add(token)
+            live = self._live_renders
+            # A tab that asks for another page stops this render before it starts or
+            # at its next step, rather than letting a note nobody is waiting for
+            # hold the interpreter.
+            superseded = lambda: token not in live  # noqa: E731
         renderer = self.renderer.copy(should_stop=superseded)
 
         def build() -> None:
             rendered, page = None, ""
             try:
+                if superseded is not None and superseded():
+                    raise RenderCancelled
                 if preview:
                     page = renderer.render_preview(rel, theme)
                 elif is_base:
@@ -1959,20 +1972,43 @@ class ReaderWindow(Adw.ApplicationWindow):
 
         def finish(key: int, rendered, page: str) -> bool:
             self._renders_in_flight -= 1
-            view, answer, generation = self._render_waiting.pop(key)
+            view, answer, asker = self._render_waiting.pop(key)
             if self._opening_token == key:
                 self._opening_token = 0
                 self.foot.say_opening(None)
+            latest = asker is not None and self._latest_render.get(asker) == key
+            if latest:
+                # Cleared even for a tab closed meanwhile, so nothing here keeps it.
+                del self._latest_render[asker]
+                self._live_renders.discard(key)
             current = self._readers.get(view)
             # A tab that asked for another page since keeps that page's render.
-            if current is not None and generation == getattr(current, "render_generation", 0):
+            if latest and current is not None:
                 current.last_render = rendered
                 current.search_marked = bool(terms) and rendered is not None and not rendered.error
             answer(page or build_message_page("This note could not be shown", "", theme))
+            if asker is not None and self._render_running.get(asker) == key:
+                del self._render_running[asker]
+                waiting = self._render_parked.pop(asker, None)
+                if waiting is not None:
+                    self._render_running[asker] = waiting[0]
+                    waiting[1]()
             return False
 
+        def start() -> None:
+            threading.Thread(target=build, daemon=True).start()
+
         self._renders_in_flight += 1
-        threading.Thread(target=build, daemon=True).start()
+        if reader is None or reader not in self._render_running:
+            if reader is not None:
+                self._render_running[reader] = token
+            start()
+            return True
+        replaced = self._render_parked.pop(reader, None)
+        self._render_parked[reader] = (token, start, finish)
+        if replaced is not None:
+            moot, _, answer_moot = replaced
+            answer_moot(moot, None, build_message_page("Superseded", "", theme))
         return True
 
     def _say_opening(self, token: int, reader, rel: str) -> bool:
