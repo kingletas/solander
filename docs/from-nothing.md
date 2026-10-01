@@ -190,7 +190,7 @@ Or launch **Solander** from your applications grid, which restores your last ses
 Two notes don't need finding. Ten thousand do, and this is where a reader earns its keep.
 
 - **Quick open** is fuzzy: type part of a name and it ranks by how the query matched, not just whether it did.
-- **Search** is full text, ranked by relevance, with hits highlighted in place. It takes `path:`, `file:` and `tag:` operators, so `tag:recipe soup` means what you'd expect.
+- **Search** is full text, ranked by relevance, with hits highlighted in place. It takes `path:`, `file:` and `tag:` operators and Obsidian's `[property:value]`, so `tag:recipe soup` and `[cuisine:thai] soup` mean what you'd expect.
 - **Backlinks** show every note pointing at this one, with the sentence around each link rather than a bare list.
 - There's a **tag browser**, your vault's own **bookmarks**, a **local graph**, and hover previews on links.
 
