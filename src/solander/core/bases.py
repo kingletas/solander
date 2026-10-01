@@ -8,6 +8,7 @@ types are named, not faked.
 
 import html
 import os
+from functools import lru_cache
 
 import yaml
 
@@ -33,11 +34,17 @@ def render_base(graph, text: str) -> str:
         return _message("This base file has no views")
     engine = DataviewEngine(graph)
     display_names = _display_names(data.get("properties"))
-    base_filter = data.get("filters")
     try:
         formulas = _parse_formulas(data.get("formulas"))
     except DqlError as error:
         return _message(f"This base file has a formula that cannot be read: {error}")
+    evaluator = Evaluator(graph=graph)
+    base_rows, base_error = [], None
+    if any(str(view.get("type") or "") == "table" for view in views):
+        try:
+            base_rows = _base_rows(engine, evaluator, data.get("filters"), formulas)
+        except DqlError as error:
+            base_error = error
     sections = []
     for view in views:
         name = str(view.get("name") or view.get("type") or "view")
@@ -49,9 +56,9 @@ def render_base(graph, text: str) -> str:
             )
             continue
         try:
-            sections.append(
-                _table_view(engine, view, base_filter, formulas, display_names, name)
-            )
+            if base_error is not None:
+                raise base_error
+            sections.append(_table_view(evaluator, view, base_rows, display_names, name))
         except DqlError as error:
             sections.append(
                 f'<div class="dataview-note">View “{html.escape(name)}” '
@@ -60,16 +67,26 @@ def render_base(graph, text: str) -> str:
     return f'<div class="dataview">{"".join(sections)}</div>'
 
 
-def _table_view(
-    engine, view: dict, base_filter, formulas: dict, display_names: dict, name: str
-) -> str:
-    evaluator = Evaluator(graph=engine.graph)
+def _base_rows(engine, evaluator: Evaluator, base_filter, formulas: dict) -> list:
+    """Every note the base's own filter admits, each carrying its formulas.
+
+    Views share these rows, so a formula one view reads is not worked out again
+    for the next.
+    """
     rows = []
     for rel in sorted(engine.graph.props.keys()):
         row = engine._page_row(rel)
         row.bindings["formula"] = _Formulas(evaluator, formulas, row)
-        if _passes(evaluator, base_filter, row) and _passes(evaluator, view.get("filters"), row):
+        if _passes(evaluator, base_filter, row):
             rows.append(row)
+    return rows
+
+
+def _table_view(
+    evaluator: Evaluator, view: dict, base_rows: list, display_names: dict, name: str
+) -> str:
+    view_filter = view.get("filters")
+    rows = [row for row in base_rows if _passes(evaluator, view_filter, row)]
     for order in reversed(_sort_spec(view)):
         accessor = _accessor(str(order.get("property", "file.name")))
         rows.sort(
@@ -184,7 +201,7 @@ def _passes(evaluator: Evaluator, node, row: Row) -> bool:
         return True
     if isinstance(node, str):
         try:
-            value = evaluator.evaluate(parse_expression(_normalize(node)), row)
+            value = evaluator.evaluate(_parsed(node), row)
         except DqlError as error:
             raise DqlError(f"filter {node!r}: {error}") from error
         return bool(value)
@@ -204,6 +221,12 @@ def _passes(evaluator: Evaluator, node, row: Row) -> bool:
                 raise DqlError(f"unsupported filter combinator {key!r}")
         return True
     raise DqlError("unsupported filter shape")
+
+
+@lru_cache(maxsize=1024)
+def _parsed(expression: str):
+    """One filter string's syntax tree, parsed once however many rows ask for it."""
+    return parse_expression(_normalize(expression))
 
 
 def _normalize(expression: str) -> str:

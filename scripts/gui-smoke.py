@@ -541,8 +541,55 @@ def run_checks(app):
                 GLib.timeout_add(20, tick)
 
             def back_to_a():
-                check_text_scale()
+                check_base_off_thread()
                 return False
+
+            def check_base_off_thread():
+                """Opens a base whose render is held for 1.5 s, timing the window's loop.
+
+                The hold stands in for a base over a large vault. Rendered on the
+                window's own thread, it would stall the loop for the whole 1.5 s.
+                """
+                from gi.repository import WebKit
+
+                from solander.core.render import NoteRenderer
+
+                original = NoteRenderer.render_base_page
+
+                def held(self, rel, theme="light"):
+                    time.sleep(1.5)
+                    return original(self, rel, theme)
+
+                NoteRenderer.render_base_page = held
+                webview = window.reader.webview
+                started = time.monotonic()
+                ticks = {"last": started, "gap": 0.0, "done": False}
+
+                def finished(view, event) -> None:
+                    ours = "Things.base" in (view.get_uri() or "")
+                    if event == WebKit.LoadEvent.FINISHED and ours:
+                        view.disconnect(handler)
+                        ticks["done"] = True
+
+                def tick() -> bool:
+                    now = time.monotonic()
+                    ticks["gap"] = max(ticks["gap"], now - ticks["last"])
+                    ticks["last"] = now
+                    if not ticks["done"] and now - started < 30:
+                        return True
+                    NoteRenderer.render_base_page = original
+                    worst = ticks["gap"] * 1000
+                    took = now - started
+                    print(f"   a held base rendered in {took:.1f} s; longest stall {worst:.0f} ms")
+                    check("a base opens through the page request", ticks["done"])
+                    check("the window keeps answering while a base renders", worst < 250)
+                    window.reader.load_note("A.md")
+                    GLib.timeout_add(1000, lambda: (check_text_scale(), False)[1])
+                    return False
+
+                handler = webview.connect("load-changed", finished)
+                window.reader.load_note("Things.base")
+                GLib.timeout_add(20, tick)
 
             def check_tab_chain(tries: int = 0):
                 """Walks Tab's focus chain from the page, the way the key does, until it closes.
