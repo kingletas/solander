@@ -2,5 +2,5 @@
 # no build until a commit here says so. Each job installs only what it runs,
 # with this file as a constraint: pip install -c .github/ci-requirements.txt uv
 # Dependabot opens a pull request when one releases.
-uv==0.12.5
+uv==0.12.20
 semgrep==1.178.0
