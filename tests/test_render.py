@@ -530,6 +530,12 @@ def test_the_stylesheet_wraps_prose_blocks_on_screen_and_every_block_in_print():
         "READER:///copy/0",
         "reader://anywhere/copy/0",
         "reader:///%63opy/0",
+        "reader:///./copy/0",
+        "reader:///x/../copy/0",
+        "reader:///%2e/copy/0",
+        "reader:///x/%2E%2e/copy/0",
+        "reader:///x/y/../../copy/0",
+        "reader:///../copy/0",
     ],
 )
 def test_a_link_written_in_a_note_cannot_set_off_a_copy(vault, address):

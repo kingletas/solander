@@ -1139,13 +1139,21 @@ def _reaches_copy(href: str, base: str) -> bool:
 
     The window routes a `reader:` address by its first path segment, so `reader:/copy/0` and
     `reader://anywhere/%63opy/0` arrive at the same place as the address a fenced block is given.
+    A browser engine also drops `.` and resolves `..` before it navigates, so those are resolved
+    here first, written plainly or percent-encoded.
     """
     if base and href.casefold().startswith(base.casefold()):
         return True
     parsed = urlparse(href)
     if parsed.scheme.casefold() != "reader":
         return False
-    segments = [unquote(part) for part in parsed.path.split("/") if part]
+    segments: list[str] = []
+    for part in parsed.path.split("/"):
+        part = unquote(part)
+        if part == "..":
+            del segments[-1:]
+        elif part not in ("", "."):
+            segments.append(part)
     return bool(segments) and segments[0] == "copy"
 
 
