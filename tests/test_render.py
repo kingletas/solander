@@ -1,6 +1,17 @@
 """The full rendering pipeline against the fixture vault."""
 
-from solander.core.render import NoteRenderer, build_message_page, build_source_page
+import re
+from importlib import resources
+
+import pytest
+
+from solander.core.render import (
+    PROSE_FENCES,
+    NoteRenderer,
+    build_message_page,
+    build_source_page,
+    number_copy_links,
+)
 
 
 def rendered(vault, rel="Index.md"):
@@ -433,3 +444,111 @@ def test_a_render_nobody_waits_for_stops_early(vault):
     with pytest.raises(RenderCancelled):
         renderer.copy(should_stop=lambda: True).render("Index.md")
     assert "Index" in renderer.copy(should_stop=lambda: False).render("Index.md").page
+
+
+def fenced_page(vault, tag: str, content: str = "one line\n\nand another\n", options=None) -> str:
+    renderer = NoteRenderer(vault, options=(lambda: options) if options else None)
+    return renderer.render_text(f"```{tag}\n{content}```\n", "Fences")
+
+
+def test_the_fence_tags_that_count_as_prose_are_these():
+    assert PROSE_FENCES == {"", "text", "txt", "plain"}
+
+
+@pytest.mark.parametrize("tag", ["", "text", "txt", "plain", "TEXT", "Plain"])
+def test_a_text_or_untagged_fence_is_marked_as_prose_so_it_wraps(vault, tag):
+    page = fenced_page(vault, tag)
+    assert '<div class="fenced prose">' in page
+    assert "<pre><code>one line\n\nand another\n</code></pre>" in page
+
+
+@pytest.mark.parametrize("tag", ["python", "bash", "json", "no-such-language"])
+def test_a_fence_with_any_other_language_is_not_prose_and_keeps_its_lines(vault, tag):
+    page = fenced_page(vault, tag)
+    assert '<div class="fenced">' in page
+    assert "fenced prose" not in page
+
+
+def test_a_highlighted_fence_keeps_the_markup_it_had_inside_its_wrapper(vault):
+    page = fenced_page(vault, "python", "x = 1\n")
+    block = r'<pre class="highlight"><code class="language-python">.*?</code></pre></div>'
+    assert re.search(block, page, re.S)
+
+
+def test_every_fenced_block_carries_a_copy_link_numbered_in_page_order(vault):
+    renderer = NoteRenderer(vault)
+    text = "```text\na\n```\n\n```python\nb = 1\n```\n\n```\nc\n```\n"
+    page = renderer.render_text(text, "Three")
+    link = r'<a class="copy-block" href="([^"]*)" title="Copy this block">Copy</a>'
+    links = re.findall(link, page)
+    assert links == ["reader:///copy/0", "reader:///copy/1", "reader:///copy/2"]
+
+
+def test_an_embedded_notes_blocks_are_counted_with_the_page_they_land_in(vault_dir):
+    from solander.core.vault import Vault
+
+    (vault_dir / "Inner.md").write_text("```text\ninner\n```\n")
+    (vault_dir / "Outer.md").write_text("```text\nfirst\n```\n\n![[Inner]]\n\n```text\nlast\n```\n")
+    page = NoteRenderer(Vault.open(vault_dir)).render("Outer.md").page
+    assert re.findall(r'href="reader:///copy/(\d+)"', page) == ["0", "1", "2"]
+    assert page.index("first") < page.index("inner") < page.index("last")
+
+
+def test_a_note_cannot_write_a_copy_link_of_its_own_into_the_count():
+    body = '<p>reader:///copy/</p><a class="copy-block" href="reader:///copy/" title="t">Copy</a>'
+    assert number_copy_links(body).count("reader:///copy/0") == 1
+    assert "<p>reader:///copy/</p>" in number_copy_links(body)
+
+
+def test_a_client_that_writes_its_own_links_gets_a_copy_link_only_by_naming_one(vault):
+    without = fenced_page(vault, "text", options={"link_bases": BROWSER_BASES})
+    assert "copy-block" not in without.split("</style>")[-1]
+    assert '<div class="fenced prose"><pre>' in without
+
+    named = fenced_page(vault, "text", options={"link_bases": BROWSER_BASES | {"copy": "/copy/"}})
+    assert '<a class="copy-block" href="/copy/0" title="Copy this block">Copy</a>' in named
+
+
+def test_a_blocks_text_reaches_the_page_escaped_and_whole(vault):
+    page = fenced_page(vault, "text", "<b>not bold</b> & kept\n\n  indented\n")
+    assert "&lt;b&gt;not bold&lt;/b&gt; &amp; kept\n\n  indented\n</code>" in page
+
+
+def test_the_stylesheet_wraps_prose_blocks_on_screen_and_every_block_in_print():
+    css = resources.files("solander.assets").joinpath("reader.css").read_text(encoding="utf-8")
+    assert ".fenced.prose > pre { white-space: pre-wrap;" in css
+    assert "  pre { overflow-x: visible; white-space: pre-wrap; word-break: break-word; }" in css
+    assert "  a.copy-block { display: none; }" in css
+
+
+@pytest.mark.parametrize(
+    "address",
+    [
+        "reader:///copy/0",
+        "reader:/copy/0",
+        "reader:copy/0",
+        "READER:///copy/0",
+        "reader://anywhere/copy/0",
+        "reader:///%63opy/0",
+        "reader:///./copy/0",
+        "reader:///x/../copy/0",
+        "reader:///%2e/copy/0",
+        "reader:///x/%2E%2e/copy/0",
+        "reader:///x/y/../../copy/0",
+        "reader:///../copy/0",
+    ],
+)
+def test_a_link_written_in_a_note_cannot_set_off_a_copy(vault, address):
+    text = f"[Open the report]({address})\n\n```text\nthe block\n```\n"
+    page = NoteRenderer(vault).render_text(text, "Planted")
+    body = page.split("</style>")[-1]
+    assert re.findall(r'href="([^"]*)"', body) == ["reader:///copy/0"], "only the block's own link"
+    assert "Open the report" in body and "unsupported-link" in body
+
+
+def test_a_client_with_its_own_copy_base_is_protected_the_same_way(vault):
+    options = {"link_bases": BROWSER_BASES | {"copy": "/copy/"}}
+    page = fenced_page(vault, "text", "x\n", options=options)
+    planted = NoteRenderer(vault, options=lambda: options).render_text("[x](/copy/0)\n", "P")
+    assert 'href="/copy/0"' in page
+    assert 'href="/copy/0"' not in planted

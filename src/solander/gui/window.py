@@ -29,7 +29,7 @@ from ..core.graph import VaultGraph, local_neighbors
 from ..core.hits import FIRST_HIT_ID, mark_terms
 from ..core.indexing import sync_indexes
 from ..core.mailto import describe_mailto
-from ..core.pagescripts import READ_SCROLL, SCRIPT_WORLD, restore_scroll
+from ..core.pagescripts import READ_SCROLL, SCRIPT_WORLD, block_text, restore_scroll
 from ..core.render import (
     NoteRenderer,
     RenderCancelled,
@@ -165,6 +165,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         reader.connect("open-external-file", self._on_external_file)
         reader.connect("choose-ambiguous", self._on_ambiguous)
         reader.connect("run-action", self._on_page_action)
+        reader.connect("copy-block", self._on_copy_block)
         reader.connect("hover-link", self._on_hover_link)
         reader.connect("navigate-note-new-tab", self._on_navigate_new_tab)
         reader.webview.connect("load-changed", self._on_load_changed)
@@ -2580,6 +2581,8 @@ class ReaderWindow(Adw.ApplicationWindow):
         if parsed.scheme == "reader":
             segments = [unquote(part) for part in parsed.path.split("/") if part]
             text = "/".join(segments[1:]) if len(segments) > 1 else uri
+            if segments and segments[0] == "copy":
+                text = "Copy this block"
             if len(segments) > 1 and segments[0] == "note":
                 rel = "/".join(segments[1:])
                 if rel and rel != self.current_note:
@@ -2861,6 +2864,26 @@ class ReaderWindow(Adw.ApplicationWindow):
             text = f"[[{stem}]]"
         else:
             text = self.current_note
+        self.get_clipboard().set(text)
+        self._toast("Copied")
+
+    def _on_copy_block(self, reader, index: int) -> None:
+        """Copies one fenced block of the page: the copy link beside it was activated."""
+        reader.webview.evaluate_javascript(
+            block_text(index), -1, SCRIPT_WORLD, None, None, self._copy_block_read, None
+        )
+
+    def _copy_block_read(self, webview, result, _data) -> None:
+        try:
+            text = webview.evaluate_javascript_finish(result).to_string()
+        except GLib.Error:
+            return
+        # A block's text ends with the line break before its closing fence, which is not its own.
+        text = text.removesuffix("\n")
+        if text:
+            self._put_on_clipboard(text)
+
+    def _put_on_clipboard(self, text: str) -> None:
         self.get_clipboard().set(text)
         self._toast("Copied")
 
