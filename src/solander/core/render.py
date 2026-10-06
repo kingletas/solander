@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cache
 from importlib import resources
-from urllib.parse import quote, unquote
+from urllib.parse import quote, unquote, urlparse
 
 from latex2mathml.converter import convert as latex_to_mathml
 from pygments import highlight
@@ -316,6 +316,15 @@ class NoteRenderer:
     def _bases(self) -> dict:
         """The link prefixes this client asked for, or the window's."""
         return link_bases(self._opts().get("link_bases"))
+
+    def _copy_base(self) -> str:
+        """Where a copy link points: the window's, or a client's own if it names one, else nowhere.
+
+        Only the window can act on the default, so a client that writes its own links gets a copy
+        link only by saying where copies go.
+        """
+        given = self._opts().get("link_bases")
+        return str(given.get("copy", "")) if given else COPY_BASE
 
     def _book_context(self, rel: str) -> dict | None:
         """Book placement for a note when a book is being read; None otherwise."""
@@ -676,7 +685,11 @@ class NoteRenderer:
             token = tokens[idx]
             href = token.attrGet("href") or ""
             lowered = href.casefold()
-            if lowered.startswith(("http:", "https:")):
+            if _reaches_copy(href, renderer._copy_base()):
+                # Only a fenced block's own link may ask the window to copy; a note can't write one.
+                token.attrSet("href", "")
+                token.attrJoin("class", "unsupported-link")
+            elif lowered.startswith(("http:", "https:")):
                 token.attrJoin("class", "external")
             elif lowered.startswith("#"):
                 token.attrJoin("class", "internal")
@@ -812,10 +825,7 @@ class NoteRenderer:
             except MermaidError as error:
                 return _inert_dataview(code, f"mermaid, not drawn: {error}")
             return f'<div class="mermaid-diagram">{svg}</div>'
-        # Only the window can act on a copy link, so a client that writes its own links gets one
-        # only by naming where copies go.
-        given = self._opts().get("link_bases")
-        base = str(given.get("copy", "")) if given else COPY_BASE
+        base = self._copy_base()
         copy = (
             f'<a class="copy-block" href="{html.escape(base, quote=True)}" '
             'title="Copy this block">Copy</a>'
@@ -1122,6 +1132,21 @@ def _css_classes(properties: dict) -> str:
             values.extend(str(item) for item in value)
     safe = [v for v in values if re.fullmatch(r"[A-Za-z0-9_-]+", v)]
     return " ".join(dict.fromkeys(safe))
+
+
+def _reaches_copy(href: str, base: str) -> bool:
+    """Whether an address would set off a copy, however its slashes and letters are written.
+
+    The window routes a `reader:` address by its first path segment, so `reader:/copy/0` and
+    `reader://anywhere/%63opy/0` arrive at the same place as the address a fenced block is given.
+    """
+    if base and href.casefold().startswith(base.casefold()):
+        return True
+    parsed = urlparse(href)
+    if parsed.scheme.casefold() != "reader":
+        return False
+    segments = [unquote(part) for part in parsed.path.split("/") if part]
+    return bool(segments) and segments[0] == "copy"
 
 
 def number_copy_links(body: str) -> str:

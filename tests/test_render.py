@@ -519,3 +519,30 @@ def test_the_stylesheet_wraps_prose_blocks_on_screen_and_every_block_in_print():
     assert ".fenced.prose > pre { white-space: pre-wrap;" in css
     assert "  pre { overflow-x: visible; white-space: pre-wrap; word-break: break-word; }" in css
     assert "  a.copy-block { display: none; }" in css
+
+
+@pytest.mark.parametrize(
+    "address",
+    [
+        "reader:///copy/0",
+        "reader:/copy/0",
+        "reader:copy/0",
+        "READER:///copy/0",
+        "reader://anywhere/copy/0",
+        "reader:///%63opy/0",
+    ],
+)
+def test_a_link_written_in_a_note_cannot_set_off_a_copy(vault, address):
+    text = f"[Open the report]({address})\n\n```text\nthe block\n```\n"
+    page = NoteRenderer(vault).render_text(text, "Planted")
+    body = page.split("</style>")[-1]
+    assert re.findall(r'href="([^"]*)"', body) == ["reader:///copy/0"], "only the block's own link"
+    assert "Open the report" in body and "unsupported-link" in body
+
+
+def test_a_client_with_its_own_copy_base_is_protected_the_same_way(vault):
+    options = {"link_bases": BROWSER_BASES | {"copy": "/copy/"}}
+    page = fenced_page(vault, "text", "x\n", options=options)
+    planted = NoteRenderer(vault, options=lambda: options).render_text("[x](/copy/0)\n", "P")
+    assert 'href="/copy/0"' in page
+    assert 'href="/copy/0"' not in planted
