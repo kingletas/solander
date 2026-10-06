@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Prose kept in a block wraps, and any block can be copied
+
+- **A letter kept in a text block ran off the right edge of the window**, one paragraph to a row, and could only be read by scrolling sideways. A fenced block tagged `text`, `txt` or `plain`, or with no language at all, now wraps to the page and keeps its own line breaks. A block with a language keeps its lines whole and scrolls, as code should. The PDF export already wrapped every block and still does.
+- **Every fenced block has a Copy link in its corner**, shown while the pointer is over the block or the link has the keyboard's focus. It puts the block's text on the clipboard as the note has it: without the fence, without its language tag, and without the line break before the closing fence, so a letter with several paragraphs pastes as it was written.
+- **Scripts in a note's page stay off.** The link is an address the window acts on, like a link to another note, and the window reads the block's text with a script of its own that is given a number and nothing else. A client that writes its own links gets no copy link unless it names where copies go.
+
 ### Moving quickly through notes renders only where you stop
 
 - **Holding a key down the file tree rendered every note it passed**, each on its own thread, though only the last would be seen. A tab now has one render in flight and at most one waiting behind it: a request that arrives meanwhile replaces the waiting one, which is answered at once without being rendered. Ten notes asked for in a row render two, the first and the last, and `make smoke` checks it.

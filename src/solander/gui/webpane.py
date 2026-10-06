@@ -39,6 +39,7 @@ class ReaderView(GObject.Object):
         "open-external-file": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
         "open-external-uri": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
         "run-action": (GObject.SignalFlags.RUN_FIRST, None, (str, str)),
+        "copy-block": (GObject.SignalFlags.RUN_FIRST, None, (int,)),
         "hover-link": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
     }
 
@@ -206,6 +207,8 @@ class ReaderView(GObject.Object):
         elif head == "action":
             query = parse_qs(parsed.query)
             self.emit("run-action", rest, query.get("arg", [""])[0])
+        elif head == "copy" and rest.isascii() and rest.isdigit() and len(rest) <= 6:
+            self.emit("copy-block", int(rest))
         return True
 
     def _on_hover(self, _view, hit_result, _modifiers) -> None:
