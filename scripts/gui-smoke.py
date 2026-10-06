@@ -415,12 +415,49 @@ def run_checks(app):
                 every = int(marks) >= 2
                 check("every search word is marked in the note, not the first alone", every)
                 check("the first hit carries the anchor the note opens at", first == "1")
-                check_block_link()
+                check_fenced()
 
             # A world of its own, because the page's policy forbids scripts in the document.
             webview = window.reader.webview
             webview.evaluate_javascript(script, -1, "smoke", None, None, counted)
             return False
+
+        def check_fenced():
+            """A text block wraps to the page, and its copy link copies the block's own text."""
+            script = (
+                "(() => { const pre = document.querySelector('.fenced.prose > pre');"
+                " const link = document.querySelector('.fenced.prose > a.copy-block');"
+                " if (!pre || !link) return 'none';"
+                " return [pre.scrollWidth <= pre.clientWidth, getComputedStyle(pre).whiteSpace,"
+                " link.getAttribute('href'), link.textContent].join(','); })()"
+            )
+
+            def measured(webview, result) -> None:
+                answer = webview.evaluate_javascript_finish(result).to_string()
+                check("a text block carries a copy link", answer != "none")
+                fits, white_space, href, label = (answer.split(",") + ["", "", "", ""])[:4]
+                check("a text block wraps, with nothing to scroll sideways", fits == "true")
+                check("a text block keeps its own line breaks", white_space == "pre-wrap")
+                check("the copy link is the page's first, and says Copy", (href, label) == (
+                    "reader:///copy/0", "Copy"
+                ))
+                copied = []
+                put = window._put_on_clipboard
+                window._put_on_clipboard = copied.append
+                window._on_copy_block(window.reader, 0)
+
+                def read_back():
+                    window._put_on_clipboard = put
+                    text = copied[0] if copied else ""
+                    whole = text.startswith("wide-code x") and text.endswith(" ENDOFLONGLINE")
+                    check("the copy link copies the block's text, less its last line break", whole)
+                    check_block_link()
+                    return False
+
+                GLib.timeout_add(400, read_back)
+
+            webview = window.reader.webview
+            webview.evaluate_javascript(script, -1, "smoke", None, None, measured)
 
         def check_block_link():
             """Follows a `[[Note#^id]]` link the way a click does, and finds the block on screen."""

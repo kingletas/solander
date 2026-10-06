@@ -1,6 +1,7 @@
 """Renders a note to a sanitized HTML page: transforms, embeds, highlighting, assembly."""
 
 import html
+import itertools
 import os
 import re
 from dataclasses import dataclass, field
@@ -47,6 +48,13 @@ PREVIEW_EMBED_BUDGET = 4
 
 # Fence languages that Obsidian executes and this reader deliberately does not.
 INERT_FENCES = {"dataviewjs", "templater", "tasks", "query", "meta-bind"}
+
+# Fences that hold prose rather than code, the untagged one among them: a letter or a
+# drafted message kept in a block so it can be copied whole. These wrap on screen.
+PROSE_FENCES = {"", "text", "txt", "plain"}
+
+# A fenced block's copy link ends where `build_page` writes its number.
+_COPY_HREF = re.compile(r'(<a class="copy-block" href="[^"]*/)(")')
 
 # TeX past this length is not a formula, and the converter's cost grows with it.
 MAX_MATH_CHARS = int(os.environ.get("READER_MAX_MATH_CHARS", "5000"))
@@ -100,6 +108,7 @@ ACTION_BASE = "reader:///action/"
 AMBIGUOUS_BASE = "reader:///ambiguous/"
 EXTERNAL_BASE = "reader:///external/"
 FONT_BASE = "reader:///font/"
+COPY_BASE = "reader:///copy/"
 
 DEFAULT_BASES = {
     "note": NOTE_BASE,
@@ -803,18 +812,29 @@ class NoteRenderer:
             except MermaidError as error:
                 return _inert_dataview(code, f"mermaid, not drawn: {error}")
             return f'<div class="mermaid-diagram">{svg}</div>'
-        if info:
-            try:
-                lexer = get_lexer_by_name(info)
-            except ClassNotFound:
-                lexer = None
-            if lexer is not None:
-                formatted = highlight(code, lexer, HtmlFormatter(nowrap=True))
-                return (
-                    f'<pre class="highlight"><code class="language-{html.escape(info)}">'
-                    f"{formatted}</code></pre>\n"
-                )
-        return f"<pre><code>{html.escape(code)}</code></pre>\n"
+        # Only the window can act on a copy link, so a client that writes its own links gets one
+        # only by naming where copies go.
+        given = self._opts().get("link_bases")
+        base = str(given.get("copy", "")) if given else COPY_BASE
+        copy = (
+            f'<a class="copy-block" href="{html.escape(base, quote=True)}" '
+            'title="Copy this block">Copy</a>'
+            if base
+            else ""
+        )
+        plain = f"{copy}<pre><code>{html.escape(code)}</code></pre></div>\n"
+        if info in PROSE_FENCES:
+            return f'<div class="fenced prose">{plain}'
+        try:
+            lexer = get_lexer_by_name(info)
+        except ClassNotFound:
+            return f'<div class="fenced">{plain}'
+        formatted = highlight(code, lexer, HtmlFormatter(nowrap=True))
+        return (
+            f'<div class="fenced">{copy}'
+            f'<pre class="highlight"><code class="language-{html.escape(info)}">'
+            f"{formatted}</code></pre></div>\n"
+        )
 
 
 def note_header(
@@ -1104,6 +1124,16 @@ def _css_classes(properties: dict) -> str:
     return " ".join(dict.fromkeys(safe))
 
 
+def number_copy_links(body: str) -> str:
+    """Gives each fenced block's copy link its place on the page, counted from 0.
+
+    The window finds the block by that number, so it is assigned here, where the
+    page is whole: an embedded note's blocks are counted with the page they land in.
+    """
+    counter = itertools.count()
+    return _COPY_HREF.sub(lambda match: f"{match.group(1)}{next(counter)}{match.group(2)}", body)
+
+
 def build_page(
     body: str,
     title: str,
@@ -1136,7 +1166,7 @@ def build_page(
         f"{_typography_css(typography)}{_snippet_style(extra_css)}</head>"
         f"<body class='{theme_class}' dir='auto'>{notice}"
         f"<main class='note markdown-preview-view {html.escape(note_classes, quote=True)}'>"
-        f"{body}</main></body></html>"
+        f"{number_copy_links(body)}</main></body></html>"
     )
 
 
