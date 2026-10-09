@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cache
 from importlib import resources
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import quote, unquote
 
 from latex2mathml.converter import convert as latex_to_mathml
 from pygments import highlight
@@ -492,9 +492,16 @@ class NoteRenderer:
             extra_css=self._snips(),
         )
 
-    def render_text(self, text: str, title: str, theme: str = "light") -> str:
-        """Renders standalone markdown text, such as the in-app documentation pages."""
+    def render_text(
+        self, text: str, title: str, theme: str = "light", *, shipped: bool = False
+    ) -> str:
+        """Renders standalone markdown text, such as the in-app documentation pages.
+
+        `shipped` says the text is Solander's own and not a note, so a `reader:` address written
+        in it stands. It is never set for anything a vault holds.
+        """
         env = self._env(f"__document__/{title}")
+        env["shipped"] = shipped
         body = sanitize(self._render_markdown(split_frontmatter(text).body, env))
         return build_page(body, title, theme, typography=self._typo(), bases=self._bases())
 
@@ -685,8 +692,11 @@ class NoteRenderer:
             token = tokens[idx]
             href = token.attrGet("href") or ""
             lowered = href.casefold()
-            if _reaches_copy(href, renderer._copy_base()):
-                # Only a fenced block's own link may ask the window to copy; a note can't write one.
+            copy_base = renderer._copy_base().casefold()
+            reaches_the_window = lowered.startswith("reader:") and not env.get("shipped")
+            if reaches_the_window or (copy_base and lowered.startswith(copy_base)):
+                # Only Solander writes a `reader:` address, or a client's copy link. One a note
+                # wrote could run the window's actions under any words it liked, so it gets none.
                 token.attrSet("href", "")
                 token.attrJoin("class", "unsupported-link")
             elif lowered.startswith(("http:", "https:")):
@@ -1132,29 +1142,6 @@ def _css_classes(properties: dict) -> str:
             values.extend(str(item) for item in value)
     safe = [v for v in values if re.fullmatch(r"[A-Za-z0-9_-]+", v)]
     return " ".join(dict.fromkeys(safe))
-
-
-def _reaches_copy(href: str, base: str) -> bool:
-    """Whether an address would set off a copy, however its slashes and letters are written.
-
-    The window routes a `reader:` address by its first path segment, so `reader:/copy/0` and
-    `reader://anywhere/%63opy/0` arrive at the same place as the address a fenced block is given.
-    A browser engine also drops `.` and resolves `..` before it navigates, so those are resolved
-    here first, written plainly or percent-encoded.
-    """
-    if base and href.casefold().startswith(base.casefold()):
-        return True
-    parsed = urlparse(href)
-    if parsed.scheme.casefold() != "reader":
-        return False
-    segments: list[str] = []
-    for part in parsed.path.split("/"):
-        part = unquote(part)
-        if part == "..":
-            del segments[-1:]
-        elif part not in ("", "."):
-            segments.append(part)
-    return bool(segments) and segments[0] == "copy"
 
 
 def number_copy_links(body: str) -> str:
