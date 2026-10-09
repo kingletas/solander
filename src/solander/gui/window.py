@@ -2091,7 +2091,7 @@ class ReaderWindow(Adw.ApplicationWindow):
             text = text.replace(f"({target}.md)", f"(reader:///page/{target})")
         renderer = self.renderer or self._fallback_renderer(docs)
         title = "User guide" if name == "user-guide" else "Getting started"
-        return renderer.render_text(text, title, theme)
+        return renderer.render_text(text, title, theme, shipped=True)
 
     def _fallback_renderer(self, docs: Path) -> NoteRenderer:
         """A renderer that exists before any vault is open; the docs folder stands in."""

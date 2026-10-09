@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### A note's own link cannot drive the window
+
+- **A link written in a note could run one of the window's actions.** Solander's own pages use addresses of a private scheme to ask the window to open a vault, search a tag, turn a book's page, reveal a folder, choose between notes of one name or open a file of the vault. A note could write such an address itself, as a link, an autolink or a reference, under any words it liked, and a click ran the action: with `open-recent`, the window left the vault the reader had chosen for another folder. None of it wrote a file, ran anything from a note or reached the network. Now a link a note writes with that scheme, in any spelling, has no address and is shown as unsupported. The links Solander writes itself are unchanged, and a note's ordinary link to another note still opens it.
+
 ### Prose kept in a block wraps, and any block can be copied
 
 - **A letter kept in a text block ran off the right edge of the window**, one paragraph to a row, and could only be read by scrolling sideways. A fenced block tagged `text`, `txt` or `plain`, or with no language at all, now wraps to the page and keeps its own line breaks. A block with a language keeps its lines whole and scrolls, as code should. The PDF export already wrapped every block and still does.
