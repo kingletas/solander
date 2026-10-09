@@ -32,6 +32,7 @@ Never used it? **[From nothing to reading a vault](docs/from-nothing.md)** takes
 
 - **Write into the vault.** No caches, indexes, locks, conflict files, or thumbnails. All application state lives under `~/.config/solander/` and `~/.cache/solander/`.
 - **Execute anything from a note.** JavaScript is disabled in the rendering surface; raw HTML in notes is escaped, and the generated HTML passes through an allowlist sanitizer before display. Templater and `dataviewjs` render as labeled inert source.
+- **Let a note drive the window.** Solander's own pages ask the window for things with addresses of a private scheme: open a vault, search a tag, turn a book's page. Only Solander writes those. A link a note writes with that scheme, in any spelling, is shown as text with no address, so a note cannot dress one of the window's actions up as an ordinary link.
 - **Touch the network.** Remote images, scripts, stylesheets, and fonts are blocked; `http`/`https` links open in your system browser, `mailto` links open your mail app after asking, and every other URI scheme is refused.
 
 ## Install

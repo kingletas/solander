@@ -12,6 +12,7 @@ from solander.core.render import (
     build_source_page,
     number_copy_links,
 )
+from solander.core.vault import Vault
 
 
 def rendered(vault, rel="Index.md"):
@@ -544,6 +545,85 @@ def test_a_link_written_in_a_note_cannot_set_off_a_copy(vault, address):
     body = page.split("</style>")[-1]
     assert re.findall(r'href="([^"]*)"', body) == ["reader:///copy/0"], "only the block's own link"
     assert "Open the report" in body and "unsupported-link" in body
+
+
+# Every action the window's page-action handler accepts, each with an argument where it takes one.
+PAGE_ACTIONS = [
+    "action/open-vault",
+    "action/open-file",
+    "action/open-recent?arg=/srv/another-vault",
+    "action/tag?arg=home",
+    "action/book-next",
+    "action/book-prev",
+    "action/reveal-folder?arg=Projects",
+]
+
+# The spellings the window reads as one address: it routes by the first path segment, not the text.
+SPELLINGS = [
+    "reader:///{}",
+    "reader:/{}",
+    "reader:{}",
+    "READER:///{}",
+    "reader://anywhere/{}",
+]
+
+
+@pytest.mark.parametrize("action", PAGE_ACTIONS)
+@pytest.mark.parametrize("spelling", SPELLINGS)
+def test_a_link_written_in_a_note_cannot_run_a_page_action(vault, action, spelling):
+    address = spelling.format(action)
+    page = NoteRenderer(vault).render_text(f"[Open the report]({address})\n", "Planted")
+    body = page.split("</style>")[-1]
+    left = re.findall(r'href="[^"]*reader:[^"]*"', body, re.IGNORECASE)
+    assert not left, "no address is left on it"
+    assert "Open the report" in body and "unsupported-link" in body
+
+
+@pytest.mark.parametrize(
+    "note",
+    [
+        "[Open the report](reader:///%61ction/open-vault)",
+        "[Open the report](&#114;eader:///action/open-vault)",
+        "<reader:///action/open-vault>",
+        "[Open the report][1]\n\n[1]: reader:///action/open-vault",
+        "[Open the report](reader:///ambiguous/Roadmap?from=Index.md)",
+        "[Open the report](reader:///external/assets/report.pdf)",
+        "[Open the report](reader:///note/Index.md)",
+        "[Open the report](reader:///page/anything)",
+    ],
+)
+def test_no_way_of_writing_a_link_leaves_a_note_a_reader_address(vault, note):
+    page = NoteRenderer(vault).render_text(note + "\n", "Planted")
+    body = page.split("</style>")[-1]
+    assert not re.findall(r'href="[^"]*reader:[^"]*"', body, re.IGNORECASE)
+
+
+def test_a_notes_own_link_to_another_note_still_opens_it(vault):
+    page = NoteRenderer(vault).render_text("[The index](Index.md) and [[Index]]\n", "Planted")
+    body = page.split("</style>")[-1]
+    written_by_the_renderer = body.count('href="reader:///note/Index.md"')
+    assert written_by_the_renderer == 2
+
+
+def test_a_page_solander_ships_keeps_the_reader_addresses_written_in_it(vault):
+    guide = "[Getting started](reader:///page/getting-started)\n"
+    shipped = NoteRenderer(vault).render_text(guide, "User guide", shipped=True)
+    as_a_note = NoteRenderer(vault).render_text(guide, "User guide")
+    assert 'href="reader:///page/getting-started"' in shipped.split("</style>")[-1]
+    assert 'href="reader:///page/getting-started"' not in as_a_note.split("</style>")[-1]
+
+
+def test_a_note_embedded_in_a_shipped_page_is_still_a_note(vault_dir):
+    (vault_dir / "Planted.md").write_text("[Open the report](reader:///action/open-vault)\n")
+    renderer = NoteRenderer(Vault.open(vault_dir))
+    page = renderer.render_text("![[Planted]]\n", "Guide", shipped=True)
+    assert "Open the report" in page, "the note is embedded"
+    assert "reader:///action/open-vault" not in page.split("</style>")[-1]
+
+
+def test_solanders_own_page_links_still_carry_their_actions(vault):
+    page = NoteRenderer(vault).render("Projects/Alpha.md").page
+    assert 'href="reader:///action/reveal-folder?arg=Projects"' in page, "the crumb above the title"
 
 
 def test_a_client_with_its_own_copy_base_is_protected_the_same_way(vault):
