@@ -817,9 +817,8 @@ def run_checks(app):
         A link a note writes with the reader scheme carries no address, so its click
         does nothing; the same address on a link the window writes opens that vault,
         which shows the click path itself works. Then the window's own links for a
-        book's next chapter and for the vault chooser are clicked the same way. Run
-        it with a bus of its own (dbus-run-session), or the chooser it asks for is
-        drawn by the desktop's portal on the real screen.
+        book's next chapter and for the vault chooser are clicked the same way; the
+        chooser is not opened, only its request recorded.
         """
         from urllib.parse import quote
 
@@ -906,12 +905,12 @@ def run_checks(app):
         def leave_book():
             check("the book's own next-chapter link turns to the next chapter", True)
             window._set_zen(False)
-            # The chooser itself is drawn by the desktop's portal, outside this process: with
-            # no portal it never appears, and with his it appears on his screen. So the run
-            # shows the click reaching the request for it, and asks for nothing more.
+            # The chooser itself is drawn by the desktop's portal, outside this process, so the
+            # run cannot see it, and asking for it on a real desktop puts it on the screen. The
+            # click is shown reaching the request, which is recorded and not made.
             asked = []
             real = window._open_vault_dialog
-            window._open_vault_dialog = lambda: (asked.append(True), real())[1]
+            window._open_vault_dialog = lambda: asked.append(True)
             shown = "the window's open-vault link asks for the vault chooser"
             in_page(click(made_link("reader:///action/open-vault")),
                     lambda _href: wait_for(lambda: bool(asked), lambda: chosen(real), shown))
