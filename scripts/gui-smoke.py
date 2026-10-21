@@ -1,7 +1,9 @@
 """Drives the real window through open, render, search, and navigation on a live display."""
 
 import re
+import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -809,6 +811,127 @@ def run_checks(app):
 
         GLib.timeout_add(1500, check_highlight)
 
+    def check_page_actions(then):
+        """Clicks links inside the page, as a reader would, then hands on to THEN (SOL-27).
+
+        A link a note writes with the reader scheme carries no address, so its click
+        does nothing; the same address on a link the window writes opens that vault,
+        which shows the click path itself works. Then the window's own links for a
+        book's next chapter and for the vault chooser are clicked the same way. Run
+        it with a bus of its own (dbus-run-session), or the chooser it asks for is
+        drawn by the desktop's portal on the real screen.
+        """
+        from urllib.parse import quote
+
+        home = window.vault.root
+        other = Path(tempfile.mkdtemp(prefix="smoke-other-vault-"))
+        (other / "Elsewhere.md").write_text("# Elsewhere\n")
+        address = f"reader:///action/open-recent?arg={quote(str(other), safe='')}"
+        (vault_path / "Planted.md").write_text(f"# Planted\n\n[Open the other vault]({address})\n")
+        webview = window.reader.webview
+
+        def in_page(script, then_with):
+            # A world of its own, because the page's policy forbids scripts in the document.
+            def answered(view, result) -> None:
+                then_with(view.evaluate_javascript_finish(result).to_string())
+
+            webview.evaluate_javascript(script, -1, "smoke", None, None, answered)
+
+        def click(element_js):
+            """A script that clicks ELEMENT_JS and answers with its href, or 'missing'."""
+            return (
+                f"(() => {{ const a = {element_js}; if (!a) return 'missing';"
+                " const h = a.getAttribute('href'); a.click(); return String(h); })()"
+            )
+
+        def made_link(href):
+            """A script that adds a link to the page the way the window writes one."""
+            return (
+                f"(() => {{ const a = document.createElement('a'); a.href = {href!r};"
+                " document.body.appendChild(a); return a; })()"
+            )
+
+        def wait_for(condition, then_, label, tries=0, limit=24):
+            if condition():
+                then_()
+                return False
+            if tries > limit:
+                check(label, False)
+                finish()
+                return False
+            GLib.timeout_add(250, wait_for, condition, then_, label, tries + 1, limit)
+            return False
+
+        def click_planted():
+            planted = ("[...document.querySelectorAll('a')]"
+                       ".find(a => a.textContent.includes('Open the other'))")
+            in_page(click(planted), after_planted)
+            return False
+
+        def after_planted(href):
+            check("the note's own reader link is on the page", href != "missing")
+            check("the note's own reader link carries no address", href == "null")
+            GLib.timeout_add(1000, planted_settled)
+
+        def planted_settled():
+            stayed = window.vault is not None and window.vault.root == home
+            check("clicking the note's own reader link leaves the vault where it was", stayed)
+            in_page(click(made_link(address)), lambda _href: wait_for(
+                lambda: window.vault is not None and window.vault.root == other,
+                go_home, "the same address on a link the window writes opens that vault"))
+            return False
+
+        def go_home():
+            check("the same address on a link the window writes opens that vault", True)
+            window._on_page_action(None, "open-recent", str(home))
+            wait_for(lambda: window.vault is not None and window.vault.root == home,
+                     open_book, "the vault comes back for the rest of the run")
+
+        def open_book():
+            window._start_book("Book")
+            # A book prints its pages before it shows: the time the book checks above allow.
+            wait_for(lambda: window.current_note == "Book/01 One.md", click_next,
+                     "the book opens for its next-chapter link", limit=52)
+
+        def click_next():
+            GLib.timeout_add(800, lambda: in_page(
+                click("document.querySelector('a.book-next')"), after_next) or False)
+
+        def after_next(href):
+            check("the book page carries its own next-chapter link",
+                  href == "reader:///action/book-next")
+            wait_for(lambda: window.current_note == "Book/02 Two.md", leave_book,
+                     "the book's own next-chapter link turns to the next chapter")
+
+        def leave_book():
+            check("the book's own next-chapter link turns to the next chapter", True)
+            window._set_zen(False)
+            # The chooser itself is drawn by the desktop's portal, outside this process: with
+            # no portal it never appears, and with his it appears on his screen. So the run
+            # shows the click reaching the request for it, and asks for nothing more.
+            asked = []
+            real = window._open_vault_dialog
+            window._open_vault_dialog = lambda: (asked.append(True), real())[1]
+            shown = "the window's open-vault link asks for the vault chooser"
+            in_page(click(made_link("reader:///action/open-vault")),
+                    lambda _href: wait_for(lambda: bool(asked), lambda: chosen(real), shown))
+
+        def chosen(real):
+            window._open_vault_dialog = real
+            check("the window's open-vault link asks for the vault chooser", True)
+            check("asking for the chooser leaves the vault where it was", window.vault.root == home)
+            finish()
+
+        def finish():
+            shutil.rmtree(other, ignore_errors=True)
+            (vault_path / "Planted.md").unlink(missing_ok=True)
+            window.reader.load_note("A.md")
+            GLib.timeout_add(800, then)
+
+        window.reader.load_note("Planted.md")
+        GLib.timeout_add(1200, click_planted)
+        return False
+
     def start_book():
         window._start_book("Book")
         wait_paged(0, check_book_open, "book pages are printed and shown")
@@ -1083,7 +1206,7 @@ def run_checks(app):
                               and int(parts[3]) <= 0)
                         check("its narrowest lane is still readable (at least 144 CSS px)",
                               whole and int(parts[1]) >= 144)
-                        GLib.timeout_add(300, done)
+                        GLib.timeout_add(300, check_page_actions, done)
 
                     # A world of its own, because the page's policy forbids scripts in the document.
                     webview = window.reader.webview
