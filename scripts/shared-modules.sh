@@ -10,18 +10,33 @@
 #   scripts/shared-modules.sh
 #
 # Environment:
-#   SOLANDER_TREE, SLATE_TREE   the two checkouts (default: this one, and its sibling)
+#   SOLANDER_TREE, SLATE_TREE   the two checkouts (default: this one, and the other app
+#                               beside this one's main checkout)
 #   SHARED_MODULES_PENDING      a sentence saying which copy waits on a port, and why;
 #                               the difference is then reported and the check passes
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
+
+# The other app sits beside this one's main checkout, not beside a worktree of it:
+# a worktree lives inside the repository, where no sibling is, and the check would
+# skip in exactly the place changes are built.
+main_checkout() {
+    local common
+    if common="$(git -C "$1" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; then
+        dirname "$common"
+    else
+        echo "$1"
+    fi
+}
+beside="$(dirname "$(main_checkout "$here")")"
+
 if [ -d "$here/src/solander" ]; then
     : "${SOLANDER_TREE:=$here}"
-    : "${SLATE_TREE:=$(dirname "$here")/slate}"
+    : "${SLATE_TREE:=$beside/slate}"
 else
     : "${SLATE_TREE:=$here}"
-    : "${SOLANDER_TREE:=$(dirname "$here")/solander}"
+    : "${SOLANDER_TREE:=$beside/solander}"
 fi
 
 for tree in "$SOLANDER_TREE" "$SLATE_TREE"; do
