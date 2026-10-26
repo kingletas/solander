@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Stone by day: a white page and a neutral grey rail
+
+- **Stone by day has a white page and a neutral grey rail.** The rail and the page were two warm greys 1.09:1 apart, so the edge between them was lost; the page is now white and the rail a neutral grey 1.27:1 from it, with the line between them 1.56:1 from the rail. It comes from glossa 0.1.3, which the lock and the Flatpak now pin.
+
 ### The rendering modules live in one library now
 
 - **The fifteen modules Solander and Slate carried as identical copies moved to [glossa](https://github.com/kingletas/glossa)**: Markdown, links, callouts and frontmatter; Dataview and its query language; Bases; canvases, boards, drawings and diagrams; and the fuzzy matching, list diffs and palettes. Solander pins `v0.1.2`, so a fix is made once and reaches both apps by a version bump rather than by hand.
