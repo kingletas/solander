@@ -9,9 +9,10 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from .frontmatter import split_frontmatter
-from .links import parse_embed, parse_wikilink
-from .markdown import strip_block_comments, strip_html_comments
+from glossa.frontmatter import split_frontmatter
+from glossa.links import parse_embed, parse_wikilink
+from glossa.markdown import strip_block_comments, strip_html_comments
+
 from .resolver import resolve_embed, resolve_note
 from .vault import Vault
 

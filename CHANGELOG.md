@@ -2,13 +2,11 @@
 
 ## Unreleased
 
-### The shared-copies check runs from a worktree
+### The rendering modules live in one library now
 
-- **The check that keeps the copies Solander and Slate share identical skipped itself in every worktree**, because it looked for the other app beside the checkout it ran in, and a worktree sits inside its repository. One shared module drifted that way and merged. It now looks beside the repository's main checkout, so a change built in a worktree is compared before review; `SOLANDER_TREE` and `SLATE_TREE` still win, and with the other app not on the machine at all it still says so and passes.
-
-### The palette module is Slate's again, byte for byte
-
-- **`palettes.py` had drifted from Slate's copy**, which the shared-modules check exists to stop: Slate's quiet labels needed a colour raised until it reads on several grounds at once. `readable()` now takes one ground or several, and `channels()` is public; every existing call reads as before, and nothing in Solander's own colours changes.
+- **The fifteen modules Solander and Slate carried as identical copies moved to [glossa](https://github.com/kingletas/glossa)**: Markdown, links, callouts and frontmatter; Dataview and its query language; Bases; canvases, boards, drawings and diagrams; and the fuzzy matching, list diffs and palettes. Solander pins `v0.1.2`, so a fix is made once and reaches both apps by a version bump rather than by hand.
+- **A hostile note is now refused where the old copies would have tried to draw it**, because glossa carries hardening they never had. A base file using YAML aliases, which a few lines can expand to gigabytes, is refused, as frontmatter already was. An Excalidraw drawing stops decompressing as it passes `READER_MAX_DRAWING_BYTES` (10 MiB) and says it is too large. A Mermaid diagram past `READER_MAX_DIAGRAM_EDGES` (2,000 edges, messages and notes) or with more participants or slices than `READER_MAX_DIAGRAM_NODES` shows a message instead, as does a Dataview or base expression that builds a value past `READER_MAX_VALUE_CHARS`, or a diagram or base that trips an error while it is drawn. Canvas cards placed at NaN or infinity are skipped, and a base view sorts numbers by value, so 2 comes before 10.
+- `make check` no longer compares copies with Slate's checkout, since there are no copies left to compare. The tests that need no vault moved with the modules; the ones that need Solander's own vault graph stay here and now exercise the library.
 
 ### A note's own link cannot drive the window
 

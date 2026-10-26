@@ -1,7 +1,8 @@
 """The kanban renderer: columns, cards, archive, and wikilinks inside cards."""
 
+from glossa.kanban import parse_kanban
+
 from solander.core.graph import VaultGraph
-from solander.core.kanban import parse_kanban
 from solander.core.render import NoteRenderer
 
 BOARD = (

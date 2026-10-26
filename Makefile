@@ -19,11 +19,10 @@ sync: ## Create the virtualenv (system GI bindings visible) and install dependen
 	@uv sync
 
 .PHONY: check
-check: ## Everything a commit has to pass: ruff, the tests, the metadata, the copies shared with Slate
+check: ## Everything a commit has to pass: ruff, the tests, the metadata
 	@uv run ruff check .
 	@uv run pytest -q
 	@scripts/validate-metadata.sh
-	@scripts/shared-modules.sh
 
 .PHONY: metadata
 metadata: ## Validate the desktop entry and the AppStream metainfo

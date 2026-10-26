@@ -19,12 +19,12 @@ import re
 import sqlite3
 
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, WebKit
+from glossa.frontmatter import split_frontmatter
 
 from .. import APP_ID, APP_NAME, __version__
 from ..core.book import chapter_title, chapters_in
 from ..core.bookmarks import read_bookmarks
 from ..core.csssnippets import load_snippets
-from ..core.frontmatter import split_frontmatter
 from ..core.graph import VaultGraph, local_neighbors
 from ..core.hits import FIRST_HIT_ID, mark_terms
 from ..core.indexing import sync_indexes

@@ -11,8 +11,9 @@ import time
 from collections import Counter
 from pathlib import Path
 
-from solander.core.dataview import DataviewEngine
-from solander.core.dql import DqlError
+from glossa.dataview import DataviewEngine
+from glossa.dql import DqlError
+
 from solander.core.graph import VaultGraph
 from solander.core.indexing import sync_indexes
 from solander.core.store import IndexStore

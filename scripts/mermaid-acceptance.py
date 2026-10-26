@@ -6,7 +6,8 @@ import traceback
 from collections import Counter
 from pathlib import Path
 
-from solander.core.mermaid import MermaidError, MermaidUnsupported, render_mermaid
+from glossa.mermaid import MermaidError, MermaidUnsupported, render_mermaid
+
 from solander.core.sanitize import sanitize
 
 FENCE = re.compile(r"^```mermaid\s*$(.*?)^```", re.M | re.S)

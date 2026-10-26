@@ -7,8 +7,8 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, Gio, GObject, Gtk
+from glossa.listdiff import splices
 
-from ..core.listdiff import splices
 from ..core.treeorder import Entry, tree_order
 from ..core.vault import NOTE_EXTENSIONS
 

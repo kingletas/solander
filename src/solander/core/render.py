@@ -10,6 +10,17 @@ from functools import cache
 from importlib import resources
 from urllib.parse import quote, unquote
 
+from glossa.bases import render_base
+from glossa.callouts import callouts_rule
+from glossa.canvas import canvas_body, parse_canvas
+from glossa.dataview import DataviewEngine
+from glossa.dql import DqlError
+from glossa.excalidraw import excalidraw_body
+from glossa.frontmatter import split_frontmatter
+from glossa.kanban import kanban_body, parse_kanban
+from glossa.links import WikiLink, slugify
+from glossa.markdown import build_parser, strip_block_comments, strip_html_comments
+from glossa.mermaid import MermaidError, MermaidUnsupported, render_mermaid
 from latex2mathml.converter import convert as latex_to_mathml
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
@@ -17,18 +28,7 @@ from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 
 from .anchors import block_anchor, heading_anchor
-from .bases import render_base
-from .callouts import callouts_rule
-from .canvas import canvas_body, parse_canvas
-from .dataview import DataviewEngine
-from .dql import DqlError
-from .excalidraw import excalidraw_body
 from .fonts import font_css
-from .frontmatter import split_frontmatter
-from .kanban import kanban_body, parse_kanban
-from .links import WikiLink, slugify
-from .markdown import build_parser, strip_block_comments, strip_html_comments
-from .mermaid import MermaidError, MermaidUnsupported, render_mermaid
 from .mindmap import mindmap_body
 from .resolver import Resolution, resolve_attachment, resolve_embed, resolve_note
 from .sanitize import sanitize

@@ -3,7 +3,8 @@
 import re
 import time
 
-from solander.core.bases import render_base
+from glossa.bases import render_base
+
 from solander.core.graph import VaultGraph
 
 BASE = """

@@ -1,15 +1,15 @@
 """The pure-Python mermaid renderer against the syntax the vault writes."""
 
 import pytest
+from glossa.mermaid import MermaidError, MermaidUnsupported, render_mermaid
 
-from solander.core.mermaid import MermaidError, MermaidUnsupported, render_mermaid
 from solander.core.sanitize import sanitize
 
 FLOW = """flowchart LR
-    A[Claude Write / Edit] --> B[file lands on disk]
+    A[Editor saves / exports] --> B[file lands on disk]
     B --> C{ends in .md?}
     C -->|no| D[hook exits 0]
-    C -->|yes| E[snippet-lint FILE]
+    C -->|yes| E[lint-note FILE]
     style D stroke:#080
 """
 
@@ -17,7 +17,7 @@ FLOW = """flowchart LR
 def test_flowchart_renders_nodes_edges_and_labels():
     svg = render_mermaid(FLOW)
     assert svg.startswith("<svg")
-    assert "Claude Write / Edit" in svg
+    assert "Editor saves / exports" in svg
     assert "ends in .md?" in svg
     assert "<polygon" in svg  # the diamond
     assert 'marker-end="url(#mermaid-arrow)"' in svg

@@ -7,7 +7,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .links import normalize_name
+from glossa.links import normalize_name
 
 NOTE_EXTENSIONS = (".md", ".markdown")
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp", ".avif")

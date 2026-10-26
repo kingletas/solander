@@ -10,6 +10,7 @@ colours and no rules, and no theme carries a hand-written block the others canno
 
 from dataclasses import dataclass, field
 
+from glossa.palettes import PALETTES, STONE_DARK, STONE_LIGHT, Palette, mix
 from pygments.style import Style
 from pygments.token import (
     Comment,
@@ -23,8 +24,6 @@ from pygments.token import (
     String,
     Token,
 )
-
-from .palettes import PALETTES, STONE_DARK, STONE_LIGHT, Palette, mix
 
 DEFAULT_THEME = "stone"
 ARCHIVE_CLASS = "theme-archive"
