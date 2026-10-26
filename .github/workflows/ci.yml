@@ -95,8 +95,8 @@ jobs:
           # than in front of a user.
           flatpak run --command=python3 com.kingletas.Solander -c "
           from solander.core.render import build_page
-          import solander.core.frontmatter, solander.core.markdown
-          import solander.core.dataview, solander.core.mermaid
+          import glossa.frontmatter, glossa.markdown
+          import glossa.dataview, glossa.mermaid
           page = build_page('<p>x</p>', 'Note', 'blood-record')
           assert 'theme-blood-record' in page, 'theme did not apply'
           print('flatpak renders, and carries its dependencies')"
