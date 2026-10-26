@@ -7,14 +7,6 @@
 - **The fifteen modules Solander and Slate carried as identical copies moved to [glossa](https://github.com/kingletas/glossa)**: Markdown, links, callouts and frontmatter; Dataview and its query language; Bases; canvases, boards, drawings and diagrams; and the fuzzy matching, list diffs and palettes. Solander pins `v0.1.0`, so a fix is made once and reaches both apps by a version bump rather than by hand. Nothing Solander renders changes.
 - `make check` no longer compares copies with Slate's checkout, since there are no copies left to compare. The tests that need no vault moved with the modules; the ones that need Solander's own vault graph stay here and now exercise the library.
 
-### The shared-copies check runs from a worktree
-
-- **The check that keeps the copies Solander and Slate share identical skipped itself in every worktree**, because it looked for the other app beside the checkout it ran in, and a worktree sits inside its repository. One shared module drifted that way and merged. It now looks beside the repository's main checkout, so a change built in a worktree is compared before review; `SOLANDER_TREE` and `SLATE_TREE` still win, and with the other app not on the machine at all it still says so and passes.
-
-### The palette module is Slate's again, byte for byte
-
-- **`palettes.py` had drifted from Slate's copy**, which the shared-modules check exists to stop: Slate's quiet labels needed a colour raised until it reads on several grounds at once. `readable()` now takes one ground or several, and `channels()` is public; every existing call reads as before, and nothing in Solander's own colours changes.
-
 ### A note's own link cannot drive the window
 
 - **A link written in a note could run one of the window's actions.** Solander's own pages use addresses of a private scheme to ask the window to open a vault, search a tag, turn a book's page, reveal a folder, choose between notes of one name or open a file of the vault. A note could write such an address itself, as a link, an autolink or a reference, under any words it liked, and a click ran the action: with `open-recent`, the window left the vault the reader had chosen for another folder. None of it wrote a file, ran anything from a note or reached the network. Now a link a note writes with that scheme, in any spelling, has no address and is shown as unsupported. The links Solander writes itself are unchanged, and a note's ordinary link to another note still opens it.
