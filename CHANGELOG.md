@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### The shared-copies check runs from a worktree
+
+- **The check that keeps the copies Solander and Slate share identical skipped itself in every worktree**, because it looked for the other app beside the checkout it ran in, and a worktree sits inside its repository. One shared module drifted that way and merged. It now looks beside the repository's main checkout, so a change built in a worktree is compared before review; `SOLANDER_TREE` and `SLATE_TREE` still win, and with the other app not on the machine at all it still says so and passes.
+
 ### The palette module is Slate's again, byte for byte
 
 - **`palettes.py` had drifted from Slate's copy**, which the shared-modules check exists to stop: Slate's quiet labels needed a colour raised until it reads on several grounds at once. `readable()` now takes one ground or several, and `channels()` is public; every existing call reads as before, and nothing in Solander's own colours changes.
