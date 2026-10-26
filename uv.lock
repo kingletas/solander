@@ -13,8 +13,8 @@ wheels = [
 
 [[package]]
 name = "glossa"
-version = "0.1.0"
-source = { git = "https://github.com/kingletas/glossa?rev=v0.1.0#d22da3a3d90343de1afb493d95f2ec55a1c494fd" }
+version = "0.1.2"
+source = { git = "https://github.com/kingletas/glossa?rev=v0.1.2#83ded2aa10b5903ed8e091132ca631e858db41de" }
 
 [package.optional-dependencies]
 render = [
@@ -215,7 +215,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "glossa", extras = ["render"], git = "https://github.com/kingletas/glossa?rev=v0.1.0" },
+    { name = "glossa", extras = ["render"], git = "https://github.com/kingletas/glossa?rev=v0.1.2" },
     { name = "latex2mathml", specifier = ">=3.81.0" },
     { name = "pygments", specifier = ">=2.17" },
 ]

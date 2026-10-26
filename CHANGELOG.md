@@ -4,7 +4,7 @@
 
 ### The rendering modules live in one library now
 
-- **The fifteen modules Solander and Slate carried as identical copies moved to [glossa](https://github.com/kingletas/glossa)**: Markdown, links, callouts and frontmatter; Dataview and its query language; Bases; canvases, boards, drawings and diagrams; and the fuzzy matching, list diffs and palettes. Solander pins `v0.1.0`, so a fix is made once and reaches both apps by a version bump rather than by hand. Nothing Solander renders changes.
+- **The fifteen modules Solander and Slate carried as identical copies moved to [glossa](https://github.com/kingletas/glossa)**: Markdown, links, callouts and frontmatter; Dataview and its query language; Bases; canvases, boards, drawings and diagrams; and the fuzzy matching, list diffs and palettes. Solander pins `v0.1.2`, so a fix is made once and reaches both apps by a version bump rather than by hand. Nothing Solander renders changes.
 - `make check` no longer compares copies with Slate's checkout, since there are no copies left to compare. The tests that need no vault moved with the modules; the ones that need Solander's own vault graph stay here and now exercise the library.
 
 ### A note's own link cannot drive the window
