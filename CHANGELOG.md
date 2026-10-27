@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### The main menu is the same menu as Slate's
+
+- **Solander's main menu is built from one table it shares with Slate.** Which groups and rows there are, their order and their words are data in glossa 0.1.4 (`glossa.menu`); each app builds its own menu from them, passing what the window can do. The first level is unchanged: **Find**; **Appearance**, **Typography** and **Preferences**; **This note**, **Tabs** and **Show**; then **Keyboard shortcuts** and **About Solander**. A row only some windows can do, such as Slate's New Note, Save and Rename, sits in the same group in both and appears only where the window holds its capability, never by the name of the app.
+- **This note gains Find in This Note…**, which Ctrl+F already did and the menu did not list, and the actions behind two rows are renamed to match Slate's: Search the vault is `win.search` and Pin / Unpin Note is `win.pin`. Their keys are unchanged. Preferences is still Solander's page of switches under the shared label.
+- **The live smoke run holds the menu.** It checks the first level, that a window without the editing capability has no editing row while the same table offers them with it, and that every action a row names is registered on the window.
+
 ### Stone by day: a white page and a neutral grey rail
 
 - **Stone by day has a white page and a neutral grey rail.** The rail and the page were two warm greys 1.09:1 apart, so the edge between them was lost; the page is now white and the rail a neutral grey 1.27:1 from it, with the line between them 1.56:1 from the rail. It comes from glossa 0.1.3, which the lock and the Flatpak now pin.
