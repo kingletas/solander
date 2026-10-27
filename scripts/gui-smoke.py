@@ -72,12 +72,67 @@ def record_crash(kind, value, trace) -> None:
     check(f"a callback raised {kind.__name__}: {value}", False)
 
 
+def menu_rows(menu) -> list[tuple[str, str]]:
+    """Every row of a menu model as (label, action), sections and submenus flattened."""
+    rows = []
+    for index in range(menu.get_n_items()):
+        label = menu.get_item_attribute_value(index, "label", None)
+        action = menu.get_item_attribute_value(index, "action", None)
+        if label is not None or action is not None:
+            rows.append(
+                (label.get_string() if label else "", action.get_string() if action else "")
+            )
+        for kind in ("section", "submenu"):
+            inner = menu.get_item_link(index, kind)
+            if inner is not None:
+                rows += menu_rows(inner)
+    return rows
+
+
+def check_main_menu(window) -> None:
+    """The main menu is the table shared with the other reading app, built for this window."""
+    from solander.gui.mainmenu import build_main_menu
+
+    menu = window.menu_popover.get_menu_model()
+    first = [menu.get_item_link(i, "section") for i in range(menu.get_n_items())]
+    first_level = [
+        [
+            section.get_item_attribute_value(row, "label", None).get_string()
+            for row in range(section.get_n_items())
+            if section.get_item_attribute_value(row, "label", None) is not None
+        ]
+        for section in first
+    ]
+    check(
+        "the main menu opens on the shared groups, in the shared order",
+        first_level == [
+            ["Go to note…", "Search the vault…"],
+            ["Appearance…", "Typography…", "Preferences…"],
+            ["This note", "Tabs", "Show"],
+            ["Keyboard shortcuts", "About Solander"],
+        ],
+    )
+    labels = {label for label, _ in menu_rows(menu)}
+    check("the menu has no editing row, since this window cannot edit", "New Note…" not in labels)
+    editing = build_main_menu({"write", "find"}, "Solander", {"preferences": "win.preferences"})
+    check(
+        "the same table offers editing rows when the capability is held",
+        {"New Note…", "Save", "Undo", "Rename…"} <= {label for label, _ in menu_rows(editing)},
+    )
+    named = {action.split("::", 1)[0] for _, action in menu_rows(menu) if action}
+    unregistered = sorted(
+        name for name in named if window.lookup_action(name.removeprefix("win.")) is None
+    )
+    check(f"every action the menu names is registered ({unregistered})", not unregistered)
+
+
 def run_checks(app):
     window = app.get_active_window()
     check("window exists", window is not None)
     check("vault opened", window.vault is not None)
     check("vault indexed notes", window.vault is not None and len(window.vault.notes) >= 2)
     check("a note is shown", bool(window.current_note))
+    check_main_menu(window)
     rendered = window.reader.last_render
     check("renderer produced a page", rendered is not None)
     if rendered is not None:

@@ -9,7 +9,7 @@ ACCELERATORS: dict[str, tuple[str, ...]] = {
     "open-vault": ("<Control><Shift>o",),
     "find": ("<Control>f",),
     "quick-open": ("<Control>p",),
-    "search-vault": ("<Control><Shift>f",),
+    "search": ("<Control><Shift>f",),
     "reload": ("<Control>r", "F5"),
     "back": ("<Alt>Left",),
     "forward": ("<Alt>Right",),

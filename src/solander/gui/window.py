@@ -52,6 +52,7 @@ from .bookpaged import BookPagedView
 from .chrome import CrumbPath, ReaderFoot
 from .filetree import VaultTree
 from .localgraph import LocalGraphView
+from .mainmenu import build_main_menu
 from .monitor import VaultMonitor
 from .panes import SplitPane
 from .pdfview import PdfWindow, poppler_available
@@ -69,6 +70,10 @@ degrades to Cantarell rather than failing."""
 
 THEME_CUSTOM = "themes"
 """The name the popover puts the grid of swatches in under."""
+
+MENU_CAPABILITIES = frozenset({"find", "export", "files", "reading-mode"})
+"""What this window can do that the shared main menu asks about: it finds in a note, exports a
+PDF, hands a note to the file manager and another app, and reads full screen."""
 
 MAX_AMBIGUOUS_CHOICES = 8
 MAX_PANEL_ROWS = 200
@@ -667,35 +672,10 @@ class ReaderWindow(Adw.ApplicationWindow):
         return box
 
     def _main_menu_button(self) -> Gtk.MenuButton:
-        """Everything the window offers, as one list and six drill-downs.
-
-        Flat, and in the order a person reaches for it: getting somewhere, then
-        what changes how the app behaves, then what acts on what is on screen. A
-        submenu is for a group whose entries only make sense once you are in it.
-        """
-        menu = Gio.Menu()
-
-        finding = Gio.Menu()
-        finding.append("Go to note…", "win.quick-open")
-        finding.append("Search the vault…", "win.search-vault")
-        menu.append_section(None, finding)
-
-        settings = Gio.Menu()
-        settings.append_submenu("Appearance…", self._appearance_page())
-        settings.append_submenu("Typography…", _typography_page())
-        settings.append_submenu("Preferences…", _preferences_page())
-        menu.append_section(None, settings)
-
-        drilling = Gio.Menu()
-        drilling.append_submenu("This note", _note_page())
-        drilling.append_submenu("Tabs", _tabs_page())
-        drilling.append_submenu("Show", _show_page())
-        menu.append_section(None, drilling)
-
-        about = Gio.Menu()
-        about.append("Keyboard shortcuts", "win.shortcuts")
-        about.append(f"About {APP_NAME}", "win.about")
-        menu.append_section(None, about)
+        """The main menu, built from the table both reading apps share, for what this one can do."""
+        menu = build_main_menu(
+            MENU_CAPABILITIES, APP_NAME, {"preferences": _preferences_page()}
+        )
 
         button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu)
         button.set_tooltip_text("Main menu")
@@ -704,25 +684,6 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.theme_chooser = ThemeChooser(self.store.state.theme, self._choose_theme)
         self.menu_popover.add_child(self.theme_chooser, THEME_CUSTOM)
         return button
-
-    def _appearance_page(self) -> Gio.Menu:
-        """The light/dark choice, then the themes as swatches of themselves.
-
-        The grid is a custom item: the popover builds its pages from this model,
-        and whoever builds the popover puts the widget in by name.
-        """
-        page = Gio.Menu()
-        modes = Gio.Menu()
-        modes.append("Follow System", "win.appearance::system")
-        modes.append("Light", "win.appearance::light")
-        modes.append("Dark", "win.appearance::dark")
-        page.append_section("Mode", modes)
-        swatches = Gio.Menu()
-        item = Gio.MenuItem.new(None, None)
-        item.set_attribute_value("custom", GLib.Variant.new_string(THEME_CUSTOM))
-        swatches.append_item(item)
-        page.append_section("Theme", swatches)
-        return page
 
     def _reveal_folder(self, rel: str) -> None:
         """A step of the path was clicked: show that folder in the tree."""
@@ -1118,7 +1079,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         add("open-vault", lambda *_: self._open_vault_dialog())
         add("find", lambda *_: self._show_find())
         add("quick-open", lambda *_: self._show_search())
-        add("search-vault", lambda *_: self._show_search())
+        add("search", lambda *_: self._show_search())
         add("reload", lambda *_: self._reload())
         add("back", lambda *_: self.reader.webview.go_back())
         add("forward", lambda *_: self.reader.webview.go_forward())
@@ -1138,7 +1099,7 @@ class ReaderWindow(Adw.ApplicationWindow):
         self.leave_zen_action.set_enabled(False)
         add("export-pdf", lambda *_: self._export_pdf_dialog())
         add("mindmap", lambda *_: self._show_mindmap())
-        add("pin-note", lambda *_: self._toggle_pin())
+        add("pin", lambda *_: self._toggle_pin())
         add("unhide-folders", lambda *_: self._unhide_all_folders())
         add("zoom-in", lambda *_: self._zoom(0.1))
         add("zoom-out", lambda *_: self._zoom(-0.1))
@@ -3024,24 +2985,6 @@ def _darken(hex_color: str, factor: float) -> str:
     return f"#{int(red * factor):02x}{int(green * factor):02x}{int(blue * factor):02x}"
 
 
-def _typography_page() -> Gio.Menu:
-    """How a note is set: the face, the measure, and the leading."""
-    page = Gio.Menu()
-    for title, action, choices in (
-        ("Font", "reader-font",
-         (("Theme Default", "default"), ("Serif", "serif"), ("Sans", "sans"), ("Mono", "mono"))),
-        ("Line Width", "line-width",
-         (("Narrow", "narrow"), ("Normal", "normal"), ("Wide", "wide"), ("Full", "full"))),
-        ("Line Spacing", "line-spacing",
-         (("Compact", "compact"), ("Normal", "normal"), ("Relaxed", "relaxed"))),
-    ):
-        group = Gio.Menu()
-        for label, value in choices:
-            group.append(label, f"win.{action}::{value}")
-        page.append_submenu(title, group)
-    return page
-
-
 def _preferences_page() -> Gio.Menu:
     """What this reader remembers and which files it will look at."""
     page = Gio.Menu()
@@ -3064,37 +3007,4 @@ def _preferences_page() -> Gio.Menu:
     keeping.append("Restore Session on Launch", "win.restore-session")
     keeping.append("Clear Index Cache", "win.clear-cache")
     page.append_section(None, keeping)
-    return page
-
-
-def _note_page() -> Gio.Menu:
-    """What can be done with the note that is open."""
-    page = Gio.Menu()
-    page.append("Pin / Unpin Note", "win.pin-note")
-    page.append("View as Mind Map", "win.mindmap")
-    page.append("Export as PDF…", "win.export-pdf")
-    page.append("Reveal in Files", "win.reveal")
-    page.append("Open Externally", "win.open-external")
-    copying = Gio.Menu()
-    copying.append("Markdown Source", "win.copy-source")
-    copying.append("Vault Path", "win.copy-path")
-    copying.append("As Wikilink", "win.copy-wikilink")
-    page.append_submenu("Copy", copying)
-    return page
-
-
-def _tabs_page() -> Gio.Menu:
-    page = Gio.Menu()
-    page.append("New Tab", "win.new-tab")
-    page.append("Close Tab", "win.close-tab")
-    page.append("Reload", "win.reload")
-    return page
-
-
-def _show_page() -> Gio.Menu:
-    page = Gio.Menu()
-    page.append("Reading Mode", "win.zen")
-    page.append("Vault Sidebar", "win.toggle-sidebar")
-    page.append("On This Page", "win.toggle-outline")
-    page.append("Raw Source View", "win.toggle-source")
     return page
